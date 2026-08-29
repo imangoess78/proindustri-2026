@@ -14,14 +14,14 @@
 <meta property="og:url" content="https://proindustri.com/checkout">
 <meta property="og:image" content="https://proindustri.com/assets/og-image.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230EA5E9'/><text x='50' y='68' font-size='50' font-weight='900' fill='white' text-anchor='middle'>M</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230F1B2D'/><text x='50' y='68' font-size='50' font-weight='900' fill='white' text-anchor='middle'>M</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/site.css">
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#0EA5E9">
+<meta name="theme-color" content="#0F1B2D">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -177,7 +177,7 @@ var IC = window.IC;
       `<option value="${SP.esc(c.city)}"${c.city === selCity ? ' selected' : ''}>${SP.esc(c.city)}</option>`).join('');
 
     const courierRows = freeShip ? '' : (courierCosts.length ? courierCosts.map(c => `
-      <label class="ship-opt${selCourier && selCourier.courier === c.courier ? ' sel' : ''}" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border:2px solid ${selCourier && selCourier.courier === c.courier ? 'var(--red)' : 'var(--border)'};border-radius:var(--radius-sm);cursor:pointer;margin-bottom:8px;background:${selCourier && selCourier.courier === c.courier ? '#E0F2FE' : '#fff'}">
+      <label class="ship-opt${selCourier && selCourier.courier === c.courier ? ' sel' : ''}" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border:2px solid ${selCourier && selCourier.courier === c.courier ? 'var(--red)' : 'var(--border)'};border-radius:var(--radius-sm);cursor:pointer;margin-bottom:8px;background:${selCourier && selCourier.courier === c.courier ? 'var(--steel-light)' : '#fff'}">
         <input type="radio" name="courier" value="${c.courier}" onclick="selCourierFn('${c.courier}')" ${selCourier && selCourier.courier === c.courier ? 'checked' : ''}>
         <span style="flex:1">
           <span style="display:block;font-weight:800;font-size:13px;color:var(--dark)">${SP.esc(c.courier_name)}</span>

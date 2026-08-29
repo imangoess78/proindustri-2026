@@ -131,7 +131,7 @@
       <div>
         <a class="brand" href="/" style="margin-bottom:12px">
           <div class="brand-logo">P</div>
-          <div><div class="brand-name" style="color:var(--dark)">ProIndustri</div><div class="brand-sub">by ProIndustri</div></div>
+          <div><div class="brand-name" style="color:#fff">ProIndustri</div><div class="brand-sub" style="color:rgba(255,255,255,.6)">by ProIndustri</div></div>
         </a>
         <p class="f-desc">Distributor mesin, tools, & perlengkapan industri impor China. Melayani bengkel, pabrik, dan UMKM dengan harga grosir & garansi.</p>
         <div class="f-col-title">Grup Toko Online</div>
@@ -187,13 +187,22 @@
   </div>`;
 
   // ── Floating widgets (WA + LiveChat) ──
+  function waTemplate(){
+    var t=document.title||'ProIndustri';
+    var u=location.href;
+    return encodeURIComponent('Halo ProIndustri \uD83D\uDC4B\n\nSaya ingin bertanya tentang halaman:\n*'+t+'*\n'+u+'\n\nMohon bantuannya.');
+  }
+  function openWA(phone){
+    var url='https://wa.me/'+phone+'?text='+waTemplate();
+    window.open(url,'_blank');
+  }
   const FLOATING_WIDGETS = `
   <div class="wa-float">
     <div class="wa-popup" id="waPopup">
       <div class="wa-popup-title">${IC("message-circle")} Hubungi Kami</div>
       <div class="wa-popup-sub">Chat langsung, kami siap bantu!</div>
-      <a href="https://wa.me/6281394191904" target="_blank" class="wa-popup-btn"><div>${IC("message-circle")}</div><div><div class="wa-popup-label">WA Utama (No Call)</div><div class="wa-popup-num">0813-9419-1904</div></div></a>
-      <a href="https://wa.me/6281392298821" target="_blank" class="wa-popup-btn"><div>${IC("message-circle")}</div><div><div class="wa-popup-label">WA Alternatif (No Call)</div><div class="wa-popup-num">0813-9229-8821</div></div></a>
+      <a href="javascript:void(0)" onclick="MP.openWA('6281394191904')" class="wa-popup-btn"><div>${IC("message-circle")}</div><div><div class="wa-popup-label">WA Utama (No Call)</div><div class="wa-popup-num">0813-9419-1904</div></div></a>
+      <a href="javascript:void(0)" onclick="MP.openWA('6281392298821')" class="wa-popup-btn"><div>${IC("message-circle")}</div><div><div class="wa-popup-label">WA Alternatif (No Call)</div><div class="wa-popup-num">0813-9229-8821</div></div></a>
     </div>
     <div style="position:relative" onclick="toggleWA()">
       <a class="wa-float-btn">
@@ -729,7 +738,7 @@
 
   // Expose helpers
   window.MP = {
-    getCart, saveCart, getTQ, updateCartBadge, addToCart, fmt, esc, toggleMenu, closeMenu, goSearch,
+    getCart, saveCart, getTQ, updateCartBadge, addToCart, fmt, esc, toggleMenu, closeMenu, goSearch, openWA, waTemplate,
     getUser, getToken, authHeaders,
     openAuth, closeAuth, switchAuthTab, submitLogin, submitRegister, loginSuccess, logout, authAction, updateAuthUI, togglePw,
     toggleNotif, openNotif, initNotif

@@ -14,7 +14,7 @@
 <meta property="og:url" content="https://proindustri.com/akun">
 <meta property="og:image" content="https://proindustri.com/assets/og-image.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230EA5E9'/><text x='50' y='68' font-size='50' font-weight='900' fill='white' text-anchor='middle'>P</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230F1B2D'/><text x='50' y='68' font-size='50' font-weight='900' fill='white' text-anchor='middle'>P</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -23,13 +23,13 @@
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --red:#DC2626;--red-dark:#B91C1C;--red-light:#FEF2F2;
-  --gold:#0EA5E9;--gold-light:#E0F2FE;--gold-bright:#38BDF8;
+  --gold:#1E3A5F;--gold-light:#EFF6FF;--gold-bright:#F97316;
   --orange:#F97316;--orange-dark:#EA580C;--orange-light:#FFF7ED;
   --green:#16A34A;--green-dark:#15803D;--green-light:#F0FDF4;
   --wa:#25D366;--wa-dark:#128C7E;
-  --grad-hero:linear-gradient(135deg,#0B0B0B 0%,#1A1A1A 40%,#0369A1 75%,#0EA5E9 100%);
-  --grad-gold:linear-gradient(90deg,#0284C7 0%,#38BDF8 50%,#0284C7 100%);
-  --grad-btn:linear-gradient(135deg,#0EA5E9 0%,#0284C7 100%);
+  --grad-hero:var(--grad-navy);
+  --grad-gold:var(--grad-navy);
+  --grad-btn:linear-gradient(135deg,#1E3A5F 0%,#0F1B2D 100%);
   --grad-orange:linear-gradient(135deg,#F97316 0%,#EA580C 100%);
   --grad-red:linear-gradient(135deg,#EF4444 0%,#DC2626 100%);
   --grad-green:linear-gradient(135deg,#25D366 0%,#128C7E 100%);
@@ -224,7 +224,7 @@ html{overflow-x:hidden}
 }
 </style>
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#0EA5E9">
+<meta name="theme-color" content="#0F1B2D">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -798,7 +798,7 @@ var IC = window.IC;
     komplainOrder = o; komplainReason = null; komplainRefundType = 'penuh'; komplainRefundItems = {};
     var itemsOpt = (o.items || []).map(function(it, i) {
       return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:6px;background:#fff" onclick="Akun.toggleKmpItem(' + i + ',this)">'
-        + '<input type="checkbox" style="width:16px;height:16px;accent-color:#0EA5E9;pointer-events:none">'
+        + '<input type="checkbox" style="width:16px;height:16px;accent-color:#1E3A5F;pointer-events:none">'
         + '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + SP.esc((it.productName || it.name || 'Produk').replace(/\(.*?\)/g, '').trim()) + (it.variantName ? ' <span style="color:var(--muted);font-weight:500">(' + SP.esc(it.variantName) + ')</span>' : '') + '</div><div style="font-size:11px;color:var(--muted)">' + SP.fmt(it.price) + ' × ' + it.qty + '</div></div>'
         + '<span class="kmp-qty" style="font-size:12px;font-weight:800;color:var(--gold);min-width:34px;text-align:right">0</span></div>';
     }).join('');
@@ -827,7 +827,7 @@ var IC = window.IC;
       + '<div style="font-size:12px;font-weight:800;color:var(--dark);margin-bottom:8px">Deskripsi Masalah</div>'
       + '<textarea id="kmpDesc" rows="3" placeholder="Contoh: barang rusak saat tiba, ukuran tidak sesuai pesanan..." style="width:100%;border:1.5px solid var(--border);border-radius:12px;padding:11px 13px;font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;color:var(--dark)"></textarea>'
       + '<div style="display:flex;gap:8px;margin-top:12px;background:#FFF8E6;border:1px solid rgba(201,137,10,.35);border-radius:12px;padding:11px 13px;font-size:12px;color:#7a5a10;line-height:1.6"><span>' + IC("camera") + '</span><span>Setelah mengajukan, kamu akan diarahkan ke <b>WhatsApp</b> untuk mengirim <b>foto produk</b> & <b>video unboxing</b> sebagai bukti. Hemat kuota, proses lebih cepat.</span></div>'
-      + '<button onclick="Akun.submitKmp()" style="width:100%;background:linear-gradient(135deg,#0EA5E9,#0284C7);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:900;cursor:pointer;margin-top:14px;font-family:inherit">Kirim Pengajuan Komplain ' + IC("arrow-right") + '</button>'
+      + '<button onclick="Akun.submitKmp()" style="width:100%;background:var(--grad-navy);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:900;cursor:pointer;margin-top:14px;font-family:inherit">Kirim Pengajuan Komplain ' + IC("arrow-right") + '</button>'
       + '</div></div>';
     document.body.appendChild(modal);
   };
@@ -838,14 +838,14 @@ var IC = window.IC;
   Akun.selectKmpReason = function(r, el) {
     komplainReason = r;
     document.querySelectorAll('.kmp-reason').forEach(function(c) { c.style.cssText = 'border:1.5px solid var(--border);border-radius:12px;padding:11px 13px;cursor:pointer;font-size:12.5px;color:var(--dark);background:#fff;transition:all .15s'; });
-    el.style.cssText = 'border:1.5px solid #0EA5E9;border-radius:12px;padding:11px 13px;cursor:pointer;font-size:12.5px;color:var(--dark);background:#E0F2FE;transition:all .15s;box-shadow:0 0 0 3px rgba(249,115,22,.12)';
+    el.style.cssText = 'border:1.5px solid var(--steel);border-radius:12px;padding:11px 13px;cursor:pointer;font-size:12.5px;color:var(--dark);background:var(--steel-light);transition:all .15s;box-shadow:0 0 0 3px rgba(249,115,22,.12)';
     document.getElementById('kmpRefundWrap').style.display = r === 'dana' ? 'block' : 'none';
     if (r === 'dana') Akun.setKmpRefundType(komplainRefundType, document.querySelector('.kmp-refund[data-t="' + komplainRefundType + '"]'));
   };
   Akun.setKmpRefundType = function(t, el) {
     komplainRefundType = t;
     document.querySelectorAll('.kmp-refund').forEach(function(c) { c.style.cssText = 'border:1.5px solid var(--border);border-radius:12px;padding:10px;cursor:pointer;font-size:12px;color:var(--dark);text-align:center;background:#fff;transition:all .15s'; });
-    if (el) el.style.cssText = 'border:1.5px solid #0EA5E9;border-radius:12px;padding:10px;cursor:pointer;font-size:12px;color:var(--dark);text-align:center;background:#E0F2FE;transition:all .15s;box-shadow:0 0 0 3px rgba(249,115,22,.12)';
+    if (el) el.style.cssText = 'border:1.5px solid var(--steel);border-radius:12px;padding:10px;cursor:pointer;font-size:12px;color:var(--dark);text-align:center;background:var(--steel-light);transition:all .15s;box-shadow:0 0 0 3px rgba(249,115,22,.12)';
     document.getElementById('kmpItemsWrap').style.display = t === 'sebagian' ? 'block' : 'none';
   };
   Akun.toggleKmpItem = function(i, el) {
@@ -854,8 +854,8 @@ var IC = window.IC;
     var cur = komplainRefundItems[i] || 0;
     komplainRefundItems[i] = cur >= it.qty ? 0 : cur + 1;
     var on = !!komplainRefundItems[i];
-    el.style.border = on ? '1.5px solid #0EA5E9' : '1px solid var(--border)';
-    el.style.background = on ? '#E0F2FE' : '#fff';
+    el.style.border = on ? '1.5px solid var(--steel)' : '1px solid var(--border)';
+    el.style.background = on ? 'var(--steel-light)' : '#fff';
     el.querySelector('input').checked = on;
     el.querySelector('.kmp-qty').textContent = komplainRefundItems[i] || 0;
   };

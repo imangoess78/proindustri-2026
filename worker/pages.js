@@ -325,7 +325,7 @@ export async function renderProduct(env, p) {
     const disc = Math.round(sub * pct / 100);
     const total = sub - disc;
     document.getElementById('pdPrice').textContent = MP.fmt(curPrice);
-    document.getElementById('qtyHint').textContent = pct > 0 ? '<svg class="ic" aria-hidden="true"><use href="#i-tag"/></svg> Diskon ' + pct + '% berlaku' : '';
+    document.getElementById('qtyHint').innerHTML = pct > 0 ? '<svg class="ic" aria-hidden="true"><use href="#i-tag"/></svg> Diskon ' + pct + '% berlaku' : '';
     document.getElementById('pdSumBox').innerHTML =
       '<div class="sum-row"><span>Harga Satuan</span><span>' + MP.fmt(curPrice) + '</span></div>' +
       '<div class="sum-row"><span>Jumlah</span><span>' + qty + ' unit</span></div>' +

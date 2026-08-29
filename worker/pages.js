@@ -214,7 +214,7 @@ export async function renderProduct(env, p) {
         <div id="pdSumBox" class="pd-sum-box" style="background:var(--light);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin:16px 0"></div>
 
         <div class="pd-actions">
-          <button class="pd-cart-btn" id="addCartBtn" onclick="doCart(false)"><svg class="ic" aria-hidden="true"><use href="#i-shopping-cart"/></svg> Tambah ke Keranjang</button>
+          <button class="pd-cart-btn" id="addCartBtn" onclick="doCart(false)"><svg class="ic" aria-hidden="true"><use href="#i-shopping-cart"/></svg> + keranjang</button>
           <button class="pd-buy-btn" id="buyBtn" onclick="doCart(true)"><svg class="ic" aria-hidden="true"><use href="#i-zap"/></svg> Beli Sekarang</button>
         </div>
         <div style="margin-top:10px">
@@ -792,7 +792,7 @@ function renderQA(){
     '<input type="number" id="qaQty" value="'+qaQ+'" min="'+(p.minpack||1)+'" step="1" inputmode="numeric" oninput="qaSet()" style="width:72px;text-align:center;font-weight:900;font-size:16px;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;background:white;color:var(--dark);font-family:var(--font)">'+
     '<button class="cqb" type="button" onclick="qaCh(1)">+</button></div>'+
     '<div class="qa-sum" id="qaSumBox">'+qaSumHtml()+'</div>'+
-    '<div class="qa-actions"><button class="qa-cart-btn" onclick="qaAdd(false)"><svg class="ic" aria-hidden="true"><use href="#i-shopping-cart"/></svg> Tambah ke Keranjang</button><button class="qa-buy-btn" onclick="qaAdd(true)"><svg class="ic" aria-hidden="true"><use href="#i-zap"/></svg> Beli Sekarang</button></div>';
+    '<div class="qa-actions"><button class="qa-cart-btn" onclick="qaAdd(false)"><svg class="ic" aria-hidden="true"><use href="#i-shopping-cart"/></svg> + keranjang</button><button class="qa-buy-btn" onclick="qaAdd(true)"><svg class="ic" aria-hidden="true"><use href="#i-zap"/></svg> Beli Sekarang</button></div>';
 }
 function qaAdd(buy){
   if(!qaD||!qaV)return;

@@ -14,7 +14,7 @@
 <meta property="og:url" content="https://proindustri.com/akun">
 <meta property="og:image" content="https://proindustri.com/assets/og-image.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23F97316'/><text x='50' y='68' font-size='50' font-weight='900' fill='white' text-anchor='middle'>M</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230EA5E9'/><text x='50' y='68' font-size='50' font-weight='900' fill='white' text-anchor='middle'>P</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -22,11 +22,11 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --red:#F97316;--red-dark:#EA580C;--red-light:#FFF4E6;
-  --gold:#F97316;--gold-light:#FFF4E6;--gold-bright:#FB923C;
-  --grad-hero:linear-gradient(135deg,#0B0B0B 0%,#1A1A1A 40%,#B45309 75%,#F97316 100%);
-  --grad-gold:linear-gradient(90deg,#EA580C 0%,#FB923C 50%,#EA580C 100%);
-  --grad-btn:linear-gradient(135deg,#F97316 0%,#EA580C 100%);
+  --red:#0EA5E9;--red-dark:#0284C7;--red-light:#E0F2FE;
+  --gold:#0EA5E9;--gold-light:#E0F2FE;--gold-bright:#38BDF8;
+  --grad-hero:linear-gradient(135deg,#0B0B0B 0%,#1A1A1A 40%,#0369A1 75%,#0EA5E9 100%);
+  --grad-gold:linear-gradient(90deg,#0284C7 0%,#38BDF8 50%,#0284C7 100%);
+  --grad-btn:linear-gradient(135deg,#0EA5E9 0%,#0284C7 100%);
   --dark:#0B0B0B;--mid:#3A3A3A;--muted:#8A8A8A;
   --light:#FFFDF8;--border:rgba(201,137,10,0.15);
   --shadow:0 2px 16px rgba(201,137,10,0.10);
@@ -218,7 +218,7 @@ html{overflow-x:hidden}
 }
 </style>
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#F97316">
+<meta name="theme-color" content="#0EA5E9">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -229,7 +229,7 @@ html{overflow-x:hidden}
 <div class="akun-login-page" id="akunLoginPage">
   <div class="akun-login-card">
     <div class="akun-login-logo">P</div>
-    <div class="akun-login-title">Murah <span>Plastic</span></div>
+    <div class="akun-login-title">Pro<span>Industri</span></div>
     <div class="akun-login-sub">Masuk dengan akun member untuk melihat pesanan, wishlist, dan review kamu.</div>
     <div class="akun-login-actions">
       <button class="akun-login-btn" type="button" onclick="MP.openAuth('login')">Masuk</button>
@@ -255,7 +255,7 @@ html{overflow-x:hidden}
 <div class="sidebar" id="sidebar">
   <div class="sidebar-logo">
     <div class="logo-box">P</div>
-    <div><div class="brand">Murah <span>Plastic</span></div><div class="sub">Akun Saya</div></div>
+    <div><div class="brand">Pro<span>Industri</span></div><div class="sub">Akun Saya</div></div>
   </div>
   <div class="sidebar-nav">
     <div class="nav-section">Menu</div>
@@ -792,7 +792,7 @@ var IC = window.IC;
     komplainOrder = o; komplainReason = null; komplainRefundType = 'penuh'; komplainRefundItems = {};
     var itemsOpt = (o.items || []).map(function(it, i) {
       return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:6px;background:#fff" onclick="Akun.toggleKmpItem(' + i + ',this)">'
-        + '<input type="checkbox" style="width:16px;height:16px;accent-color:#F97316;pointer-events:none">'
+        + '<input type="checkbox" style="width:16px;height:16px;accent-color:#0EA5E9;pointer-events:none">'
         + '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + SP.esc((it.productName || it.name || 'Produk').replace(/\(.*?\)/g, '').trim()) + (it.variantName ? ' <span style="color:var(--muted);font-weight:500">(' + SP.esc(it.variantName) + ')</span>' : '') + '</div><div style="font-size:11px;color:var(--muted)">' + SP.fmt(it.price) + ' × ' + it.qty + '</div></div>'
         + '<span class="kmp-qty" style="font-size:12px;font-weight:800;color:var(--gold);min-width:34px;text-align:right">0</span></div>';
     }).join('');
@@ -821,7 +821,7 @@ var IC = window.IC;
       + '<div style="font-size:12px;font-weight:800;color:var(--dark);margin-bottom:8px">Deskripsi Masalah</div>'
       + '<textarea id="kmpDesc" rows="3" placeholder="Contoh: barang rusak saat tiba, ukuran tidak sesuai pesanan..." style="width:100%;border:1.5px solid var(--border);border-radius:12px;padding:11px 13px;font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;color:var(--dark)"></textarea>'
       + '<div style="display:flex;gap:8px;margin-top:12px;background:#FFF8E6;border:1px solid rgba(201,137,10,.35);border-radius:12px;padding:11px 13px;font-size:12px;color:#7a5a10;line-height:1.6"><span>' + IC("camera") + '</span><span>Setelah mengajukan, kamu akan diarahkan ke <b>WhatsApp</b> untuk mengirim <b>foto produk</b> & <b>video unboxing</b> sebagai bukti. Hemat kuota, proses lebih cepat.</span></div>'
-      + '<button onclick="Akun.submitKmp()" style="width:100%;background:linear-gradient(135deg,#F97316,#EA580C);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:900;cursor:pointer;margin-top:14px;font-family:inherit">Kirim Pengajuan Komplain ' + IC("arrow-right") + '</button>'
+      + '<button onclick="Akun.submitKmp()" style="width:100%;background:linear-gradient(135deg,#0EA5E9,#0284C7);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:900;cursor:pointer;margin-top:14px;font-family:inherit">Kirim Pengajuan Komplain ' + IC("arrow-right") + '</button>'
       + '</div></div>';
     document.body.appendChild(modal);
   };
@@ -832,14 +832,14 @@ var IC = window.IC;
   Akun.selectKmpReason = function(r, el) {
     komplainReason = r;
     document.querySelectorAll('.kmp-reason').forEach(function(c) { c.style.cssText = 'border:1.5px solid var(--border);border-radius:12px;padding:11px 13px;cursor:pointer;font-size:12.5px;color:var(--dark);background:#fff;transition:all .15s'; });
-    el.style.cssText = 'border:1.5px solid #F97316;border-radius:12px;padding:11px 13px;cursor:pointer;font-size:12.5px;color:var(--dark);background:#FFF4E6;transition:all .15s;box-shadow:0 0 0 3px rgba(249,115,22,.12)';
+    el.style.cssText = 'border:1.5px solid #0EA5E9;border-radius:12px;padding:11px 13px;cursor:pointer;font-size:12.5px;color:var(--dark);background:#E0F2FE;transition:all .15s;box-shadow:0 0 0 3px rgba(249,115,22,.12)';
     document.getElementById('kmpRefundWrap').style.display = r === 'dana' ? 'block' : 'none';
     if (r === 'dana') Akun.setKmpRefundType(komplainRefundType, document.querySelector('.kmp-refund[data-t="' + komplainRefundType + '"]'));
   };
   Akun.setKmpRefundType = function(t, el) {
     komplainRefundType = t;
     document.querySelectorAll('.kmp-refund').forEach(function(c) { c.style.cssText = 'border:1.5px solid var(--border);border-radius:12px;padding:10px;cursor:pointer;font-size:12px;color:var(--dark);text-align:center;background:#fff;transition:all .15s'; });
-    if (el) el.style.cssText = 'border:1.5px solid #F97316;border-radius:12px;padding:10px;cursor:pointer;font-size:12px;color:var(--dark);text-align:center;background:#FFF4E6;transition:all .15s;box-shadow:0 0 0 3px rgba(249,115,22,.12)';
+    if (el) el.style.cssText = 'border:1.5px solid #0EA5E9;border-radius:12px;padding:10px;cursor:pointer;font-size:12px;color:var(--dark);text-align:center;background:#E0F2FE;transition:all .15s;box-shadow:0 0 0 3px rgba(249,115,22,.12)';
     document.getElementById('kmpItemsWrap').style.display = t === 'sebagian' ? 'block' : 'none';
   };
   Akun.toggleKmpItem = function(i, el) {
@@ -848,8 +848,8 @@ var IC = window.IC;
     var cur = komplainRefundItems[i] || 0;
     komplainRefundItems[i] = cur >= it.qty ? 0 : cur + 1;
     var on = !!komplainRefundItems[i];
-    el.style.border = on ? '1.5px solid #F97316' : '1px solid var(--border)';
-    el.style.background = on ? '#FFF4E6' : '#fff';
+    el.style.border = on ? '1.5px solid #0EA5E9' : '1px solid var(--border)';
+    el.style.background = on ? '#E0F2FE' : '#fff';
     el.querySelector('input').checked = on;
     el.querySelector('.kmp-qty').textContent = komplainRefundItems[i] || 0;
   };

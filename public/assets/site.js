@@ -46,7 +46,7 @@
       <span>${IC("message-circle")} WA Partai:</span>
       <a href="https://wa.me/6281394191904" target="_blank" rel="noopener" class="wa-link">0813-9419-1904</a>
       <span>|</span>
-      <a href="https://wa.me/6285104778700" target="_blank" rel="noopener" class="wa-link">0851-0477-8700</a>
+      <a href="https://wa.me/6281392298821" target="_blank" rel="noopener" class="wa-link">0813-9229-8821</a>
       <span style="opacity:0.4">(No Call)</span>
     </div>
   </div>
@@ -109,7 +109,7 @@
       </div>
       <div class="sb-foot">
         <a class="sb-wa-btn" href="https://wa.me/6281394191904" target="_blank" rel="noopener">${IC("message-circle")} Chat WhatsApp</a>
-        <div class="sb-contact">0813-9419-1904 · 0851-0477-8700</div>
+        <div class="sb-contact">0813-9419-1904 · 0813-9229-8821</div>
       </div>
     </div>
     <div class="sidebar-overlay" onclick="MP.closeMenu()"></div>
@@ -172,7 +172,7 @@
         <div class="f-col-title">Hubungi Kami</div>
         <div class="f-contact">
           <div class="f-contact-item">${IC("message-circle")} <a href="https://wa.me/6281394191904" target="_blank" rel="noopener">0813-9419-1904</a> <span style="color:var(--gold);font-size:11px">(No Call)</span></div>
-          <div class="f-contact-item">${IC("message-circle")} <a href="https://wa.me/6285104778700" target="_blank" rel="noopener">0851-0477-8700</a> <span style="color:var(--gold);font-size:11px">(No Call)</span></div>
+          <div class="f-contact-item">${IC("message-circle")} <a href="https://wa.me/6281392298821" target="_blank" rel="noopener">0813-9229-8821</a> <span style="color:var(--gold);font-size:11px">(No Call)</span></div>
           <div class="f-contact-item">${IC("mail")} <a href="mailto:proindustri@gmail.com">proindustri@gmail.com</a></div>
           <div class="f-contact-item">${IC("map-pin")} Tangerang, Indonesia</div>
         </div>
@@ -193,7 +193,7 @@
       <div class="wa-popup-title">${IC("message-circle")} Hubungi Kami</div>
       <div class="wa-popup-sub">Chat langsung, kami siap bantu!</div>
       <a href="https://wa.me/6281394191904" target="_blank" class="wa-popup-btn"><div>${IC("message-circle")}</div><div><div class="wa-popup-label">WA Utama (No Call)</div><div class="wa-popup-num">0813-9419-1904</div></div></a>
-      <a href="https://wa.me/6285104778700" target="_blank" class="wa-popup-btn"><div>${IC("message-circle")}</div><div><div class="wa-popup-label">WA Alternatif (No Call)</div><div class="wa-popup-num">0851-0477-8700</div></div></a>
+      <a href="https://wa.me/6281392298821" target="_blank" class="wa-popup-btn"><div>${IC("message-circle")}</div><div><div class="wa-popup-label">WA Alternatif (No Call)</div><div class="wa-popup-num">0813-9229-8821</div></div></a>
     </div>
     <div style="position:relative" onclick="toggleWA()">
       <a class="wa-float-btn">

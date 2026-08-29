@@ -22,4 +22,4 @@ Allow: /
 User-agent: ClaudeBot
 Allow: /
 
-Sitemap: https://murah-plastic.imangoess78.workers.dev/sitemap.xml
+Sitemap: https://proindustri.com/sitemap.xml

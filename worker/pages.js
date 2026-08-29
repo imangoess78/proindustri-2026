@@ -47,7 +47,12 @@ const IC_CSS = '.ic{width:1.1em;height:1.1em;vertical-align:-0.15em;display:inli
 
 function layout({ title, desc, canonical, ogImage, jsonLd, body, bodyClass = '', script = '' }) {
   const descText = truncate(desc || TAGLINE, 158);
-  const jsonLdHtml = jsonLd ? `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>` : '';
+  // Support array of JSON-LD objects (Article + FAQPage + BreadcrumbList)
+  let jsonLdHtml = '';
+  if (jsonLd) {
+    const arr = Array.isArray(jsonLd) ? jsonLd : [jsonLd];
+    jsonLdHtml = arr.map(j => `<script type="application/ld+json">${JSON.stringify(j)}</script>`).join('\n');
+  }
   return `<!DOCTYPE html>
 <html lang="id">
 <head>
@@ -68,7 +73,7 @@ ${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(descText)}">
 ${ogImage ? `<meta name="twitter:image" content="${esc(ogImage)}">` : ''}
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23F97316'/><text x='50' y='68' font-size='50' font-weight='900' fill='white' text-anchor='middle'>M</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230EA5E9'/><text x='50' y='68' font-size='50' font-weight='900' fill='white' text-anchor='middle'>P</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -146,14 +151,14 @@ export async function renderProduct(env, p) {
     </div>`).join('');
 
   // Badges
-  const badges = ['📦 Ready Stock', '🚚 Gratis Ongkir min. Rp500rb'];
-  if (p.specs && p.specs['Garansi']) badges.unshift('✅ Garansi Resmi');
+  const badges = ['<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg> Ready Stock', '<svg class="ic" aria-hidden="true"><use href="#i-truck"/></svg> Gratis Ongkir min. Rp500rb'];
+  if (p.specs && p.specs['Garansi']) badges.unshift('<svg class="ic" aria-hidden="true"><use href="#i-shield-check"/></svg> Garansi Resmi');
   const discTiers = [{ min: 100, pct: 20 }, { min: 50, pct: 10 }, { min: 10, pct: 5 }, { min: 5, pct: 2 }];
 
-  const minPackNote = `📦 Minimum <strong>1 unit</strong> per produk. Boleh campur varian!`;
+  const minPackNote = `<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg> Minimum <strong>1 unit</strong> per produk. Boleh campur varian!`;
 
   const relatedHtml = related.length ? `
-    <div class="pd-related-title">🛍️ Produk Serupa</div>
+    <div class="pd-related-title"><svg class="ic" aria-hidden="true"><use href="#i-shopping-bag"/></svg> Produk Serupa</div>
     <div class="p-grid">
       ${related.map(r => homeCard(r)).join('')}
     </div>` : '';
@@ -183,7 +188,7 @@ export async function renderProduct(env, p) {
     <div class="pd-main">
       <div class="pd-gallery">
         <div class="pd-img-box">
-          ${img ? `<img src="${esc(img)}" alt="${esc(p.name)}" onerror="this.outerHTML='<div style=&quot;display:flex;align-items:center;justify-content:center;height:100%;font-size:72px&quot;>📦</div>'">` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:72px">📦</div>'}
+          ${img ? `<img src="${esc(img)}" alt="${esc(p.name)}" onerror="this.outerHTML='<div style=&quot;display:flex;align-items:center;justify-content:center;height:100%;font-size:72px&quot;><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg></div>'">` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:72px"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg></div>'}
         </div>
         <div class="pd-badges">${badges.map(b => `<span class="pd-badge">${b}</span>`).join('')}</div>
       </div>
@@ -209,35 +214,35 @@ export async function renderProduct(env, p) {
         <div id="pdSumBox" class="pd-sum-box" style="background:var(--light);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin:16px 0"></div>
 
         <div class="pd-actions">
-          <button class="pd-cart-btn" id="addCartBtn" onclick="doCart(false)">🛒 Tambah ke Keranjang</button>
-          <button class="pd-buy-btn" id="buyBtn" onclick="doCart(true)">⚡ Beli Sekarang</button>
+          <button class="pd-cart-btn" id="addCartBtn" onclick="doCart(false)"><svg class="ic" aria-hidden="true"><use href="#i-shopping-cart"/></svg> Tambah ke Keranjang</button>
+          <button class="pd-buy-btn" id="buyBtn" onclick="doCart(true)"><svg class="ic" aria-hidden="true"><use href="#i-zap"/></svg> Beli Sekarang</button>
         </div>
         <div style="margin-top:10px">
-          <button class="wl-btn" id="wlBtn" onclick="toggleWish()">🤍 Simpan ke Wishlist</button>
+          <button class="wl-btn" id="wlBtn" onclick="toggleWish()"><svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg> Simpan ke Wishlist</button>
         </div>
         <div id="toastMsg" class="toast"></div>
       </div>
     </div>
 
     <div class="pd-panel">
-      <div class="pd-panel-title">📋 Spesifikasi Produk</div>
+      <div class="pd-panel-title"><svg class="ic" aria-hidden="true"><use href="#i-clipboard-list"/></svg> Spesifikasi Produk</div>
       <table class="pd-specs-table">${specRows}</table>
     </div>
 
     <div class="pd-panel">
-      <div class="pd-panel-title">📝 Deskripsi Produk</div>
+      <div class="pd-panel-title"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg> Deskripsi Produk</div>
       <div class="pd-desc">${esc(p.desc || 'Tidak ada deskripsi.')}</div>
     </div>
 
     <div class="pd-panel">
-      <div class="pd-panel-title">⭐ Review Pembeli</div>
+      <div class="pd-panel-title"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg> Review Pembeli</div>
       <div id="reviewBox">
-        <div style="font-size:13px;color:var(--muted);padding:8px 0">⏳ Memuat review...</div>
+        <div style="font-size:13px;color:var(--muted);padding:8px 0"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg> Memuat review...</div>
       </div>
     </div>
 
     <div class="pd-panel">
-      <div class="pd-panel-title">💬 Diskusi Produk (${qnaList.length})</div>
+      <div class="pd-panel-title"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg> Diskusi Produk (${qnaList.length})</div>
       <div id="qnaBox">
         ${qnaList.length === 0 ? '<div style="font-size:13px;color:var(--muted);padding:8px 0">Belum ada pertanyaan. Jadi yang pertama bertanya tentang produk ini!</div>' :
           qnaList.map(q => `
@@ -246,23 +251,23 @@ export async function renderProduct(env, p) {
               <div style="width:26px;height:26px;border-radius:50%;background:var(--red);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800">${esc((maskName(q.user_name)||'A')[0])}</div>
               <div><div style="font-size:12px;font-weight:800;color:var(--dark)">${esc(maskName(q.user_name))}</div><div style="font-size:11px;color:var(--muted)">${q.date ? new Date(q.date).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}) : ''}</div></div>
             </div>
-            <div style="font-size:13px;color:var(--dark)">❔ ${esc(q.question)}</div>
-            ${q.answer ? `<div style="background:var(--light);border-radius:8px;padding:10px 12px;margin-top:8px;font-size:13px;color:var(--mid)">💬 <strong>Jawaban Toko:</strong> ${esc(q.answer)}</div>` : '<div style="font-size:12px;color:var(--muted);margin-top:6px;font-style:italic">⏳ Menunggu jawaban dari penjual</div>'}
+            <div style="font-size:13px;color:var(--dark)"><svg class="ic" aria-hidden="true"><use href="#i-help-circle"/></svg> ${esc(q.question)}</div>
+            ${q.answer ? `<div style="background:var(--light);border-radius:8px;padding:10px 12px;margin-top:8px;font-size:13px;color:var(--mid)"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg> <strong>Jawaban Toko:</strong> ${esc(q.answer)}</div>` : '<div style="font-size:12px;color:var(--muted);margin-top:6px;font-style:italic"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg> Menunggu jawaban dari penjual</div>'}
           </div>`).join('')}
         <div id="qnaLoginBox" style="margin-top:12px;padding:12px;background:var(--light);border-radius:8px;text-align:center;font-size:13px;color:var(--muted)">
-          🔒 <a href="#" onclick="MP.openAuth('login');return false" style="color:var(--red);font-weight:700;text-decoration:underline">Masuk</a> untuk bertanya
+          <svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg> <a href="#" onclick="MP.openAuth('login');return false" style="color:var(--red);font-weight:700;text-decoration:underline">Masuk</a> untuk bertanya
         </div>
         <div id="qnaForm" style="display:none;margin-top:12px">
           <textarea id="qnaQuestion" class="rv-textarea" placeholder="Tanya apa aja soal produk ini, mis. bahan, ketebalan, cara pesan..." style="min-height:70px"></textarea>
-          <button class="btn-red" style="border:none;cursor:pointer;margin-top:8px" onclick="submitQna()">📤 Kirim Pertanyaan</button>
+          <button class="btn-red" style="border:none;cursor:pointer;margin-top:8px" onclick="submitQna()"><svg class="ic" aria-hidden="true"><use href="#i-send"/></svg> Kirim Pertanyaan</button>
         </div>
       </div>
     </div>
 
     <div class="pd-panel">
-      <div class="pd-panel-title">💬 Butuh Bantuan?</div>
+      <div class="pd-panel-title"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg> Butuh Bantuan?</div>
       <p style="font-size:13px;color:var(--mid);line-height:1.7;margin-bottom:14px">Punya pertanyaan soal produk ini, ukuran, atau pesan partai besar? Tim kami siap bantu via WhatsApp.</p>
-      <a class="btn-red" href="${WA_STORE}?text=${encodeURIComponent('Halo, saya mau tanya produk: ' + p.name)}" target="_blank" rel="noopener">💬 Chat WhatsApp</a>
+      <a class="btn-red" href="${WA_STORE}?text=${encodeURIComponent('Halo, saya mau tanya produk: ' + p.name)}" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg> Chat WhatsApp</a>
     </div>
 
     ${relatedHtml}
@@ -312,13 +317,13 @@ export async function renderProduct(env, p) {
     const disc = Math.round(sub * pct / 100);
     const total = sub - disc;
     document.getElementById('pdPrice').textContent = MP.fmt(curPrice);
-    document.getElementById('qtyHint').textContent = pct > 0 ? '🏷️ Diskon ' + pct + '% berlaku' : '';
+    document.getElementById('qtyHint').textContent = pct > 0 ? '<svg class="ic" aria-hidden="true"><use href="#i-tag"/></svg> Diskon ' + pct + '% berlaku' : '';
     document.getElementById('pdSumBox').innerHTML =
       '<div class="sum-row"><span>Harga Satuan</span><span>' + MP.fmt(curPrice) + '</span></div>' +
       '<div class="sum-row"><span>Jumlah</span><span>' + qty + ' unit</span></div>' +
       '<div class="sum-row"><span>Subtotal</span><span>' + MP.fmt(sub) + '</span></div>' +
       (pct > 0
-        ? '<div class="sum-row"><span style="color:#16A34A;font-weight:700">🏷️ Diskon ' + pct + '%</span><span class="neg">-' + MP.fmt(disc) + '</span></div>'
+        ? '<div class="sum-row"><span style="color:#16A34A;font-weight:700"><svg class="ic" aria-hidden="true"><use href="#i-tag"/></svg> Diskon ' + pct + '%</span><span class="neg">-' + MP.fmt(disc) + '</span></div>'
         : '') +
       '<div class="sum-row grand"><span>Total Harga</span><span>' + MP.fmt(total) + '</span></div>';
   }
@@ -330,11 +335,11 @@ export async function renderProduct(env, p) {
     const vname = sel ? sel.querySelector('.pd-var-name').textContent : 'Standar';
     MP.addToCart(pid, pname, vname, curPrice, qty, pimg);
     if (buy) {
-      showToast('⚡ ' + qty + ' unit ' + vname + ' → checkout');
+      showToast('<svg class="ic" aria-hidden="true"><use href="#i-zap"/></svg> ' + qty + ' unit ' + vname + ' → checkout');
       setTimeout(() => location.href = '/checkout', 600);
     } else {
       // Tetap di halaman supaya user bisa tambah varian lain / lanjut belanja
-      showCartToast('✅ ' + qty + ' unit ' + vname + ' masuk keranjang');
+      showCartToast('<svg class="ic" aria-hidden="true"><use href="#i-check-circle-2"/></svg> ' + qty + ' unit ' + vname + ' masuk keranjang');
     }
   }
   function showCartToast(msg) {
@@ -353,7 +358,7 @@ export async function renderProduct(env, p) {
   let wlOn = false;
   function wlBtnHtml() {
     const b = document.getElementById('wlBtn');
-    if (b) b.innerHTML = wlOn ? '❤️ <span style="font-size:12px;font-weight:700">Di Wishlist</span>' : '🤍 <span style="font-size:12px;font-weight:700">Simpan ke Wishlist</span>';
+    if (b) b.innerHTML = wlOn ? '<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg> <span style="font-size:12px;font-weight:700">Di Wishlist</span>' : '<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg> <span style="font-size:12px;font-weight:700">Simpan ke Wishlist</span>';
   }
   async function initWish() {
     const u = MP.getUser(), tok = MP.getToken();
@@ -378,7 +383,7 @@ export async function renderProduct(env, p) {
       } else {
         await fetch('/api/account/wishlist', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok }, body: JSON.stringify({ product_id: pid }) });
         wlOn = true;
-        showToast('❤️ Disimpan ke wishlist');
+        showToast('<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg> Disimpan ke wishlist');
       }
       wlBtnHtml();
     } catch (e) { showToast('Gagal memproses wishlist'); }
@@ -411,10 +416,10 @@ export async function renderProduct(env, p) {
           return '<div class="rv-item"><div class="rv-item-head"><span class="rv-item-name">' + escT(r.user_name ? r.user_name.slice(0, 2) + '***' : 'Anonim') + v + '</span><span class="rv-item-date">' + d + '</span></div><div class="rv-item-stars">' + '★'.repeat(Math.max(1, Math.min(5, r.rating))) + '</div><div class="rv-item-comment">' + escT(r.comment) + '</div></div>';
         }).join('');
       } else {
-        items = '<div class="wl-empty" style="padding:24px"><div class="wl-empty-icon">💬</div><div class="akun-empty-sub" style="font-size:13px;color:var(--muted)">Belum ada review. Jadilah yang pertama memberi review!</div></div>';
+        items = '<div class="wl-empty" style="padding:24px"><div class="wl-empty-icon"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg></div><div class="akun-empty-sub" style="font-size:13px;color:var(--muted)">Belum ada review. Jadilah yang pertama memberi review!</div></div>';
       }
       let html = '';
-      if (list.length) html += '<div style="font-size:13px;font-weight:800;color:var(--dark);margin-bottom:12px">⭐ ' + avg + ' / 5 dari ' + list.length + ' review</div>';
+      if (list.length) html += '<div style="font-size:13px;font-weight:800;color:var(--dark);margin-bottom:12px"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg> ' + avg + ' / 5 dari ' + list.length + ' review</div>';
       html += '<div class="rv-list" style="margin-top:0">' + items + '</div>';
       if (u) {
         try {
@@ -426,15 +431,15 @@ export async function renderProduct(env, p) {
             canReview = orders.some(function(o){return o.status==='Selesai'&&JSON.stringify(o.items||[]).includes(pname);});
           }
           if (canReview) {
-            html += '<div style="border-top:1px dashed #ddd;margin-top:14px;padding-top:14px"><div style="font-size:13px;font-weight:900;color:var(--dark);margin-bottom:8px">✍️ Tulis Review Kamu</div><div class="rv-stars" id="rvStars">' + starRow() + '</div><textarea class="rv-textarea" id="rvComment" placeholder="Bagaimana kualitas produk ini? Ceritakan pengalamanmu... (wajib)" maxlength="1000"></textarea><div style="margin-top:8px;display:flex;gap:8px;align-items:center"><button class="akun-form-save" onclick="submitReview()">Kirim Review</button><span id="rvStatus" style="font-size:12px;color:var(--muted)"></span></div></div>';
+            html += '<div style="border-top:1px dashed #ddd;margin-top:14px;padding-top:14px"><div style="font-size:13px;font-weight:900;color:var(--dark);margin-bottom:8px"><svg class="ic" aria-hidden="true"><use href="#i-edit"/></svg> Tulis Review Kamu</div><div class="rv-stars" id="rvStars">' + starRow() + '</div><textarea class="rv-textarea" id="rvComment" placeholder="Bagaimana kualitas produk ini? Ceritakan pengalamanmu... (wajib)" maxlength="1000"></textarea><div style="margin-top:8px;display:flex;gap:8px;align-items:center"><button class="akun-form-save" onclick="submitReview()">Kirim Review</button><span id="rvStatus" style="font-size:12px;color:var(--muted)"></span></div></div>';
           } else {
-            html += '<div style="border-top:1px dashed #ddd;margin-top:14px;padding-top:12px;font-size:12.5px;color:var(--muted)">🛍️ Beli produk ini dan tunggu pesanan Selesai untuk memberi review.</div>';
+            html += '<div style="border-top:1px dashed #ddd;margin-top:14px;padding-top:12px;font-size:12.5px;color:var(--muted)"><svg class="ic" aria-hidden="true"><use href="#i-shopping-bag"/></svg> Beli produk ini dan tunggu pesanan Selesai untuk memberi review.</div>';
           }
         } catch(e) {
-          html += '<div style="border-top:1px dashed #ddd;margin-top:14px;padding-top:12px;font-size:12.5px;color:var(--muted)">🔐 <a href="javascript:MP.openAuth(\\'login\\')" style="color:var(--red);font-weight:700">Masuk</a> untuk menulis review.</div>';
+          html += '<div style="border-top:1px dashed #ddd;margin-top:14px;padding-top:12px;font-size:12.5px;color:var(--muted)"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg> <a href="javascript:MP.openAuth(\\'login\\')" style="color:var(--red);font-weight:700">Masuk</a> untuk menulis review.</div>';
         }
       } else {
-        html += '<div style="border-top:1px dashed #ddd;margin-top:14px;padding-top:12px;font-size:12.5px;color:var(--muted)">🔐 <a href="javascript:MP.openAuth(\\\'login\\\')" style="color:var(--red);font-weight:700">Masuk</a> untuk menulis review.</div>';
+        html += '<div style="border-top:1px dashed #ddd;margin-top:14px;padding-top:12px;font-size:12.5px;color:var(--muted)"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg> <a href="javascript:MP.openAuth(\\\'login\\\')" style="color:var(--red);font-weight:700">Masuk</a> untuk menulis review.</div>';
       }
       box.innerHTML = html;
     } catch (e) {
@@ -446,8 +451,8 @@ export async function renderProduct(env, p) {
     const status = document.getElementById('rvStatus');
     const u = MP.getUser(), tok = MP.getToken();
     if (!u || !tok) { MP.openAuth('login'); return; }
-    if (!myRating) { status.textContent = '⚠️ Pilih rating dulu (1-5 bintang)'; return; }
-    if (!comment) { status.textContent = '⚠️ Tulis komentar review dulu'; return; }
+    if (!myRating) { status.textContent = '<svg class="ic" aria-hidden="true"><use href="#i-alert-triangle"/></svg> Pilih rating dulu (1-5 bintang)'; return; }
+    if (!comment) { status.textContent = '<svg class="ic" aria-hidden="true"><use href="#i-alert-triangle"/></svg> Tulis komentar review dulu'; return; }
     status.textContent = 'Mengirim...';
     try {
       const res = await fetch('/api/reviews', {
@@ -457,7 +462,7 @@ export async function renderProduct(env, p) {
       });
       if (res.ok) {
         status.style.color = '#16A34A';
-        status.textContent = '✔ Review terkirim! Terima kasih.';
+        status.textContent = '<svg class="ic" aria-hidden="true"><use href="#i-check-circle-2"/></svg> Review terkirim! Terima kasih.';
         myRating = 0;
         document.getElementById('rvComment').value = '';
         const rv = document.getElementById('rvStars');
@@ -465,9 +470,9 @@ export async function renderProduct(env, p) {
         setTimeout(loadReviews, 1200);
       } else {
         const e = await res.json().catch(() => ({}));
-        status.textContent = '❌ ' + (e.error || 'Gagal mengirim review');
+        status.textContent = '<svg class="ic" aria-hidden="true"><use href="#i-x-circle"/></svg> ' + (e.error || 'Gagal mengirim review');
       }
-    } catch (e) { status.textContent = '❌ Gagal mengirim review'; }
+    } catch (e) { status.textContent = '<svg class="ic" aria-hidden="true"><use href="#i-x-circle"/></svg> Gagal mengirim review'; }
   }
   initWish();
   loadReviews();
@@ -493,9 +498,9 @@ export async function renderProduct(env, p) {
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
         body: JSON.stringify({ id: 'Q-' + Date.now().toString(36).toUpperCase(), productId: pid, productName: pname, userName: u.name, question: q.trim(), date: new Date().toISOString(), answer: null, answerDate: null })
       });
-      if (res.ok) { alert('Pertanyaan terkirim! ✅'); location.reload(); }
-      else { const e = await res.json().catch(()=>({})); alert('❌ ' + (e.error || 'Gagal mengirim pertanyaan')); }
-    } catch (e) { alert('❌ Gagal mengirim pertanyaan'); }
+      if (res.ok) { alert('Pertanyaan terkirim! <svg class="ic" aria-hidden="true"><use href="#i-check-circle-2"/></svg>'); location.reload(); }
+      else { const e = await res.json().catch(()=>({})); alert('<svg class="ic" aria-hidden="true"><use href="#i-x-circle"/></svg> ' + (e.error || 'Gagal mengirim pertanyaan')); }
+    } catch (e) { alert('<svg class="ic" aria-hidden="true"><use href="#i-x-circle"/></svg> Gagal mengirim pertanyaan'); }
   }
   ${QUICKMODAL_SCRIPT}`;
 
@@ -515,18 +520,74 @@ export async function renderPost(env, slug) {
   const img = (row.image || '').replace(/^https:\/\/pub-[a-f0-9]+\.r2\.dev\//, '/img/');
   const fullImg = img ? (img.startsWith('http') ? img : ORIGIN + img) : '';
 
-  const jsonLd = {
+  // ── Extract FAQ from content (H3 + following P) for FAQPage schema ──
+  const faqPairs = [];
+  try {
+    const h3Re = /<h3[^>]*>(.*?)<\/h3>\s*<p[^>]*>(.*?)<\/p>/gis;
+    let m;
+    while ((m = h3Re.exec(row.content || '')) !== null && faqPairs.length < 8) {
+      const q = stripHtml(m[1]).trim();
+      const a = stripHtml(m[2]).trim();
+      if (q && a && q.length > 10 && a.length > 20) faqPairs.push({ q, a });
+    }
+  } catch (e) {}
+
+  const articleLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: title,
     image: fullImg ? [fullImg] : undefined,
     datePublished: row.created_at,
     dateModified: row.updated_at || row.created_at,
-    author: { '@type': 'Organization', name: SITE_NAME },
-    publisher: { '@type': 'Organization', name: SITE_NAME },
+    author: { '@type': 'Organization', name: SITE_NAME, url: ORIGIN },
+    publisher: { '@type': 'Organization', name: SITE_NAME, logo: { '@type': 'ImageObject', url: ORIGIN + '/assets/logo.png' } },
     description: truncate(stripHtml(row.content || ''), 155),
     mainEntityOfPage: ORIGIN + '/artikel/' + slug
   };
+
+  const breadcrumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: ORIGIN + '/' },
+      { '@type': 'ListItem', position: 2, name: 'Artikel', item: ORIGIN + '/artikel' },
+      { '@type': 'ListItem', position: 3, name: title, item: ORIGIN + '/artikel/' + slug }
+    ]
+  };
+
+  const jsonLdArr = [articleLd, breadcrumbLd];
+  if (faqPairs.length >= 2) {
+    jsonLdArr.push({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqPairs.map(f => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a }
+      }))
+    });
+  }
+
+  // ── Related articles (same category or latest) ──
+  let relatedHtml = '';
+  try {
+    const rel = await env.DB.prepare(
+      "SELECT slug, title, category, image FROM articles WHERE status='Published' AND slug != ? ORDER BY CASE WHEN category = ? THEN 0 ELSE 1 END, created_at DESC LIMIT 3"
+    ).bind(slug, row.category || '').all();
+    const rels = rel.results || [];
+    if (rels.length) {
+      relatedHtml = `<div class="related-articles" style="margin-top:32px;padding-top:24px;border-top:1px solid #eee">
+        <h3 style="font-size:18px;font-weight:800;margin-bottom:16px"><svg class="ic" aria-hidden="true"><use href="#i-book-open"/></svg> Artikel Terkait</h3>
+        <div class="a-grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))">${rels.map(r => {
+          const ri = (r.image || '').replace(/^https:\/\/pub-[a-f0-9]+\.r2\.dev\//, '/img/');
+          return `<a class="a-card" href="/artikel/${esc(r.slug)}">
+            ${ri ? `<div class="a-thumb"><img src="${esc(ri)}" alt="${esc(r.title)}" loading="lazy" onerror="this.style.display='none'"></div>` : `<div class="a-thumb"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg></div>`}
+            <div class="a-body"><div class="a-tag">${esc(r.category || 'Blog')}</div><div class="a-title" style="font-size:14px">${esc(r.title)}</div></div>
+          </a>`;
+        }).join('')}</div>
+      </div>`;
+    }
+  } catch (e) {}
 
   const body = `
   <div class="wrap">
@@ -536,18 +597,19 @@ export async function renderPost(env, slug) {
         <div class="post-cat">${esc(row.category || 'Blog')}</div>
         <h1 class="post-title">${esc(title)}</h1>
         <div class="post-meta">
-          <span>📅 ${fmtDate(row.created_at)}</span>
-          <span>👁️ ${Number(row.views || 0) + 1}x dibaca</span>
+          <span><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg> ${fmtDate(row.created_at)}</span>
+          <span><svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg> ${Number(row.views || 0) + 1}x dibaca</span>
         </div>
       </div>
       ${img ? `<div class="post-thumb"><img src="${esc(img)}" alt="${esc(title)}" onerror="this.style.display='none'"></div>` : ''}
       <div class="post-body">
         <div class="post-content">${row.content || '<p>Konten belum tersedia.</p>'}</div>
+        ${relatedHtml}
         <div class="post-share">
           <span class="post-share-label">Bagikan:</span>
-          <button class="share-btn" onclick="shareWA()">💬 WhatsApp</button>
-          <button class="share-btn" onclick="shareFB()">📘 Facebook</button>
-          <button class="share-btn" onclick="shareTW()">🐦 X / Twitter</button>
+          <button class="share-btn" onclick="shareWA()"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg> WhatsApp</button>
+          <button class="share-btn" onclick="shareFB()"><svg class="ic" aria-hidden="true"><use href="#i-facebook"/></svg> Facebook</button>
+          <button class="share-btn" onclick="shareTW()"><svg class="ic" aria-hidden="true"><use href="#i-twitter"/></svg> X / Twitter</button>
         </div>
       </div>
     </article>
@@ -558,7 +620,7 @@ export async function renderPost(env, slug) {
   function shareFB() { window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(location.href), '_blank'); }
   function shareTW() { window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(document.title + ' ' + location.href), '_blank'); }`;
 
-  return { html: layout({ title: `${title} — ${SITE_NAME}`, desc: truncate(stripHtml(row.content || ''), 155), canonical: ORIGIN + '/artikel/' + slug, ogImage: fullImg, jsonLd, body, bodyClass: 'page-post', script }), script };
+  return { html: layout({ title: `${title} — ${SITE_NAME}`, desc: truncate(stripHtml(row.content || ''), 155), canonical: ORIGIN + '/artikel/' + slug, ogImage: fullImg, jsonLd: jsonLdArr, body, bodyClass: 'page-post', script }), script };
 }
 
 // ── Seed artikel default (hanya jika tabel kosong) ──
@@ -637,21 +699,21 @@ export async function renderArticles(env) {
   let cards;
   if (!results.length) {
     cards = `<div class="cart-empty" style="padding:60px 0">
-      <div class="cart-empty-icon">📝</div>
+      <div class="cart-empty-icon"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg></div>
       <div class="cart-empty-title">Belum Ada Artikel</div>
       <div class="cart-empty-sub">Artikel & tips seputar produk industri akan segera hadir. Sambil menunggu, yuk lihat koleksi produk kami.</div>
-      <a class="btn-red" href="/#produkSection">🛒 Lihat Produk</a>
+      <a class="btn-red" href="/#produkSection"><svg class="ic" aria-hidden="true"><use href="#i-shopping-cart"/></svg> Lihat Produk</a>
     </div>`;
   } else {
     cards = `<div class="a-grid">${results.map(a => {
       const img = (a.image || '').replace(/^https:\/\/pub-[a-f0-9]+\.r2\.dev\//, '/img/');
       return `<a class="a-card" href="/artikel/${esc(a.slug)}">
-        ${img ? `<div class="a-thumb"><img src="${esc(img)}" alt="${esc(a.title)}" loading="lazy" onerror="this.parentElement.textContent='📝'"></div>` : `<div class="a-thumb">📝</div>`}
+        ${img ? `<div class="a-thumb"><img src="${esc(img)}" alt="${esc(a.title)}" loading="lazy" onerror="this.parentElement.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg>'"></div>` : `<div class="a-thumb"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg></div>`}
         <div class="a-body">
           <div class="a-tag">${esc(a.category || 'Blog')}</div>
           <div class="a-title">${esc(a.title)}</div>
           <div class="a-desc">${esc(truncate(stripHtml(a.content || ''), 110))}</div>
-          <div class="a-meta">📅 ${fmtDate(a.created_at)} · 👁️ ${Number(a.views || 0)}x dibaca</div>
+          <div class="a-meta"><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg> ${fmtDate(a.created_at)} · <svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg> ${Number(a.views || 0)}x dibaca</div>
           <div class="a-read">Baca selengkapnya →</div>
         </div>
       </a>`;}).join('')}</div>`;
@@ -660,7 +722,7 @@ export async function renderArticles(env) {
   const body = `
   <div class="wrap">
     <div class="page-head">
-      <div class="page-title">📝 Artikel & Tips</div>
+      <div class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg> Artikel & Tips</div>
       <div class="page-sub">Panduan memilih mesin & tools industri, tips untuk bengkel dan pabrik, dan info seputar produk industri.</div>
     </div>
     ${cards}
@@ -679,11 +741,11 @@ function maskName(n){
 // ── Kartu produk (sama persis dengan card di home — index.html renderProducts) ──
 const BESTSELLER_IDS = ['29463366459','19626400134'];
 // Script wishlist untuk halaman SSR (shop/archive/kategori/produk)
-const WISH_SCRIPT = `function cardWish(id,e){if(e&&e.preventDefault)e.preventDefault();if(e&&e.stopPropagation)e.stopPropagation();let w=JSON.parse(localStorage.getItem('mp_wish')||'[]');const i=w.indexOf(id);const had=i>-1;if(had)w.splice(i,1);else w.push(id);localStorage.setItem('mp_wish',JSON.stringify(w));const b=e&&e.currentTarget;if(b){b.classList.toggle('active',!had);b.textContent=had?'🤍':'❤️';}const tok=localStorage.getItem('mp_token');if(tok){const h={'Authorization':'Bearer '+tok};if(had){fetch('/api/account/wishlist?product_id='+encodeURIComponent(id),{method:'DELETE',headers:h}).catch(function(){});}else{fetch('/api/account/wishlist',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},h),body:JSON.stringify({product_id:id})}).catch(function(){});}}}
+const WISH_SCRIPT = `function cardWish(id,e){if(e&&e.preventDefault)e.preventDefault();if(e&&e.stopPropagation)e.stopPropagation();let w=JSON.parse(localStorage.getItem('mp_wish')||'[]');const i=w.indexOf(id);const had=i>-1;if(had)w.splice(i,1);else w.push(id);localStorage.setItem('mp_wish',JSON.stringify(w));const b=e&&e.currentTarget;if(b){b.classList.toggle('active',!had);b.textContent=had?'<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>':'<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>';}const tok=localStorage.getItem('mp_token');if(tok){const h={'Authorization':'Bearer '+tok};if(had){fetch('/api/account/wishlist?product_id='+encodeURIComponent(id),{method:'DELETE',headers:h}).catch(function(){});}else{fetch('/api/account/wishlist',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},h),body:JSON.stringify({product_id:id})}).catch(function(){});}}}
 function quickAdd(btn,e){if(e){e.preventDefault();e.stopPropagation();}const d=btn.dataset;try{let c=JSON.parse(localStorage.getItem('mp_cart')||'[]');const k=d.id+'|'+d.variant;const ex=c.find(x=>x.key===k);if(ex){ex.qty+=Number(d.minpack||1);}else{c.push({key:k,productId:d.id,slug:d.slug,productName:d.name,variantName:d.variant,price:Number(d.price),qty:Number(d.minpack||1),img:d.img});}localStorage.setItem('mp_cart',JSON.stringify(c));if(window.MP&&MP.updateCartBadge)MP.updateCartBadge();showToast('✓ Ditambahkan ke keranjang');}catch(err){alert('Gagal menambahkan ke keranjang');}}
 function showToast(msg){var t=document.createElement('div');t.textContent=msg;Object.assign(t.style,{position:'fixed',bottom:'20px',left:'50%',transform:'translateX(-50%)',background:'#16A34A',color:'white',padding:'10px 24px',borderRadius:'30px',fontSize:'14px',fontWeight:'700',zIndex:9999,boxShadow:'0 4px 16px rgba(0,0,0,0.2)',transition:'opacity 0.3s'});document.body.appendChild(t);setTimeout(function(){t.style.opacity='0';setTimeout(function(){t.remove()},300)},2000);}
-document.querySelectorAll('.wish-btn').forEach(function(b){if(JSON.parse(localStorage.getItem('mp_wish')||'[]').includes(b.getAttribute('data-id'))){b.classList.add('active');b.textContent='❤️';}});
-(function(){const tok=localStorage.getItem('mp_token');if(!tok)return;fetch('/api/account/wishlist/ids',{headers:{'Authorization':'Bearer '+tok}}).then(function(r){return r.ok?r.json():Promise.reject();}).then(function(ids){if(!Array.isArray(ids))return;document.querySelectorAll('.wish-btn').forEach(function(b){if(ids.indexOf(b.getAttribute('data-id'))>-1){b.classList.add('active');b.textContent='❤️';}});}).catch(function(){});})();`;
+document.querySelectorAll('.wish-btn').forEach(function(b){if(JSON.parse(localStorage.getItem('mp_wish')||'[]').includes(b.getAttribute('data-id'))){b.classList.add('active');b.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>';}});
+(function(){const tok=localStorage.getItem('mp_token');if(!tok)return;fetch('/api/account/wishlist/ids',{headers:{'Authorization':'Bearer '+tok}}).then(function(r){return r.ok?r.json():Promise.reject();}).then(function(ids){if(!Array.isArray(ids))return;document.querySelectorAll('.wish-btn').forEach(function(b){if(ids.indexOf(b.getAttribute('data-id'))>-1){b.classList.add('active');b.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>';}});}).catch(function(){});})();`;
 // Script pemilih varian untuk kartu produk di halaman SSR (override quickAdd lama:
 // klik "+ Keranjang" → pilih varian + qty dulu, TIDAK langsung masuk keranjang)
 const QUICKMODAL_SCRIPT = `
@@ -705,7 +767,7 @@ function qaSumHtml(){
   var h='<div class="qa-sum-row"><span>Harga Satuan</span><span>'+qaFmt(qaV.price)+'</span></div>';
   h+='<div class="qa-sum-row"><span>Jumlah</span><span>'+qaQ+' unit</span></div>';
   h+='<div class="qa-sum-row"><span>Subtotal</span><span>'+qaFmt(sub)+'</span></div>';
-  if(disc>0)h+='<div class="qa-sum-row"><span style="color:#16A34A;font-weight:700">🏷️ Diskon '+disc+'%</span><span class="neg">-'+qaFmt(discAmt)+'</span></div>';
+  if(disc>0)h+='<div class="qa-sum-row"><span style="color:#16A34A;font-weight:700"><svg class="ic" aria-hidden="true"><use href="#i-tag"/></svg> Diskon '+disc+'%</span><span class="neg">-'+qaFmt(discAmt)+'</span></div>';
   h+='<div class="qa-sum-row grand"><span>Total Harga</span><span>'+qaFmt(total)+'</span></div>';
   return h;
 }
@@ -721,7 +783,7 @@ function renderQA(){
   }
   var el=document.getElementById('qaModal');
   el.innerHTML='<div class="qa-head">'+
-    '<div class="qa-thumb">'+(p.img?'<img src="'+p.img+'" alt="" onerror="this.parentElement.innerHTML=\\'📦\\'">':'📦')+'</div>'+
+    '<div class="qa-thumb">'+(p.img?'<img src="'+p.img+'" alt="" onerror="this.parentElement.innerHTML=\\'<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg>\\'">':'<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg>')+'</div>'+
     '<div class="qa-name">'+escQA(p.name)+'</div>'+
     '<button class="qa-close-btn" onclick="closeQA()">✕</button></div>'+
     '<div class="qa-lbl">Pilih Varian</div>'+vsHtml+
@@ -730,7 +792,7 @@ function renderQA(){
     '<input type="number" id="qaQty" value="'+qaQ+'" min="'+(p.minpack||1)+'" step="1" inputmode="numeric" oninput="qaSet()" style="width:72px;text-align:center;font-weight:900;font-size:16px;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;background:white;color:var(--dark);font-family:var(--font)">'+
     '<button class="cqb" type="button" onclick="qaCh(1)">+</button></div>'+
     '<div class="qa-sum" id="qaSumBox">'+qaSumHtml()+'</div>'+
-    '<div class="qa-actions"><button class="qa-cart-btn" onclick="qaAdd(false)">🛒 Tambah ke Keranjang</button><button class="qa-buy-btn" onclick="qaAdd(true)">⚡ Beli Sekarang</button></div>';
+    '<div class="qa-actions"><button class="qa-cart-btn" onclick="qaAdd(false)"><svg class="ic" aria-hidden="true"><use href="#i-shopping-cart"/></svg> Tambah ke Keranjang</button><button class="qa-buy-btn" onclick="qaAdd(true)"><svg class="ic" aria-hidden="true"><use href="#i-zap"/></svg> Beli Sekarang</button></div>';
 }
 function qaAdd(buy){
   if(!qaD||!qaV)return;
@@ -738,7 +800,7 @@ function qaAdd(buy){
   if(window.MP&&MP.updateCartBadge)MP.updateCartBadge();
   closeQA();
   if(buy){setTimeout(function(){location.href='/checkout';},300);return;}
-  showQAToast('✅ '+qaQ+' unit '+qaV.name+' masuk keranjang');
+  showQAToast('<svg class="ic" aria-hidden="true"><use href="#i-check-circle-2"/></svg> '+qaQ+' unit '+qaV.name+' masuk keranjang');
 }
 function showQAToast(msg){
   var t=document.createElement('div');
@@ -770,7 +832,7 @@ function homeCard(p) {
   const name = esc(p.short_name || p.name);
   const tag = esc(p.category || '');
   const best = BESTSELLER_IDS.includes(p.id)
-    ? `<span class="p-pill" style="left:auto;right:8px;top:8px;background:var(--red);color:white">🔥 Terlaris</span>`
+    ? `<span class="p-pill" style="left:auto;right:8px;top:8px;background:var(--red);color:white"><svg class="ic" aria-hidden="true"><use href="#i-flame"/></svg> Terlaris</span>`
     : '';
   let vcount = 0, vFirst = null;
   try {
@@ -782,8 +844,8 @@ function homeCard(p) {
   } catch (e) {}
   const minPack = 5;
   const imgHtml = img
-    ? `<div class="p-img"><img src="${esc(img)}" alt="${name}" loading="lazy" onerror="this.parentElement.innerHTML='📦'"></div>`
-    : `<div class="p-img" style="display:flex;align-items:center;justify-content:center;font-size:42px">📦</div>`;
+    ? `<div class="p-img"><img src="${esc(img)}" alt="${name}" loading="lazy" onerror="this.parentElement.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg>'"></div>`
+    : `<div class="p-img" style="display:flex;align-items:center;justify-content:center;font-size:42px"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg></div>`;
   let variantsJson = '[]';
   try {
     const vsj = JSON.parse(p.variants || '[]');
@@ -795,7 +857,7 @@ function homeCard(p) {
       ${imgHtml}
       ${tag ? `<span class="p-pill">${tag}</span>` : ''}
       ${best}
-      <button class="wish-btn" data-id="${esc(p.id)}" onclick="cardWish('${esc(p.id)}',event)">🤍</button>
+      <button class="wish-btn" data-id="${esc(p.id)}" onclick="cardWish('${esc(p.id)}',event)"><svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg></button>
     </div>
     <div class="p-body">
       <div class="p-name">${name}</div>
@@ -828,7 +890,7 @@ export async function renderShop(env, searchQuery) {
   <div class="wrap">
     ${breadcrumb([{ href: '/shop', label: 'Shop' }])}
     <div class="shop-hero">
-      <h1>🛍️ Shop Produk ProIndustri</h1>
+      <h1><svg class="ic" aria-hidden="true"><use href="#i-shopping-bag"/></svg> Shop Produk ProIndustri</h1>
       <p>Temukan semua produk industri, tools, dan perlengkapan manufaktur grosir untuk bengkel & pabrik. Filter berdasarkan kategori, harga, dan ukuran dengan mudah.</p>
       <div class="shop-stats">
         <div class="shop-stat"><b>${products.length}</b><span>Produk</span></div>
@@ -840,15 +902,15 @@ export async function renderShop(env, searchQuery) {
     <div class="shop-layout">
       <aside class="shop-side" id="shopSide">
         <div class="shop-side-group">
-          <div class="shop-side-title">🔍 Cari Produk</div>
+          <div class="shop-side-title"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg> Cari Produk</div>
           <input class="shop-search" id="shopSearch" placeholder="Cari nama / ukuran..." oninput="applyShop()">
         </div>
         <div class="shop-side-group">
-          <div class="shop-side-title">📂 Kategori</div>
+          <div class="shop-side-title"><svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg> Kategori</div>
           ${catHtml}
         </div>
         <div class="shop-side-group">
-          <div class="shop-side-title">💰 Rentang Harga</div>
+          <div class="shop-side-title"><svg class="ic" aria-hidden="true"><use href="#i-banknote"/></svg> Rentang Harga</div>
           <div class="shop-range">
             <input type="number" id="priceMin" placeholder="Min" min="0" oninput="applyShop()">
             <span class="sep">–</span>
@@ -856,7 +918,7 @@ export async function renderShop(env, searchQuery) {
           </div>
         </div>
         <div class="shop-side-group">
-          <div class="shop-side-title">↕️ Urutkan</div>
+          <div class="shop-side-title"><svg class="ic" aria-hidden="true"><use href="#i-arrow-up-down"/></svg> Urutkan</div>
           <select class="shop-sort" id="shopSort" onchange="applyShop()">
             <option value="default">Default</option>
             <option value="priceAsc">Harga Terendah</option>
@@ -864,11 +926,11 @@ export async function renderShop(env, searchQuery) {
             <option value="nameAsc">Nama A–Z</option>
           </select>
         </div>
-        <button class="shop-reset" onclick="resetShop()">⟲ Reset Filter</button>
+        <button class="shop-reset" onclick="resetShop()"><svg class="ic" aria-hidden="true"><use href="#i-refresh-ccw"/></svg> Reset Filter</button>
       </aside>
       <main class="shop-main">
         <div class="shop-toolbar">
-          <button class="shop-filter-toggle" style="display:none" onclick="document.getElementById('shopSide').classList.toggle('open')">⚙️ Filter</button>
+          <button class="shop-filter-toggle" style="display:none" onclick="document.getElementById('shopSide').classList.toggle('open')"><svg class="ic" aria-hidden="true"><use href="#i-sliders-horizontal"/></svg> Filter</button>
           <div class="shop-count">Menampilkan <b id="shopTotal">${products.length}</b> produk</div>
           <select class="shop-sort shop-sort-mobile" id="shopSortM" onchange="document.getElementById('shopSort').value=this.value;applyShop()">
             <option value="default">Default</option>
@@ -891,7 +953,7 @@ export async function renderShop(env, searchQuery) {
       const q = String.fromCharCode(39);
       const price = p.min === p.max ? 'Rp' + Math.round(p.min).toLocaleString('id-ID') : 'Rp' + Math.round(p.min).toLocaleString('id-ID') + ' – Rp' + Math.round(p.max).toLocaleString('id-ID');
       const tag = (p.cat || '');
-      const best = ['29463366459','19626400134'].includes(p.id) ? '<span class="p-pill" style="left:auto;right:8px;top:8px;background:var(--red);color:white">🔥 Terlaris</span>' : '';
+      const best = ['29463366459','19626400134'].includes(p.id) ? '<span class="p-pill" style="left:auto;right:8px;top:8px;background:var(--red);color:white"><svg class="ic" aria-hidden="true"><use href="#i-flame"/></svg> Terlaris</span>' : '';
       const vs = p.variants || [];
       const vFirst = vs.filter(function(v){return Number(v.price)>0}).sort(function(a,b){return Number(a.price)-Number(b.price)})[0] || null;
       const vcount = vs.length;
@@ -902,12 +964,12 @@ export async function renderShop(env, searchQuery) {
         '<div class="p-img" style="position:relative">' + img +
         (tag ? '<span class="p-pill">' + tag.replace(/</g,'&lt;') + '</span>' : '') +
         best +
-        '<button class="wish-btn" data-id="' + p.id + '" onclick="cardWish(' + q + p.id + q + ',event)">' + (isWished(p.id) ? '❤️' : '🤍') + '</button></div>' +
+        '<button class="wish-btn" data-id="' + p.id + '" onclick="cardWish(' + q + p.id + q + ',event)">' + (isWished(p.id) ? '<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>' : '<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>') + '</button></div>' +
         '<div class="p-body"><div class="p-name">' + p.name.replace(/</g,'&lt;') + '</div><div class="p-price">' + price + '</div><div class="p-sub">Garansi ' + (p.specs && p.specs['Garansi'] ? p.specs['Garansi'] : 'Resmi') + '</div>' +
         (vcount ? '<div class="p-vars">' + vcount + ' pilihan varian</div>' : '') +
         '<button class="p-btn" ' + d + ' onclick="quickAdd(this,event)">+ Keranjang</button></div></a>';
     }
-    function cardWish(id,e){if(e&&e.preventDefault)e.preventDefault();if(e&&e.stopPropagation)e.stopPropagation();let w=JSON.parse(localStorage.getItem('mp_wish')||'[]');const i=w.indexOf(id);const had=i>-1;if(had)w.splice(i,1);else w.push(id);localStorage.setItem('mp_wish',JSON.stringify(w));const b=e&&e.currentTarget;if(b){b.classList.toggle('active',!had);b.textContent=had?'🤍':'❤️';}const tok=localStorage.getItem('mp_token');if(tok){const h={'Authorization':'Bearer '+tok};if(had){fetch('/api/account/wishlist?product_id='+encodeURIComponent(id),{method:'DELETE',headers:h}).catch(function(){});}else{fetch('/api/account/wishlist',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},h),body:JSON.stringify({product_id:id})}).catch(function(){});}}}
+    function cardWish(id,e){if(e&&e.preventDefault)e.preventDefault();if(e&&e.stopPropagation)e.stopPropagation();let w=JSON.parse(localStorage.getItem('mp_wish')||'[]');const i=w.indexOf(id);const had=i>-1;if(had)w.splice(i,1);else w.push(id);localStorage.setItem('mp_wish',JSON.stringify(w));const b=e&&e.currentTarget;if(b){b.classList.toggle('active',!had);b.textContent=had?'<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>':'<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>';}const tok=localStorage.getItem('mp_token');if(tok){const h={'Authorization':'Bearer '+tok};if(had){fetch('/api/account/wishlist?product_id='+encodeURIComponent(id),{method:'DELETE',headers:h}).catch(function(){});}else{fetch('/api/account/wishlist',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},h),body:JSON.stringify({product_id:id})}).catch(function(){});}}}
     function isWished(id){try{return JSON.parse(localStorage.getItem('mp_wish')||'[]').includes(id);}catch(err){return false;}}
     function quickAdd(btn,e){if(e){e.preventDefault();e.stopPropagation();}try{var c=JSON.parse(localStorage.getItem('mp_cart')||'[]');var d=btn.dataset;var k=d.id+'|'+d.variant;var ex=c.find(function(x){return x.key===k});if(ex){ex.qty+=Number(d.minpack||1);}else{c.push({key:k,productId:d.id,slug:d.slug,productName:d.name,variantName:d.variant,price:Number(d.price),qty:Number(d.minpack||1),img:d.img});}localStorage.setItem('mp_cart',JSON.stringify(c));if(window.MP&&MP.updateCartBadge)MP.updateCartBadge();showToast('✓ Ditambahkan ke keranjang');}catch(err){alert('Gagal menambahkan ke keranjang');}}
     function showToast(msg){var t=document.createElement('div');t.textContent=msg;Object.assign(t.style,{position:'fixed',bottom:'20px',left:'50%',transform:'translateX(-50%)',background:'#16A34A',color:'white',padding:'10px 24px',borderRadius:'30px',fontSize:'14px',fontWeight:'700',zIndex:9999,boxShadow:'0 4px 16px rgba(0,0,0,0.2)',transition:'opacity 0.3s'});document.body.appendChild(t);setTimeout(function(){t.style.opacity='0';setTimeout(function(){t.remove()},300)},2000);}
@@ -927,7 +989,7 @@ export async function renderShop(env, searchQuery) {
     else if (sort === 'nameAsc') list.sort((a,b) => a.name.localeCompare(b.name,'id'));
     document.getElementById('shopGrid').innerHTML = list.length
       ? list.map(cardHtml).join('')
-      : '<div class="shop-empty"><span class="big">🔍</span>Tidak ada produk yang cocok dengan filter. Coba ubah pencarian atau reset filter.</div>';
+      : '<div class="shop-empty"><span class="big"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg></span>Tidak ada produk yang cocok dengan filter. Coba ubah pencarian atau reset filter.</div>';
     document.getElementById('shopTotal').textContent = list.length;
   }
   function resetShop(){
@@ -944,7 +1006,7 @@ export async function renderShop(env, searchQuery) {
   const headerQ = ${JSON.stringify(searchQuery || '')};
   if (headerQ) { document.getElementById('shopSearch').value = headerQ; applyShop(); }
   // Init wishlist server→lokal untuk member
-  (function(){var tok=localStorage.getItem('mp_token');if(!tok)return;fetch('/api/account/wishlist/ids',{headers:{'Authorization':'Bearer '+tok}}).then(function(r){return r.ok?r.json():Promise.reject();}).then(function(ids){if(!Array.isArray(ids))return;document.querySelectorAll('.wish-btn').forEach(function(b){if(ids.indexOf(b.getAttribute('data-id'))>-1){b.classList.add('active');b.textContent='❤️';}});}).catch(function(){});})();`;
+  (function(){var tok=localStorage.getItem('mp_token');if(!tok)return;fetch('/api/account/wishlist/ids',{headers:{'Authorization':'Bearer '+tok}}).then(function(r){return r.ok?r.json():Promise.reject();}).then(function(ids){if(!Array.isArray(ids))return;document.querySelectorAll('.wish-btn').forEach(function(b){if(ids.indexOf(b.getAttribute('data-id'))>-1){b.classList.add('active');b.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>';}});}).catch(function(){});})();`;
 
   return { html: layout({ title: `Shop Produk Tools & Industri Grosir — ${SITE_NAME}`, desc: 'Katalog lengkap mesin & tools industri, power tools, dan perlengkapan manufaktur ProIndustri. Harga distributor, garansi 1 tahun, kirim seluruh Indonesia.', canonical: ORIGIN + '/shop', body, bodyClass: 'page-shop', script: script + QUICKMODAL_SCRIPT }), script };
 }
@@ -961,7 +1023,7 @@ export async function renderArchive(env) {
     const items = products.filter(p => p.category === c);
     return `<div class="arch-group">
       <div class="arch-cat">
-        <span class="arch-cat-icon">📦</span>
+        <span class="arch-cat-icon"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg></span>
         <h2>${esc(c)}</h2>
         <span class="arch-count">${items.length} produk</span>
       </div>
@@ -973,7 +1035,7 @@ export async function renderArchive(env) {
   <div class="wrap">
     ${breadcrumb([{ href: '/produk', label: 'Semua Produk' }])}
     <div class="page-head">
-      <div class="page-title">📦 Arsip Produk</div>
+      <div class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg> Arsip Produk</div>
       <div class="page-sub">Seluruh ${products.length} produk ProIndustri dikelompokkan berdasarkan kategori. Klik produk untuk melihat detail, ukuran, dan harga.</div>
     </div>
     ${groups}
@@ -1018,10 +1080,10 @@ export async function renderCategory(env, slug) {
   const items = results.map(homeCard).join('');
   const featImg = catInfo && catInfo.featured_image ? catInfo.featured_image.replace(/^https:\/\/pub-[a-f0-9]+\.r2\.dev\//, '/img/') : imgUrl(results[0] || {});
   const desc = catInfo && catInfo.description ? catInfo.description : `${results.length} produk ${name} tersedia di ProIndustri.`;
-  const EMOJI_TO_LUCIDE = { '🫱': 'hand', '💪': 'dumbbell', '🛡️': 'shield', '🧩': 'puzzle', '🥖': 'wheat', '🤐': 'lock', '📦': 'package', '📁': 'folder', '🏷️': 'tag', '⭐': 'star', '📂': 'folder' };
-  const rawIcon = catInfo && catInfo.icon ? catInfo.icon : '📂';
+  const EMOJI_TO_LUCIDE = { '🫱': 'hand', '💪': 'dumbbell', '🛡️': 'shield', '🧩': 'puzzle', '🥖': 'wheat', '🤐': 'lock', '<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg>': 'package', '📁': 'folder', '🏷️': 'tag', '⭐': 'star', '📂': 'folder' };
+  const rawIcon = catInfo && catInfo.icon ? catInfo.icon : '<svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg>';
   const iconName = EMOJI_TO_LUCIDE[rawIcon] || 'folder';
-  const emptyMsg = results.length ? '' : `<div class="wl-empty" style="padding:32px"><div class="wl-empty-icon">📭</div><div class="akun-empty-sub" style="font-size:14px;color:var(--muted)">Belum ada produk di kategori <strong>${esc(name)}</strong>.<br>Kategori ini baru dibuat — produk akan tampil di sini begitu ditambahkan.</div></div>`;
+  const emptyMsg = results.length ? '' : `<div class="wl-empty" style="padding:32px"><div class="wl-empty-icon"><svg class="ic" aria-hidden="true"><use href="#i-inbox"/></svg></div><div class="akun-empty-sub" style="font-size:14px;color:var(--muted)">Belum ada produk di kategori <strong>${esc(name)}</strong>.<br>Kategori ini baru dibuat — produk akan tampil di sini begitu ditambahkan.</div></div>`;
   const body = `
   <div class="wrap">
     ${breadcrumb([{ href: '/shop', label: 'Shop' }, { href: '/kategori/' + slug, label: name }])}
@@ -1032,7 +1094,7 @@ export async function renderCategory(env, slug) {
     <div class="p-grid">${items}</div>
     ${emptyMsg}
     <div style="text-align:center;margin:28px 0 8px">
-      <a class="btn-red" style="text-decoration:none;display:inline-block" href="/shop">🛍️ Lihat Semua Produk</a>
+      <a class="btn-red" style="text-decoration:none;display:inline-block" href="/shop"><svg class="ic" aria-hidden="true"><use href="#i-shopping-bag"/></svg> Lihat Semua Produk</a>
     </div>
   </div>`;
 

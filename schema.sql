@@ -149,3 +149,19 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 CREATE INDEX IF NOT EXISTS idx_notif_admin ON notifications(role, is_read);
 CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, is_read);
+
+-- Coupons / Kupon diskon
+CREATE TABLE IF NOT EXISTS coupons (
+  code TEXT PRIMARY KEY,
+  type TEXT NOT NULL DEFAULT 'percent',
+  value INTEGER NOT NULL DEFAULT 0,
+  min_order INTEGER NOT NULL DEFAULT 0,
+  max_discount INTEGER DEFAULT 0,
+  usage_limit INTEGER DEFAULT 0,
+  used_count INTEGER NOT NULL DEFAULT 0,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  expires_at TEXT DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_coupons_active ON coupons(is_active);

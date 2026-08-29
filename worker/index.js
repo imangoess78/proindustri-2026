@@ -180,15 +180,51 @@ async function ensureSettings(env) {
     const row = await env.DB.prepare("SELECT COUNT(*) as c FROM settings").first();
     if (row && row.c === 0) {
       const defaults = [
-        ['discount_tiers', JSON.stringify([{min:100,pct:20},{min:50,pct:10},{min:10,pct:5},{min:5,pct:2}])],
         ['member_discount', '10'],
-        ['free_ship_min', '500000'],
       ];
       for (const [k, v] of defaults) {
         await env.DB.prepare("INSERT INTO settings (key, value) VALUES (?,?)").bind(k, v).run();
       }
     }
   } catch (e) { /* ignore */ }
+}
+
+// ── Coupons / Kupon diskon ──
+async function ensureCoupons(env) {
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS coupons (
+    code TEXT PRIMARY KEY,
+    type TEXT NOT NULL DEFAULT 'percent',
+    value INTEGER NOT NULL DEFAULT 0,
+    min_order INTEGER NOT NULL DEFAULT 0,
+    max_discount INTEGER DEFAULT 0,
+    usage_limit INTEGER DEFAULT 0,
+    used_count INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    expires_at TEXT DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`).run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_coupons_active ON coupons(is_active)').run();
+}
+function normalizeCouponCode(s) { return String(s||'').trim().toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,32); }
+async function validateCoupon(env, rawCode, subtotal) {
+  const code = normalizeCouponCode(rawCode);
+  if (!code) return { ok:false, error:'Masukkan kode kupon' };
+  const row = await env.DB.prepare('SELECT * FROM coupons WHERE code=?').bind(code).first();
+  if (!row) return { ok:false, error:'Kupon tidak ditemukan' };
+  if (!row.is_active) return { ok:false, error:'Kupon tidak aktif' };
+  if (row.expires_at && new Date(row.expires_at).getTime() < Date.now()) return { ok:false, error:'Kupon sudah kedaluwarsa' };
+  if (row.usage_limit > 0 && row.used_count >= row.usage_limit) return { ok:false, error:'Kuota kupon habis' };
+  if (row.min_order > 0 && Number(subtotal||0) < row.min_order) return { ok:false, error:'Minimal belanja Rp' + Number(row.min_order).toLocaleString('id-ID') };
+  let amt = 0;
+  if (row.type === 'percent') {
+    amt = Math.floor(Number(subtotal||0) * Number(row.value||0) / 100);
+    if (row.max_discount > 0) amt = Math.min(amt, row.max_discount);
+  } else {
+    amt = Number(row.value||0);
+  }
+  amt = Math.max(0, Math.min(amt, Number(subtotal||0)));
+  return { ok:true, code, type: row.type, value: row.value, amount: amt, min_order: row.min_order, max_discount: row.max_discount, coupon: row };
 }
 
 // ── Payment confirmations (bukti bayar manual) ──
@@ -653,7 +689,88 @@ export default {
       return json({ ok: true });
     }
 
-    // ── Settings toko (diskon, gratis ongkir, dll) ──
+    // ── Coupons API ──
+    if (path === '/api/coupons/validate' && request.method === 'POST') {
+      await ensureCoupons(env);
+      const b = await request.json();
+      const r = await validateCoupon(env, b.code || '', Number(b.subtotal||0));
+      if (!r.ok) return json({ ok:false, error: r.error }, 400);
+      return json({ ok:true, code: r.code, type: r.type, value: r.value, amount: r.amount, min_order: r.min_order, max_discount: r.max_discount });
+    }
+    if (path === '/api/coupons/validate' && request.method === 'GET') {
+      await ensureCoupons(env);
+      const code = url.searchParams.get('code') || '';
+      const subtotal = Number(url.searchParams.get('subtotal')||0);
+      const r = await validateCoupon(env, code, subtotal);
+      if (!r.ok) return json({ ok:false, error: r.error }, 400);
+      return json({ ok:true, code: r.code, type: r.type, value: r.value, amount: r.amount });
+    }
+    if (path === '/api/coupons' && request.method === 'GET') {
+      if (!await isAdmin(request, env)) return json({ error: 'Unauthorized' }, 401);
+      await ensureCoupons(env);
+      const { results } = await env.DB.prepare('SELECT * FROM coupons ORDER BY created_at DESC').all();
+      return json(results);
+    }
+    if (path === '/api/coupons' && request.method === 'POST') {
+      if (!await isAdminRole(request, env, ['super_admin'])) return json({ error: 'Forbidden' }, 403);
+      await ensureCoupons(env);
+      const b = await request.json();
+      const code = normalizeCouponCode(b.code);
+      if (!code) return json({ error: 'Kode kupon wajib diisi (A-Z, 0-9, -, _)' }, 400);
+      const type = b.type === 'fixed' ? 'fixed' : 'percent';
+      let value = Math.max(0, parseInt(b.value,10)||0);
+      if (type === 'percent' && value > 100) return json({ error: 'Diskon persen maksimal 100%' }, 400);
+      const min_order = Math.max(0, parseInt(b.min_order,10)||0);
+      const max_discount = Math.max(0, parseInt(b.max_discount,10)||0);
+      const usage_limit = Math.max(0, parseInt(b.usage_limit,10)||0);
+      const is_active = b.is_active === undefined ? 1 : (b.is_active ? 1 : 0);
+      let expires_at = (b.expires_at||'').toString().trim();
+      if (expires_at) {
+        const d = new Date(expires_at);
+        if (isNaN(d.getTime())) return json({ error: 'Format tanggal kedaluwarsa tidak valid' }, 400);
+        expires_at = d.toISOString();
+      }
+      try {
+        await env.DB.prepare('INSERT INTO coupons (code, type, value, min_order, max_discount, usage_limit, is_active, expires_at) VALUES (?,?,?,?,?,?,?,?)')
+          .bind(code, type, value, min_order, max_discount, usage_limit, is_active, expires_at).run();
+      } catch(e) { return json({ error: 'Kode sudah dipakai' }, 409); }
+      return json({ ok:true, code });
+    }
+    const couponMatch = path.match(/^\/api\/coupons\/([^/]+)$/);
+    if (couponMatch && request.method === 'PUT') {
+      if (!await isAdminRole(request, env, ['super_admin'])) return json({ error: 'Forbidden' }, 403);
+      await ensureCoupons(env);
+      const code = normalizeCouponCode(decodeURIComponent(couponMatch[1]));
+      const row = await env.DB.prepare('SELECT code FROM coupons WHERE code=?').bind(code).first();
+      if (!row) return json({ error: 'Kupon tidak ditemukan' }, 404);
+      const b = await request.json();
+      const fields = [], vals = [];
+      if (b.type !== undefined) { const t = b.type === 'fixed' ? 'fixed' : 'percent'; fields.push('type=?'); vals.push(t); }
+      if (b.value !== undefined) { let v = Math.max(0, parseInt(b.value,10)||0); fields.push('value=?'); vals.push(v); }
+      if (b.min_order !== undefined) { fields.push('min_order=?'); vals.push(Math.max(0, parseInt(b.min_order,10)||0)); }
+      if (b.max_discount !== undefined) { fields.push('max_discount=?'); vals.push(Math.max(0, parseInt(b.max_discount,10)||0)); }
+      if (b.usage_limit !== undefined) { fields.push('usage_limit=?'); vals.push(Math.max(0, parseInt(b.usage_limit,10)||0)); }
+      if (b.is_active !== undefined) { fields.push('is_active=?'); vals.push(b.is_active ? 1 : 0); }
+      if (b.expires_at !== undefined) {
+        let ea = (b.expires_at||'').toString().trim();
+        if (ea) { const d = new Date(ea); if (isNaN(d.getTime())) return json({ error: 'Format tanggal tidak valid' }, 400); ea = d.toISOString(); }
+        fields.push('expires_at=?'); vals.push(ea);
+      }
+      if (!fields.length) return json({ error: 'Nothing to update' }, 400);
+      fields.push("updated_at=datetime('now')");
+      vals.push(code);
+      await env.DB.prepare(`UPDATE coupons SET ${fields.join(',')} WHERE code=?`).bind(...vals).run();
+      return json({ ok:true });
+    }
+    if (couponMatch && request.method === 'DELETE') {
+      if (!await isAdminRole(request, env, ['super_admin'])) return json({ error: 'Forbidden' }, 403);
+      await ensureCoupons(env);
+      const code = normalizeCouponCode(decodeURIComponent(couponMatch[1]));
+      await env.DB.prepare('DELETE FROM coupons WHERE code=?').bind(code).run();
+      return json({ ok:true });
+    }
+
+    // ── Settings toko (diskon, dll) ──
     if (path === '/api/settings' && request.method === 'GET') {
       await ensureSettings(env);
       const { results } = await env.DB.prepare('SELECT key, value FROM settings').all();
@@ -667,7 +784,7 @@ export default {
       const body = await request.json();
       const { key, value } = body;
       if (!key) return json({ error: 'key wajib diisi' }, 400);
-      const ALLOWED = ['discount_tiers', 'member_discount', 'free_ship_min'];
+      const ALLOWED = ['discount_tiers', 'member_discount'];
       if (!ALLOWED.includes(key)) return json({ error: 'Setting tidak dikenal: ' + key }, 400);
       await env.DB.prepare(`INSERT INTO settings (key, value, updated_at) VALUES (?,?,datetime('now'))
         ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at`)
@@ -905,6 +1022,7 @@ export default {
     // ── POST /api/orders ── (create order)
     if (path === '/api/orders' && request.method === 'POST') {
       await ensureOrdersUserCol(env);
+      await ensureCoupons(env);
       const o = await request.json();
       const id = o.id || ('MP-' + nanoid());
       const shippingCost = Math.max(0, Number(o.shipping?.cost) || 0);
@@ -917,6 +1035,18 @@ export default {
         etd: o.shipping.etd || '',
         weight_kg: o.shipping.weight_kg || 0
       } : {};
+      // Validasi kupon server-side: hitung ulang voucherAmt dari kode kupon (anti-tamper)
+      let voucherAmt = 0;
+      let couponCode = '';
+      const rawCoupon = (o.couponCode || o.coupon_code || '').toString().trim();
+      if (rawCoupon) {
+        const vc = await validateCoupon(env, rawCoupon, Number(o.sub||0));
+        if (!vc.ok) return json({ error: vc.error }, 400);
+        voucherAmt = vc.amount;
+        couponCode = vc.code;
+      } else {
+        voucherAmt = Math.max(0, Number(o.voucherAmt||0));
+      }
       await env.DB.prepare(`
         INSERT INTO orders (id, date, customer_name, customer_phone, customer_address, customer_note,
           items, sub, disc, disc_amt, member_disc, member_amt, voucher_amt, total, payment, status, shipping, shipping_cost, user_id)
@@ -925,14 +1055,17 @@ export default {
         id, o.date || new Date().toISOString(),
         o.customer.name, o.customer.phone, o.customer.address, o.customer.note || '',
         JSON.stringify(o.items), o.sub, o.disc || 0, o.discAmt || 0,
-        o.memberDisc || 0, o.memberAmt || 0, o.voucherAmt || 0,
+        o.memberDisc || 0, o.memberAmt || 0, voucherAmt,
         o.total, o.payment, o.status || 'Menunggu Pembayaran',
         JSON.stringify(shipping), shippingCost, o.user_id || ''
       ).run();
+      if (couponCode) {
+        try { await env.DB.prepare('UPDATE coupons SET used_count = used_count + 1, updated_at=datetime(\'now\') WHERE code=?').bind(couponCode).run(); } catch(e) {}
+      }
       await addNotif(env, {
         role: 'admin', type: 'order',
         title: '🛒 Order Baru Masuk',
-        message: `${o.customer.name} — ${o.items.length} item · Rp${Number(o.total).toLocaleString('id-ID')} (${o.payment || '-'})`,
+        message: `${o.customer.name} — ${o.items.length} item · Rp${Number(o.total).toLocaleString('id-ID')} (${o.payment || '-'})${couponCode ? ' kupon '+couponCode : ''}`,
         link: '/admin'
       });
       return json({ id });

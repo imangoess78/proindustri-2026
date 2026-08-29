@@ -261,12 +261,14 @@ tr:hover td{background:rgba(201,137,10,.04)}
     <button class="nav-item" onclick="setTab('customers')" id="nav-customers"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg></span>Pelanggan</button>
     <button class="nav-item" onclick="setTab('komplain')" id="nav-komplain"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-wrench"/></svg></span>Komplain<span class="nav-badge" id="badge-komplain" style="display:none">0</span></button>
     <button class="nav-item" onclick="setTab('qna')" id="nav-qna"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg></span>Tanya Jawab<span class="nav-badge" id="badge-qna" style="display:none">0</span></button>
+    <button class="nav-item" onclick="setTab('aeimport')" id="nav-aeimport"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg></span>Import AE</button>
     <div class="nav-section">Konten</div>
     <button class="nav-item" onclick="setTab('articles')" id="nav-articles"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg></span>Blog/Artikel</button>
     <div class="nav-section">Laporan</div>
     <button class="nav-item" onclick="setTab('reports')" id="nav-reports"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-trending-up"/></svg></span>Laporan</button>
     <div class="nav-section">Pengaturan</div>
     <button class="nav-item" onclick="setTab('payment')" id="nav-payment"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-credit-card"/></svg></span>Pembayaran</button>
+    <button class="nav-item" onclick="setTab('coupons')" id="nav-coupons"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-tag"/></svg></span>Kupon</button>
     <button class="nav-item" onclick="setTab('users')" id="nav-users"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-briefcase"/></svg></span>Pengguna</button>
     <button class="nav-item" onclick="setTab('settings')" id="nav-settings"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></span>Pengaturan</button>
   </nav>
@@ -335,13 +337,13 @@ let ADMIN_ROLE = localStorage.getItem('mp_admin_role') || 'super_admin';
 let ADMIN_NAME = localStorage.getItem('mp_admin_name') || 'Super Admin';
 const ROLE_LABELS = { super_admin:'' + IC("crown") + ' Super Admin', finance:'' + IC("dollar-sign") + ' Keuangan', operations:'' + IC("package") + ' Operasional', cs:'' + IC("headphones") + ' Customer Service', warehouse:'' + IC("truck") + ' Gudang' };
 const ROLE_TABS = {
-  super_admin: ['dashboard','orders','products','categories','customers','komplain','qna','articles','reports','payment','users','settings'],
-  finance: ['dashboard','orders','payment','reports','customers'],
-  operations: ['dashboard','orders','products','categories','komplain','qna','articles'],
+  super_admin: ['dashboard','orders','products','categories','customers','komplain','qna','aeimport','articles','reports','payment','coupons','users','settings'],
+  finance: ['dashboard','orders','payment','coupons','reports','customers'],
+  operations: ['dashboard','orders','products','categories','komplain','qna','aeimport','articles'],
   cs: ['dashboard','orders','komplain','qna','customers'],
   warehouse: ['dashboard','orders']
 };
-let TAB_TITLES_EXTRA = { payment:'' + IC("credit-card") + ' Pembayaran', users:'' + IC("briefcase") + ' Pengguna' };
+let TAB_TITLES_EXTRA = { payment:'' + IC("credit-card") + ' Pembayaran', coupons:'' + IC("tag") + ' Kupon', users:'' + IC("briefcase") + ' Pengguna' };
 let currentTab = 'dashboard';
 let pollInterval = null;
 let ORDERS = [], PRODUCTS = [], QUESTIONS = [], ARTICLES = [], CUSTOMERS = [], STATS = null;
@@ -353,13 +355,12 @@ let detailOrderId = null;
 let detailSig = '';
 let debounceTimer = null;
 let PM_CACHE = [];   // payment methods dari /api/payment-methods/all (id → label)
-let SETTINGS = {};   // settings toko (diskon, gratis ongkir) dari /api/settings
+let SETTINGS = {};   // settings toko (diskon) dari /api/settings
+let COUPONS = [];
 
 // Default jika settings belum ter-load
 const SETTINGS_DEFAULTS = {
   member_discount: '10',
-  free_ship_min: '500000',
-  discount_tiers: JSON.stringify([{min:100,pct:20},{min:50,pct:10},{min:10,pct:5},{min:5,pct:2}])
 };
 const getSetting = (k) => (SETTINGS[k] !== undefined && SETTINGS[k] !== null && SETTINGS[k] !== '') ? SETTINGS[k] : (SETTINGS_DEFAULTS[k] || '');
 
@@ -469,7 +470,7 @@ function doLogout() {
 async function fetchAll() {
   if (!TOKEN) return;
   try {
-    const [o, p, q, a, c, st, pms, s] = await Promise.allSettled([
+    const [o, p, q, a, c, st, pms, s, cp] = await Promise.allSettled([
       api('GET', '/api/orders'),
       api('GET', '/api/products'),
       api('GET', '/api/questions'),
@@ -477,7 +478,8 @@ async function fetchAll() {
       api('GET', '/api/customers'),
       api('GET', '/api/stats'),
       api('GET', '/api/payment-methods/all'),
-      api('GET', '/api/settings')
+      api('GET', '/api/settings'),
+      api('GET', '/api/coupons')
     ]);
     const ok = x => x.status === 'fulfilled' ? x.value : null;
     const ORDERS_NEW = ok(o), PRODUCTS_NEW = ok(p), QUESTIONS_NEW = ok(q), ARTICLES_NEW = ok(a);
@@ -490,6 +492,7 @@ async function fetchAll() {
     if (STATS_NEW) STATS = STATS_NEW;
     if (ok(pms)) PM_CACHE = ok(pms) || [];
     if (ok(s)) SETTINGS = ok(s) || {};
+    if (ok(cp)) COUPONS = ok(cp) || [];
     const failed = [o, p, q, a, c, st].filter(x => x.status === 'rejected').length;
     if (failed === 6) {
       const firstRej = [o, p, q, a, c, st].find(x => x.status === 'rejected');
@@ -521,8 +524,8 @@ function updateBadges() {
 // ── Tabs ──
 const TAB_TITLES = {
   dashboard:'' + IC("layout-dashboard") + ' Dashboard', orders:'' + IC("package") + ' Pesanan', products:'' + IC("shopping-bag") + '️ Produk', categories:'' + IC("folder") + ' Kategori', customers:'' + IC("users") + ' Pelanggan',
-  komplain:'' + IC("wrench") + '️ Komplain', qna:'' + IC("message-circle") + ' Tanya Jawab', articles:'' + IC("file-text") + ' Blog/Artikel', reports:'' + IC("trending-up") + ' Laporan', settings:'' + IC("settings") + ' Pengaturan',
-  payment:'' + IC("credit-card") + ' Pembayaran', users:'' + IC("briefcase") + ' Pengguna'
+  komplain:'' + IC("wrench") + '️ Komplain', qna:'' + IC("message-circle") + ' Tanya Jawab', aeimport:'' + IC("download") + ' Import AliExpress', articles:'' + IC("file-text") + ' Blog/Artikel', reports:'' + IC("trending-up") + ' Laporan', settings:'' + IC("settings") + ' Pengaturan',
+  payment:'' + IC("credit-card") + ' Pembayaran', coupons:'' + IC("tag") + ' Kupon', users:'' + IC("briefcase") + ' Pengguna'
 };
 
 function setTab(tab) {
@@ -556,8 +559,10 @@ function renderTab() {
   else if (currentTab === 'customers') renderCustomers(c);
   else if (currentTab === 'komplain') renderKomplain(c);
   else if (currentTab === 'payment') renderPembayaran(c);
+  else if (currentTab === 'coupons') renderCoupons(c);
   else if (currentTab === 'users') renderPengguna(c);
   else if (currentTab === 'qna') renderQna(c);
+  else if (currentTab === 'aeimport') renderAEImport(c);
   else if (currentTab === 'articles') renderArticles(c);
   else if (currentTab === 'reports') renderReports(c);
   else if (currentTab === 'settings') renderSettings(c);
@@ -1699,7 +1704,7 @@ function varRowHtml(v, i) {
       <input class="var-name" placeholder="Nama varian" value="${esc(v.name||'')}">
       <input class="var-price" type="number" placeholder="Harga" value="${v.price!=null?v.price:''}">
       <input class="var-stock" type="number" placeholder="Stok" value="${v.stock!=null?v.stock:''}">
-      <input class="var-minqty" type="number" placeholder="Min Qty" value="${v.min_qty!=null?v.min_qty:5}">
+      <input class="var-minqty" type="number" placeholder="Min Qty" value="${v.min_qty!=null?v.min_qty:1}">
       <button type="button" class="action-btn del" onclick="remVarRow(this)" style="padding:6px 10px">${IC("x")}</button>
     </div>
   `;
@@ -1722,9 +1727,15 @@ async function uploadProductImg() {
   const file = input.files[0];
   if (!file) return;
   const status = document.getElementById('pm-img-status');
-  status.textContent = '⏳ Uploading...';
+  // Image optimistis: resize max 1024px + convert webp q80 via canvas (client-side, gratis)
+  status.textContent = '⏳ Optimasi gambar...';
+  let blob = file;
+  try{
+    blob = await optimizeImage(file, 1024, 0.80) || file;
+  }catch(e){ /* fallback original */ }
+  status.textContent = '⏳ Uploading... (' + Math.round(blob.size/1024) + 'KB)';
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append('file', blob, (file.name.replace(/\.[^.]+$/, '')||'image') + '.webp');
   try {
     const res = await fetch('/api/upload/product', { method: 'POST', headers: { 'Authorization': 'Bearer ' + TOKEN }, body: formData });
     const data = await res.json();
@@ -1732,8 +1743,34 @@ async function uploadProductImg() {
     document.getElementById('pm-img').value = data.url;
     const preview = document.getElementById('pm-img-preview');
     preview.src = data.url; preview.style.display = 'block';
-    status.textContent = '✅ Terupload';
+    status.textContent = '✅ Terupload (' + Math.round(blob.size/1024) + 'KB webp)';
   } catch (e) { status.textContent = '❌ ' + e.message; }
+}
+// Resize + webp via canvas — turun 60-80% tanpa biaya
+function optimizeImage(file, maxSide, quality){
+  return new Promise((resolve, reject)=>{
+    if(!file.type.startsWith('image/')) return resolve(null);
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      let w = img.width, h = img.height;
+      if(Math.max(w,h) > maxSide){
+        if(w > h){ h = Math.round(h * maxSide / w); w = maxSide; }
+        else { w = Math.round(w * maxSide / h); h = maxSide; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(b=>{
+        if(b) resolve(b);
+        else resolve(null);
+      }, 'image/webp', quality);
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
 }
 
 async function saveProduct() {
@@ -2143,6 +2180,96 @@ async function apiUpload(path, formData) {
   return data;
 }
 
+// ── Kupon ──
+function renderCoupons(c) {
+  if (ADMIN_ROLE !== 'super_admin') { c.innerHTML = '<div class="empty"><div class="empty-icon">' + IC("ban") + '</div><div class="empty-text">Akses ditolak. Hanya Super Admin.</div></div>'; return; }
+  const list = COUPONS || [];
+  const active = list.filter(x => x.is_active).length;
+  c.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card gold"><div class="stat-label">Total Kupon</div><div class="stat-value">${list.length}</div></div>
+      <div class="stat-card green"><div class="stat-label">Aktif</div><div class="stat-value">${active}</div></div>
+      <div class="stat-card blue"><div class="stat-label">Terpakai</div><div class="stat-value">${list.reduce((s,x)=>s+(x.used_count||0),0)}</div></div>
+    </div>
+    <div class="search-bar"><button class="action-btn primary" onclick="openCouponModal()">${IC("plus")} Tambah Kupon</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Kode</th><th>Tipe</th><th>Nilai</th><th>Min. Belanja</th><th>Maks Diskon</th><th>Kuota</th><th>Terpakai</th><th>Kedaluwarsa</th><th>Status</th><th style="text-align:right">Aksi</th></tr></thead>
+      <tbody>${list.length ? list.map(x => {
+        const exp = x.expires_at ? new Date(x.expires_at).toLocaleDateString('id-ID') : '-';
+        const val = x.type==='percent' ? x.value+'%' : fmt(x.value);
+        const maxD = x.max_discount ? fmt(x.max_discount) : '-';
+        const quota = x.usage_limit ? x.usage_limit : '∞';
+        return `<tr>
+          <td style="font-weight:900;font-family:monospace">${esc(x.code)}</td>
+          <td>${x.type==='percent'?'Persen':'Nominal'}</td>
+          <td style="font-weight:800">${val}</td>
+          <td>${x.min_order?fmt(x.min_order):'-'}</td>
+          <td>${maxD}</td>
+          <td>${quota}</td>
+          <td><b>${x.used_count||0}</b></td>
+          <td style="font-size:12px;color:var(--muted)">${exp}</td>
+          <td>${x.is_active?'<span class="status-badge s-shipped">Aktif</span>':'<span class="status-badge s-cancel">Nonaktif</span>'}</td>
+          <td style="text-align:right;white-space:nowrap"><button class="action-btn" onclick="openCouponModal('${esc(x.code)}')">${IC("pencil")}</button> <button class="action-btn ${x.is_active?'del':''}" onclick="toggleCoupon('${esc(x.code)}',${x.is_active?0:1})">${x.is_active?'⏸':'▶️'}</button> <button class="action-btn del" onclick="deleteCoupon('${esc(x.code)}')">${IC("trash-2")}</button></td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="10"><div class="empty"><div class="empty-icon">' + IC("tag") + '</div><div class="empty-text">Belum ada kupon.</div></div></td></tr>'}
+      </tbody></table></div>
+    <div class="hint" style="font-size:11px;color:var(--muted);margin-top:10px">${IC("lightbulb")} Kupon divalidasi di <b>checkout</b> (field kode kupon) & di-<b>re-validate server-side</b> saat buat pesanan. Persen dipotong dari subtotal, nominal dipotong langsung. Maks diskon hanya untuk tipe persen.</div>`;
+}
+function openCouponModal(code) {
+  const isEdit = !!code;
+  const row = isEdit ? (COUPONS||[]).find(x=>x.code===code) : null;
+  const expVal = row?.expires_at ? new Date(row.expires_at).toISOString().slice(0,10) : '';
+  openModal(`
+    <div class="modal-title">${isEdit ? '' + IC("pencil") + ' Edit Kupon' : '' + IC("plus") + ' Tambah Kupon'}</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+      <input class="search-input" id="cpCode" placeholder="Kode (contoh: HEMAT10, DISKON50K)" value="${esc(row?.code||'')}" ${isEdit?'disabled':''} style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;text-transform:uppercase">
+      <div style="display:flex;gap:8px">
+        <select class="search-input" id="cpType" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px">
+          <option value="percent" ${(!row||row.type==='percent')?'selected':''}>Persen (%)</option>
+          <option value="fixed" ${row?.type==='fixed'?'selected':''}>Nominal (Rp)</option>
+        </select>
+        <input class="search-input" id="cpValue" type="number" min="0" placeholder="Nilai" value="${row?.value||''}" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px">
+      </div>
+      <div style="display:flex;gap:8px">
+        <input class="search-input" id="cpMin" type="number" min="0" placeholder="Min. belanja (Rp, 0=tanpa minimal)" value="${row?.min_order||''}" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px">
+        <input class="search-input" id="cpMax" type="number" min="0" placeholder="Maks diskon (Rp, hanya persen)" value="${row?.max_discount||''}" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px">
+      </div>
+      <div style="display:flex;gap:8px">
+        <input class="search-input" id="cpLimit" type="number" min="0" placeholder="Kuota (0=tanpa batas)" value="${row?.usage_limit||''}" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px">
+        <input class="search-input" id="cpExp" type="date" value="${expVal}" style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px">
+      </div>
+      <label style="font-size:12px;font-weight:700;color:var(--mid);display:flex;align-items:center;gap:8px"><input type="checkbox" id="cpActive" ${(!row||row.is_active)?'checked':''}> Aktif</label>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="action-btn primary" onclick="saveCoupon('${isEdit?esc(code):''}')" style="flex:1;padding:10px">${isEdit?'' + IC("save") + ' Simpan':'' + IC("plus") + ' Buat Kupon'}</button>
+      <button class="action-btn" onclick="closeModal()">Batal</button>
+    </div>`);
+}
+async function saveCoupon(code) {
+  const isEdit = !!code;
+  const body = {
+    type: document.getElementById('cpType').value,
+    value: document.getElementById('cpValue').value,
+    min_order: document.getElementById('cpMin').value || 0,
+    max_discount: document.getElementById('cpMax').value || 0,
+    usage_limit: document.getElementById('cpLimit').value || 0,
+    is_active: document.getElementById('cpActive').checked,
+    expires_at: document.getElementById('cpExp').value || ''
+  };
+  if (!isEdit) {
+    const raw = document.getElementById('cpCode').value.trim();
+    if (!raw) { toast('Kode kupon wajib diisi','error'); return; }
+    body.code = raw;
+  }
+  if (!body.value && body.value!==0) { toast('Nilai kupon wajib diisi','error'); return; }
+  try {
+    if (isEdit) await api('PUT','/api/coupons/'+encodeURIComponent(code), body);
+    else await api('POST','/api/coupons', body);
+    closeModal(); toast('Kupon disimpan ' + IC("check-circle-2"),'success'); fetchAll();
+  } catch(e){ toast('Gagal: '+e.message,'error'); }
+}
+async function toggleCoupon(code, active){ try{ await api('PUT','/api/coupons/'+encodeURIComponent(code),{is_active:!!active}); toast(active?'Kupon diaktifkan':'Kupon dinonaktifkan','success'); fetchAll(); }catch(e){ toast('Gagal: '+e.message,'error'); } }
+async function deleteCoupon(code){ if(!confirm('Hapus kupon "'+code+'"?')) return; try{ await api('DELETE','/api/coupons/'+encodeURIComponent(code)); toast('Kupon dihapus','success'); fetchAll(); }catch(e){ toast('Gagal: '+e.message,'error'); } }
+
 // ── Komplain ──
 function renderKomplain(c) {
   const komplain = ORDERS.filter(o => o.complaint);
@@ -2465,6 +2592,157 @@ function deleteArticle(id) {
     .catch(e => toast('Gagal hapus: ' + e.message, 'error'));
 }
 
+// ── Import AliExpress ──
+let AE_PREVIEW = null;
+function renderAEImport(c){
+  const cats = [...new Set(PRODUCTS.map(p=>p.category))].sort();
+  const catOpts = cats.map(x=>`<option>${esc(x)}</option>`).join('');
+  c.innerHTML = `
+    <div class="card" style="margin-bottom:16px">
+      <div style="font-size:15px;font-weight:900;margin-bottom:6px">${IC("download")} Import dari AliExpress</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Paste link produk AliExpress → Preview → Publish. Harga otomatis <b>markup 2×</b> (USD→IDR kurs 16.500). Gambar AE otomatis di-download ke R2.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input id="ae-url" placeholder="https://www.aliexpress.com/item/100500....html" style="flex:1;min-width:220px;padding:10px 12px;border:2px solid var(--border);border-radius:10px;font-size:13px;outline:none" onkeydown="if(event.key==='Enter')doAEScrape()">
+        <button class="d-btn d-btn-primary" onclick="doAEScrape()" id="ae-scrape-btn">${IC("search")} Scrape</button>
+      </div>
+      <div id="ae-scrape-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+    </div>
+    <div id="ae-preview"></div>
+  `;
+  if(AE_PREVIEW) renderAEPreview();
+}
+function renderAEPreview(){
+  const p = AE_PREVIEW; if(!p) return;
+  const el = document.getElementById('ae-preview'); if(!el) return;
+  const cats = [...new Set(PRODUCTS.map(x=>x.category))].sort();
+  const catOpts = cats.map(x=>`<option ${x===p.category?'selected':''}>${esc(x)}</option>`).join('');
+  el.innerHTML = `
+    <div class="card">
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <div style="flex:1;min-width:260px">
+          <label style="font-size:11px;font-weight:800;color:var(--muted)">JUDUL *</label>
+          <input id="ae-title" value="${esc(p.title)}" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-size:13px;margin-top:4px">
+          <label style="font-size:11px;font-weight:800;color:var(--muted);margin-top:10px;display:block">DESKRIPSI</label>
+          <textarea id="ae-desc" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-size:12px;min-height:80px;margin-top:4px">${esc(p.desc)}</textarea>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <div style="flex:1"><label style="font-size:11px;font-weight:800;color:var(--muted)">KATEGORI</label>
+              <select id="ae-cat" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-size:13px;margin-top:4px"><option>Mesin & Tools</option><option>Elektronik & Power Tools</option><option>Perkakas Tangan</option><option>Safety & APD</option>${catOpts}</select>
+            </div>
+            <div style="width:120px"><label style="font-size:11px;font-weight:800;color:var(--muted)">BERAT (gram)</label>
+              <input id="ae-weight" type="number" value="${p.weight||200}" style="width:100%;padding:9px 12px;border:2px solid var(--border);border-radius:10px;font-size:13px;margin-top:4px">
+            </div>
+          </div>
+          <div style="margin-top:10px;background:var(--gold-light);border-radius:10px;padding:10px 12px;font-size:11px;color:var(--mid)">
+            Kurs: Rp16.500 × Markup <b>2×</b> → dibulatkan ke ribuan. Contoh: $${p.priceUSD||'?'} → ${fmt(p.minPrice||0)} – ${fmt(p.maxPrice||0)}
+            ${p.rawHints&&p.rawHints.length?`<br><span style="color:var(--muted)">Harga AE terdeteksi: $${p.rawHints.join(', $')}</span>`:''}
+          </div>
+        </div>
+        <div style="width:220px">
+          <div style="font-size:11px;font-weight:800;color:var(--muted)">GAMBAR (${p.images.length})</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+            ${p.images.map((u,i)=>`<label style="position:relative;cursor:pointer;border:2px solid ${p.imgSel?.has(i)?'var(--gold)':'var(--border)'};border-radius:10px;overflow:hidden;display:block">
+              <img src="${esc(u)}" style="width:100%;height:90px;object-fit:cover;display:block" onerror="this.style.opacity=.3">
+              <input type="checkbox" ${p.imgSel?.has(i)?'checked':''} onchange="toggleAEImg(${i},this.checked)" style="position:absolute;top:4px;left:4px">
+            </label>`).join('')}
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:6px">Centang gambar yang mau di-import (min 1). Gambar otomatis di-download ke R2.</div>
+        </div>
+      </div>
+      <div style="margin-top:14px">
+        <div style="font-size:11px;font-weight:800;color:var(--muted)">VARIAN — harga sudah markup 2× (bisa edit)</div>
+        <div id="ae-vars" style="margin-top:6px">
+          ${p.variants.map((v,i)=>`
+            <div class="var-row" style="display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center">
+              <input class="ae-vname" value="${esc(v.name)}" placeholder="Nama varian" style="padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:12px">
+              <input class="ae-vprice" type="number" value="${v.priceIDR}" placeholder="Harga IDR" style="padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:12px">
+              <input class="ae-vstock" type="number" value="${v.stock}" placeholder="Stok" style="padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:12px">
+              <input class="ae-vmin" type="number" value="${v.min_qty}" placeholder="Min" style="padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:12px">
+              <button class="action-btn del" onclick="this.closest('.var-row').remove()" style="padding:6px 10px">${IC("x")}</button>
+            </div>`).join('')}
+        </div>
+        <button class="action-btn" onclick="addAEVar()" style="margin-top:6px">+ Tambah varian</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="d-btn d-btn-success" style="flex:1" onclick="doAEPublish()" id="ae-pub-btn">${IC("check-circle-2")} Publish ke Toko</button>
+        <button class="d-btn" onclick="AE_PREVIEW=null;renderAEImport(document.getElementById('mainContent'))">Batal</button>
+      </div>
+      <div id="ae-pub-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+    </div>
+  `;
+}
+function toggleAEImg(i, on){
+  if(!AE_PREVIEW) return;
+  if(!AE_PREVIEW.imgSel) AE_PREVIEW.imgSel = new Set([0]);
+  if(on) AE_PREVIEW.imgSel.add(i); else AE_PREVIEW.imgSel.delete(i);
+  renderAEPreview();
+}
+function addAEVar(){
+  const wrap = document.getElementById('ae-vars');
+  if(!wrap) return;
+  wrap.insertAdjacentHTML('beforeend', `<div class="var-row" style="display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center">
+    <input class="ae-vname" placeholder="Nama varian" style="padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:12px">
+    <input class="ae-vprice" type="number" placeholder="Harga IDR" style="padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:12px">
+    <input class="ae-vstock" type="number" value="50" style="padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:12px">
+    <input class="ae-vmin" type="number" value="1" style="padding:8px 10px;border:2px solid var(--border);border-radius:8px;font-size:12px">
+    <button class="action-btn del" onclick="this.closest('.var-row').remove()" style="padding:6px 10px">${IC("x")}</button>
+  </div>`);
+}
+async function doAEScrape(){
+  const url = (document.getElementById('ae-url')?.value||'').trim();
+  if(!url || !url.includes('aliexpress.com')){ toast('Paste link AliExpress yang valid', 'error'); return; }
+  const btn = document.getElementById('ae-scrape-btn');
+  const st = document.getElementById('ae-scrape-status');
+  btn.disabled = true; btn.textContent = '⏳ Scrape...';
+  st.textContent = 'Mengambil data dari AliExpress...';
+  try{
+    const r = await api('POST','/api/admin/ae-scrape',{url});
+    AE_PREVIEW = {
+      title: r.title||'', desc: r.desc||'', images: r.images||[], priceUSD: r.priceUSD, minPrice: r.minPrice, maxPrice: r.maxPrice, rawHints: r.rawHints||[],
+      variants: r.variants||[], category: 'Mesin & Tools', weight: 200,
+      imgSel: new Set(r.images&&r.images.length?[0]:[]),
+      aeUrl: url
+    };
+    st.textContent = '✅ Preview siap — cek & edit lalu Publish.';
+    renderAEPreview();
+    toast('Scrape berhasil', 'success');
+  }catch(e){ st.textContent = '❌ ' + e.message; toast(e.message, 'error'); }
+  finally{ btn.disabled=false; btn.innerHTML = IC("search")+' Scrape'; }
+}
+async function doAEPublish(){
+  if(!AE_PREVIEW) return;
+  const title = (document.getElementById('ae-title')?.value||'').trim();
+  if(!title){ toast('Judul wajib diisi', 'error'); return; }
+  const desc = (document.getElementById('ae-desc')?.value||'').trim();
+  const category = (document.getElementById('ae-cat')?.value||'Mesin & Tools').trim();
+  const weight = Number(document.getElementById('ae-weight')?.value)||200;
+  const rows = document.querySelectorAll('#ae-vars .var-row');
+  const variants = [];
+  rows.forEach(r=>{
+    const name = r.querySelector('.ae-vname')?.value.trim();
+    const priceIDR = Number(r.querySelector('.ae-vprice')?.value)||0;
+    const stock = Number(r.querySelector('.ae-vstock')?.value)||50;
+    const min_qty = Number(r.querySelector('.ae-vmin')?.value)||1;
+    if(name && priceIDR>0) variants.push({name, priceIDR, stock, min_qty});
+  });
+  if(!variants.length){ toast('Minimal 1 varian dengan harga', 'error'); return; }
+  const selIdx = AE_PREVIEW.imgSel ? [...AE_PREVIEW.imgSel] : [0];
+  const images = selIdx.map(i=>AE_PREVIEW.images[i]).filter(Boolean);
+  if(!images.length){ toast('Pilih minimal 1 gambar', 'error'); return; }
+  const btn = document.getElementById('ae-pub-btn');
+  const st = document.getElementById('ae-pub-status');
+  btn.disabled = true; btn.textContent = '⏳ Publish...';
+  st.textContent = 'Upload gambar ke R2 & buat produk...';
+  try{
+    const res = await api('POST','/api/admin/ae-import',{title, desc, category, weight, variants, images});
+    st.textContent = '✅ Produk terbuat: ' + res.id;
+    toast('Produk AE berhasil di-publish! ' + res.slug, 'success');
+    AE_PREVIEW = null;
+    await fetchAll();
+    setTab('products');
+  }catch(e){ st.textContent = '❌ ' + e.message; toast(e.message, 'error'); }
+  finally{ btn.disabled=false; btn.innerHTML = IC("check-circle-2")+' Publish ke Toko'; }
+}
+
 // ── Reports ──
 let reportData = null;
 function renderReports(c) {
@@ -2651,11 +2929,6 @@ function exportReportCSV() {
 
 // ── Settings ──
 function renderSettings(c) {
-  let tiers = [];
-  try { tiers = JSON.parse(getSetting('discount_tiers')); } catch (e) { tiers = []; }
-  if (!Array.isArray(tiers)) tiers = [];
-  tiers.sort((a, b) => (a.min||0) - (b.min||0));
-  const tierRows = tiers.length ? tiers.map((t, i) => tierRowHtml(t, i)).join('') : tierRowHtml({min:'',pct:''}, 0);
   c.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="settings-grid">
       <div class="card">
@@ -2672,12 +2945,6 @@ function renderSettings(c) {
         <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Diubah di sini, otomatis berlaku di seluruh toko (checkout &amp; beranda).</div>
         <label style="font-size:12px;font-weight:700;color:var(--mid)">Diskon Member (%)</label>
         <input class="login-input" type="number" id="set-member-disc" value="${esc(getSetting('member_discount'))}" min="0" max="100" style="margin-bottom:10px">
-        <label style="font-size:12px;font-weight:700;color:var(--mid)">Minimal Belanja Gratis Ongkir (Rp)</label>
-        <input class="login-input" type="number" id="set-free-ship" value="${esc(getSetting('free_ship_min'))}" min="0" style="margin-bottom:10px">
-        <label style="font-size:12px;font-weight:700;color:var(--mid)">Diskon Qty Bertingkat</label>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Min qty ${IC("arrow-right")} diskon %. Baris atas = minimal qty paling tinggi.</div>
-        <div id="set-tier-rows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">${tierRows}</div>
-        <button class="action-btn" style="padding:6px 12px;margin-bottom:12px" onclick="addTierRow()">+ Tambah Tingkat</button>
         <button class="d-btn d-btn-primary d-btn-block" onclick="saveDiscountSettings()">${IC("save")} Simpan Diskon &amp; Promo</button>
       </div>
       <div class="card">
@@ -2710,38 +2977,12 @@ function renderSettings(c) {
   `;
 }
 
-// ── Diskon & Promo settings ──
-function tierRowHtml(t, i) {
-  return `<div style="display:flex;gap:6px;align-items:center">
-    <input type="number" class="tier-min" value="${esc(t.min)}" placeholder="Min qty" min="1" style="flex:1;padding:7px 10px;border:2px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font)">
-    <span style="font-size:12px;color:var(--muted)">${IC("arrow-right")}</span>
-    <input type="number" class="tier-pct" value="${esc(t.pct)}" placeholder="%" min="0" max="100" style="flex:1;padding:7px 10px;border:2px solid var(--border);border-radius:8px;font-size:13px;font-family:var(--font)">
-    <button class="action-btn del" style="padding:6px 9px" onclick="this.parentElement.remove()" title="Hapus">${IC("x")}</button>
-  </div>`;
-}
-function addTierRow() {
-  const wrap = document.getElementById('set-tier-rows');
-  if (wrap) wrap.insertAdjacentHTML('beforeend', tierRowHtml({min:'',pct:''}, 0));
-}
 async function saveDiscountSettings() {
   const member = parseInt(document.getElementById('set-member-disc').value || '0', 10);
-  const freeShip = parseInt(document.getElementById('set-free-ship').value || '0', 10);
-  const rows = Array.from(document.querySelectorAll('#set-tier-rows > div')).map(r => ({
-    min: parseInt((r.querySelector('.tier-min')||{}).value || '0', 10),
-    pct: parseInt((r.querySelector('.tier-pct')||{}).value || '0', 10)
-  })).filter(t => t.min > 0 && t.pct > 0);
   if (member < 0 || member > 100) { toast('Diskon member harus 0-100%', 'error'); return; }
-  if (freeShip < 0) { toast('Minimal gratis ongkir tidak valid', 'error'); return; }
-  if (!rows.length) { toast('Minimal 1 tingkat diskon qty', 'error'); return; }
-  const dup = rows.find((t, i) => rows.some((x, j) => j !== i && x.min === t.min));
-  if (dup) { toast('Ada min qty yang sama (' + dup.min + '), gabungkan atau ubah', 'error'); return; }
   try {
     await api('PUT', '/api/settings', { key: 'member_discount', value: member });
-    await api('PUT', '/api/settings', { key: 'free_ship_min', value: freeShip });
-    await api('PUT', '/api/settings', { key: 'discount_tiers', value: JSON.stringify(rows.sort((a,b)=>b.min-a.min)) });
     SETTINGS.member_discount = String(member);
-    SETTINGS.free_ship_min = String(freeShip);
-    SETTINGS.discount_tiers = JSON.stringify(rows.sort((a,b)=>b.min-a.min));
     toast('Pengaturan diskon tersimpan ' + IC("check-circle-2") + '', 'success');
   } catch (e) {
     toast('Gagal simpan: ' + e.message, 'error');

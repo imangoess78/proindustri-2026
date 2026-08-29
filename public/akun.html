@@ -507,7 +507,7 @@ var IC = window.IC;
       var items = o.items || [];
       var itemsText = items.map(function(i) { return (i.productName || i.product_name || 'Produk') + (i.variantName ? ' (' + i.variantName + ')' : ''); }).join(', ');
       var more = items.length > 2 ? ' (+' + (items.length - 2) + ')' : '';
-      var shipText = o.shipping === 'gratis' ? '' + IC("truck") + ' Gratis Ongkir' : (o.shipping_cost ? SP.fmt(o.shipping_cost) : '—');
+      var shipText = (o.shipping_cost ? SP.fmt(o.shipping_cost) : (o.shipping ? SP.esc(o.shipping) : '—'));
       var canReorder = items.length > 0 && o.status !== 'Batal';
       var canReview = o.status === 'Selesai' || o.status === 'Dikirim' || o.status === 'Lunas';
       return '<div class="order-card">'

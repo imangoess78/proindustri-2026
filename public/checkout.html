@@ -54,13 +54,15 @@ var IC = window.IC;
 (function () {
   const SP = MP;
   // Nilai default; di-override oleh /api/settings saat load
-  let DISC_TIERS = [{min:100,pct:20},{min:50,pct:10},{min:10,pct:5},{min:5,pct:2}];
   let MEMBER_DISCOUNT = 10;
   const WA = '6281394191904';
   const WEIGHT_PER_PACK = 250; // gram per pack (estimasi)
-  let FREE_SHIP_MIN = 500000;
   let PAYMENTS = [];   // dinamis dari /api/payment-methods
   let SEL_PM = null;   // object payment method terpilih (bank/qris statis)
+  let couponCode = '';
+  let couponAmt = 0;
+  let couponInfo = null;
+  let couponMsg = '';
 
   let selPay = null;
   let selProv = '';
@@ -79,26 +81,17 @@ var IC = window.IC;
     try {
       const res = await fetch('/api/settings');
       const s = await res.json();
-      if (s && s.discount_tiers) {
-        const t = JSON.parse(s.discount_tiers);
-        if (Array.isArray(t) && t.length) DISC_TIERS = t;
-      }
       if (s && s.member_discount !== undefined) MEMBER_DISCOUNT = parseInt(s.member_discount, 10) || 0;
-      if (s && s.free_ship_min !== undefined) FREE_SHIP_MIN = parseInt(s.free_ship_min, 10) || 0;
     } catch (e) { /* pakai default */ }
   }
 
-  function getDisc(qty) {
-    for (const t of DISC_TIERS) if (qty >= t.min) return t.pct;
-    return 0;
-  }
+  function getDisc(qty) { return 0; }
 
   function getTotal(cart, sub, discAmt, memberAmt) {
-    return sub - discAmt - memberAmt + getShippingCost(sub);
+    return sub - discAmt - memberAmt - couponAmt + getShippingCost(sub);
   }
 
   function getShippingCost(sub) {
-    if (sub >= FREE_SHIP_MIN) return 0;      // gratis ongkir
     return selCourier ? selCourier.cost : 0; // ongkir kurir terpilih
   }
 
@@ -144,7 +137,7 @@ var IC = window.IC;
     const wrap = document.getElementById('coWrap');
     // Simpan nilai input dulu (render menimpa innerHTML seluruhnya)
     const saved = {};
-    ['coName','coPhone','coAddr','coNote'].forEach(id => {
+    ['coName','coPhone','coAddr','coNote','couponInput'].forEach(id => {
       const el = document.getElementById(id);
       if (el) saved[id] = el.value;
     });
@@ -156,14 +149,14 @@ var IC = window.IC;
 
     const sub = cart.reduce((s, c) => s + c.price * c.qty, 0);
     const tq = cart.reduce((s, c) => s + c.qty, 0);
-    const discPct = getDisc(tq);
-    const discAmt = sub * discPct / 100;
-    const afterDisc = sub - discAmt;
+    const discPct = 0;
+    const discAmt = 0;
+    const afterDisc = sub;
     const memberDisc = isMember() ? MEMBER_DISCOUNT : 0;
     const memberAmt = afterDisc * memberDisc / 100;
-    const freeShip = sub >= FREE_SHIP_MIN;
+    const voucherAmt = couponAmt;
     const shipCost = getShippingCost(sub);
-    const total = sub - discAmt - memberAmt + shipCost;
+    const total = sub - discAmt - memberAmt - voucherAmt + shipCost;
 
     const itemsRows = cart.map(c => `
       <div class="order-row">
@@ -176,7 +169,7 @@ var IC = window.IC;
     const cityOptions = (cityData?.cities || []).filter(c => c.province === selProv).map(c =>
       `<option value="${SP.esc(c.city)}"${c.city === selCity ? ' selected' : ''}>${SP.esc(c.city)}</option>`).join('');
 
-    const courierRows = freeShip ? '' : (courierCosts.length ? courierCosts.map(c => `
+    const courierRows = courierCosts.length ? courierCosts.map(c => `
       <label class="ship-opt${selCourier && selCourier.courier === c.courier ? ' sel' : ''}" style="display:flex;align-items:center;gap:10px;padding:11px 12px;border:2px solid ${selCourier && selCourier.courier === c.courier ? 'var(--red)' : 'var(--border)'};border-radius:var(--radius-sm);cursor:pointer;margin-bottom:8px;background:${selCourier && selCourier.courier === c.courier ? 'var(--steel-light)' : '#fff'}">
         <input type="radio" name="courier" value="${c.courier}" onclick="selCourierFn('${c.courier}')" ${selCourier && selCourier.courier === c.courier ? 'checked' : ''}>
         <span style="flex:1">
@@ -184,7 +177,7 @@ var IC = window.IC;
           <span style="display:block;font-size:11px;color:var(--muted)">Estimasi ${c.etd} hari · ${c.weight_kg} kg</span>
         </span>
         <span style="font-weight:800;font-size:13px;color:var(--red)">${SP.fmt(c.cost)}</span>
-      </label>`).join('') : '<p style="font-size:12px;color:var(--muted)">Pilih kota tujuan untuk melihat tarif ekspedisi.</p>');
+      </label>`).join('') : '<p style="font-size:12px;color:var(--muted)">Pilih kota tujuan untuk melihat tarif ekspedisi.</p>';
 
     wrap.innerHTML = `
       ${isMember() ? `
@@ -226,7 +219,6 @@ var IC = window.IC;
 
       <div class="co-card">
         <div class="co-card-title">${IC("truck")} Pengiriman & Ongkir</div>
-        ${freeShip ? '<div style="font-size:13px;color:#16A34A;padding:10px 0">' + IC("gift") + ' Subtotal ≥ Rp500.000 — pengiriman GRATIS (ekspedisi pilihan kami).</div>' : `
         <div class="fg">
           <label class="fl">Provinsi *</label>
           <select class="fi" id="coProv" onchange="provFn(this.value)">
@@ -242,7 +234,7 @@ var IC = window.IC;
         <div class="fg" style="margin-top:4px">
           <label class="fl">Pilih Ekspedisi *</label>
           <div id="courierList" style="margin-top:4px">${courierRows}</div>
-        </div>`}
+        </div>
       </div>
 
       <div class="co-card">
@@ -259,12 +251,16 @@ var IC = window.IC;
       <div class="co-card">
         <div class="co-card-title">${IC("clipboard-list")} Ringkasan Pesanan</div>
         ${itemsRows}
+        <div style="display:flex;gap:8px;align-items:center;margin:10px 0;padding:10px;background:var(--gold-light);border:1px dashed var(--gold);border-radius:10px">
+          <input id="couponInput" placeholder="Kode kupon (mis. HEMAT10)" value="${SP.esc(couponCode)}" style="flex:1;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;text-transform:uppercase">
+          ${couponCode ? `<button type="button" onclick="removeCoupon()" style="padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;font-weight:800;cursor:pointer">Hapus</button>` : `<button type="button" onclick="applyCoupon()" id="couponBtn" style="padding:9px 14px;border:none;border-radius:8px;background:var(--gold);color:#fff;font-weight:800;cursor:pointer">Pakai</button>`}
+        </div>
+        ${couponMsg ? `<div style="font-size:12px;margin:-6px 0 8px;color:${couponInfo?'#15803D':'var(--red)'};font-weight:700">${SP.esc(couponMsg)}</div>` : ''}
         <div class="order-row" style="margin-top:8px"><span>Subtotal</span><span>${SP.fmt(sub)}</span></div>
-        ${discPct > 0 ? `<div class="order-row" style="color:#16A34A"><span>Diskon ${discPct}%</span><span>-${SP.fmt(discAmt)}</span></div>` : ''}
         ${isMember() ? `<div class="order-row" style="color:#16A34A"><span>Diskon Member ${memberDisc}%</span><span>-${SP.fmt(memberAmt)}</span></div>` : ''}
-        <div class="order-row"><span>Ongkir</span><span>${freeShip ? '' + IC("check-circle-2") + ' Gratis' : (selCourier ? SP.fmt(shipCost) : 'Belum dipilih')}</span></div>
+        ${couponAmt>0 ? `<div class="order-row" style="color:#15803D"><span>Kupon ${SP.esc(couponCode)}</span><span>-${SP.fmt(couponAmt)}</span></div>` : ''}
+        <div class="order-row"><span>Ongkir</span><span>${selCourier ? SP.fmt(shipCost) : 'Belum dipilih'}</span></div>
         <div class="order-row" style="font-weight:900;font-size:15px;color:var(--dark);border-top:1px solid var(--border);margin-top:8px;padding-top:12px"><span>Total</span><span>${SP.fmt(total)}</span></div>
-        ${freeShip ? '<div style="font-size:11px;color:#16A34A;margin-top:6px">' + IC("gift") + ' Selamat! Subtotal ≥ Rp500.000 — ongkir GRATIS.</div>' : ''}
       </div>
 
       <button class="place-btn" id="placeBtn" onclick="placeOrder()">${IC("shopping-cart")} Buat Pesanan — ${SP.fmt(total)}</button>
@@ -297,6 +293,21 @@ var IC = window.IC;
     selCourier = courierCosts.find(c => c.courier === code) || null;
     render();
   };
+  window.applyCoupon = async function() {
+    const inp = document.getElementById('couponInput');
+    const code = (inp ? inp.value : '').trim();
+    if (!code) { couponMsg='Masukkan kode kupon'; render(); return; }
+    const cart = SP.getCart(); const sub = cart.reduce((s,c)=>s+c.price*c.qty,0);
+    const btn = document.getElementById('couponBtn'); if(btn){ btn.disabled=true; btn.textContent='...'; }
+    try {
+      const r = await fetch('/api/coupons/validate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ code, subtotal: sub }) });
+      const j = await r.json();
+      if(!r.ok) throw new Error(j.error||'Gagal');
+      couponCode = j.code; couponAmt = j.amount; couponInfo = j; couponMsg = 'Kupon '+j.code+' aktif: -'+SP.fmt(j.amount);
+    } catch(e){ couponCode=''; couponAmt=0; couponInfo=null; couponMsg = e.message||'Kupon tidak valid'; }
+    render();
+  };
+  window.removeCoupon = function(){ couponCode=''; couponAmt=0; couponInfo=null; couponMsg='Kupon dihapus'; render(); };
 
   window.placeOrder = async function() {
     const cart = SP.getCart();
@@ -310,23 +321,19 @@ var IC = window.IC;
 
     const sub = cart.reduce((s, c) => s + c.price * c.qty, 0);
         const tq = cart.reduce((s, c) => s + c.qty, 0);
-        const disc = getDisc(tq);
-        const discAmt = sub * disc / 100;
-        const afterDisc = sub - discAmt;
+        const disc = 0;
+        const discAmt = 0;
+        const afterDisc = sub;
         const memberDisc = isMember() ? MEMBER_DISCOUNT : 0;
         const memberAmt = afterDisc * memberDisc / 100;
-        const freeShip = sub >= FREE_SHIP_MIN;
-        const voucherAmt = 0;
+        const voucherAmt = couponAmt;
 
-        if (!freeShip && !selCourier) { alert('Pilih ekspedisi pengiriman dulu ya!'); return; }
+        if (!selCourier) { alert('Pilih ekspedisi pengiriman dulu ya!'); return; }
 
-        const shipCost = freeShip ? 0 : (selCourier ? selCourier.cost : 0);
-        const total = sub - discAmt - memberAmt + shipCost;
+        const shipCost = selCourier ? selCourier.cost : 0;
+        const total = sub - discAmt - memberAmt - voucherAmt + shipCost;
 
-        const shipping = freeShip ? {
-          city: 'Gratis Ongkir', province: '', courier: 'gratis', courier_name: 'Gratis Ongkir',
-          cost: 0, etd: '1-3', weight_kg: Math.ceil(getWeight(cart) / 1000)
-        } : {
+        const shipping = {
           city: selCity, province: selProv, courier: selCourier.courier,
           courier_name: selCourier.courier_name, cost: shipCost, etd: selCourier.etd, weight_kg: selCourier.weight_kg
         };
@@ -339,6 +346,7 @@ var IC = window.IC;
           items: cart.map(c => ({ productId: c.productId, slug: c.slug || '', productName: c.productName, variantName: c.variantName, price: c.price, qty: c.qty })),
           sub, disc, discAmt, memberDisc, memberAmt, voucherAmt, total,
           payment: selPay,
+          couponCode: couponCode || '',
           status: 'Menunggu Konfirmasi',
           shipping,
           user_id: (SP.getUser()||{}).id || ''
@@ -368,7 +376,7 @@ var IC = window.IC;
           }
 
           const itemsText = cart.map(c => `- ${c.productName} (${c.variantName}) × ${c.qty} = ${SP.fmt(c.price * c.qty)}`).join('\\n');
-          const shipText = freeShip ? 'Gratis Ongkir (min. belanja Rp500.000)' : `${selCourier.courier_name} ke ${selCity}, ${selProv} (${selCourier.etd} hari) = ${SP.fmt(shipCost)}`;
+          const shipText = `${selCourier.courier_name} ke ${selCity}, ${selProv} (${selCourier.etd} hari) = ${SP.fmt(shipCost)}`;
           const dashBtn = SP.getUser() ? '<a class="btn-red" href="/akun">' + IC("package") + ' Lihat Pesanan Saya</a>' : '';
 
           function showSuccess(extra) {

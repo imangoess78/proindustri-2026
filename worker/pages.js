@@ -159,9 +159,8 @@ export async function renderProduct(env, p) {
     </div>`).join('');
 
   // Badges
-  const badges = ['<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg> Ready Stock', '<svg class="ic" aria-hidden="true"><use href="#i-truck"/></svg> Gratis Ongkir min. Rp500rb'];
+  const badges = ['<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg> Ready Stock', '<svg class="ic" aria-hidden="true"><use href="#i-truck"/></svg> Pengiriman Nasional'];
   if (p.specs && p.specs['Garansi']) badges.unshift('<svg class="ic" aria-hidden="true"><use href="#i-shield-check"/></svg> Garansi Resmi');
-  const discTiers = [{ min: 100, pct: 20 }, { min: 50, pct: 10 }, { min: 10, pct: 5 }, { min: 5, pct: 2 }];
 
   const minPackNote = `<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg> Minimum <strong>1 unit</strong> per produk. Boleh campur varian!`;
 
@@ -205,7 +204,6 @@ export async function renderProduct(env, p) {
         <h1 class="pd-name">${esc(p.name)}</h1>
         <div class="pd-price" id="pdPrice">${priceLabel}</div>
         <div class="pd-price-sub">Ready stock · ${sortedVars.length} pilihan varian${minP !== maxP ? ' · mulai ' + fmt(minP) : ''}</div>
-        <div class="pd-disc-row">${discTiers.map(t => `<span class="pd-disc-badge">${t.pct}% (${t.min}+ unit)</span>`).join('')}</div>
 
         ${minPackNote}
         <div class="pd-lbl">Pilih Varian & Jumlah</div>
@@ -214,7 +212,7 @@ export async function renderProduct(env, p) {
         <div class="pd-qty-row" style="display:flex;align-items:center;gap:12px;margin:18px 0">
           <span style="font-size:13px;font-weight:700;color:var(--mid)">Jumlah:</span>
           <button class="cqb" type="button" onclick="chQty(-1)">−</button>
-          <input type="number" id="qtyLbl" value="5" min="5" step="1" inputmode="numeric" aria-label="Jumlah pesanan" oninput="qtyInput()" onchange="qtyCommit()" style="width:72px;text-align:center;font-weight:900;font-size:16px;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;background:white;color:var(--dark);font-family:var(--font)">
+          <input type="number" id="qtyLbl" value="1" min="1" step="1" inputmode="numeric" aria-label="Jumlah pesanan" oninput="qtyInput()" onchange="qtyCommit()" style="width:72px;text-align:center;font-weight:900;font-size:16px;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;background:white;color:var(--dark);font-family:var(--font)">
           <button class="cqb" type="button" onclick="chQty(1)">+</button>
           <span id="qtyHint" style="font-size:12px;color:var(--muted)"></span>
         </div>
@@ -282,7 +280,7 @@ export async function renderProduct(env, p) {
   </div>`;
 
   const script = `
-  let qty = 5, curPrice = ${sortedVars.length ? sortedVars[0].price : 0};
+  let qty = 1, curPrice = ${sortedVars.length ? sortedVars[0].price : 0};
   const MIN_PACK = 1;
   const MAX_QTY = 100000;
   const pid = ${JSON.stringify(p.id)};
@@ -317,22 +315,16 @@ export async function renderProduct(env, p) {
     document.getElementById('qtyLbl').value = v;
     updatePrice();
   }
-  const DISC_TIERS = [{min:100,pct:20},{min:50,pct:10},{min:10,pct:5},{min:5,pct:2}];
-  function getDiscPct(q){ for (const t of DISC_TIERS) if (q >= t.min) return t.pct; return 0; }
   function updatePrice() {
-    const pct = getDiscPct(qty);
     const sub = curPrice * qty;
-    const disc = Math.round(sub * pct / 100);
-    const total = sub - disc;
+    const total = sub;
     document.getElementById('pdPrice').textContent = MP.fmt(curPrice);
-    document.getElementById('qtyHint').innerHTML = pct > 0 ? '<svg class="ic" aria-hidden="true"><use href="#i-tag"/></svg> Diskon ' + pct + '% berlaku' : '';
+    document.getElementById('qtyHint').innerHTML = '';
     document.getElementById('pdSumBox').innerHTML =
       '<div class="sum-row"><span>Harga Satuan</span><span>' + MP.fmt(curPrice) + '</span></div>' +
       '<div class="sum-row"><span>Jumlah</span><span>' + qty + ' unit</span></div>' +
       '<div class="sum-row"><span>Subtotal</span><span>' + MP.fmt(sub) + '</span></div>' +
-      (pct > 0
-        ? '<div class="sum-row"><span style="color:#16A34A;font-weight:700"><svg class="ic" aria-hidden="true"><use href="#i-tag"/></svg> Diskon ' + pct + '%</span><span class="neg">-' + MP.fmt(disc) + '</span></div>'
-        : '') +
+
       '<div class="sum-row grand"><span>Total Harga</span><span>' + MP.fmt(total) + '</span></div>';
   }
   function doCart(buy) {
@@ -347,13 +339,13 @@ export async function renderProduct(env, p) {
       setTimeout(() => location.href = '/checkout', 600);
     } else {
       // Tetap di halaman supaya user bisa tambah varian lain / lanjut belanja
-      showCartToast('<svg class="ic" aria-hidden="true"><use href="#i-check-circle-2"/></svg> ' + qty + ' unit ' + vname + ' masuk keranjang');
+      showCartToast(qty + ' unit ' + vname + ' masuk keranjang');
     }
   }
   function showCartToast(msg) {
     const el = document.getElementById('toastMsg');
     if (!el) return;
-    el.innerHTML = msg + ' <a href="/cart" style="color:white;font-weight:800;text-decoration:underline;white-space:nowrap">Lihat Keranjang →</a>';
+    el.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-check-circle-2"/></svg> ' + msg.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + ' <a href="/cart" style="color:white;font-weight:800;text-decoration:underline;white-space:nowrap">Lihat Keranjang →</a>';
     el.classList.add('show');
     clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 4000);
   }
@@ -751,7 +743,7 @@ function maskName(n){
 // ── Kartu produk (sama persis dengan card di home — index.html renderProducts) ──
 const BESTSELLER_IDS = ['29463366459','19626400134'];
 // Script wishlist untuk halaman SSR (shop/archive/kategori/produk)
-const WISH_SCRIPT = `function cardWish(id,e){if(e&&e.preventDefault)e.preventDefault();if(e&&e.stopPropagation)e.stopPropagation();let w=JSON.parse(localStorage.getItem('mp_wish')||'[]');const i=w.indexOf(id);const had=i>-1;if(had)w.splice(i,1);else w.push(id);localStorage.setItem('mp_wish',JSON.stringify(w));const b=e&&e.currentTarget;if(b){b.classList.toggle('active',!had);b.textContent=had?'<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>':'<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>';}const tok=localStorage.getItem('mp_token');if(tok){const h={'Authorization':'Bearer '+tok};if(had){fetch('/api/account/wishlist?product_id='+encodeURIComponent(id),{method:'DELETE',headers:h}).catch(function(){});}else{fetch('/api/account/wishlist',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},h),body:JSON.stringify({product_id:id})}).catch(function(){});}}}
+const WISH_SCRIPT = `function cardWish(id,e){if(e&&e.preventDefault)e.preventDefault();if(e&&e.stopPropagation)e.stopPropagation();let w=JSON.parse(localStorage.getItem('mp_wish')||'[]');const i=w.indexOf(id);const had=i>-1;if(had)w.splice(i,1);else w.push(id);localStorage.setItem('mp_wish',JSON.stringify(w));const b=e&&e.currentTarget;if(b){b.classList.toggle('active',!had);b.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>';}const tok=localStorage.getItem('mp_token');if(tok){const h={'Authorization':'Bearer '+tok};if(had){fetch('/api/account/wishlist?product_id='+encodeURIComponent(id),{method:'DELETE',headers:h}).catch(function(){});}else{fetch('/api/account/wishlist',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},h),body:JSON.stringify({product_id:id})}).catch(function(){});}}}
 function quickAdd(btn,e){if(e){e.preventDefault();e.stopPropagation();}const d=btn.dataset;try{let c=JSON.parse(localStorage.getItem('mp_cart')||'[]');const k=d.id+'|'+d.variant;const ex=c.find(x=>x.key===k);if(ex){ex.qty+=Number(d.minpack||1);}else{c.push({key:k,productId:d.id,slug:d.slug,productName:d.name,variantName:d.variant,price:Number(d.price),qty:Number(d.minpack||1),img:d.img});}localStorage.setItem('mp_cart',JSON.stringify(c));if(window.MP&&MP.updateCartBadge)MP.updateCartBadge();showToast('✓ Ditambahkan ke keranjang');}catch(err){alert('Gagal menambahkan ke keranjang');}}
 function showToast(msg){var t=document.createElement('div');t.textContent=msg;Object.assign(t.style,{position:'fixed',bottom:'20px',left:'50%',transform:'translateX(-50%)',background:'#16A34A',color:'white',padding:'10px 24px',borderRadius:'30px',fontSize:'14px',fontWeight:'700',zIndex:9999,boxShadow:'0 4px 16px rgba(0,0,0,0.2)',transition:'opacity 0.3s'});document.body.appendChild(t);setTimeout(function(){t.style.opacity='0';setTimeout(function(){t.remove()},300)},2000);}
 document.querySelectorAll('.wish-btn').forEach(function(b){if(JSON.parse(localStorage.getItem('mp_wish')||'[]').includes(b.getAttribute('data-id'))){b.classList.add('active');b.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>';}});
@@ -761,8 +753,8 @@ document.querySelectorAll('.wish-btn').forEach(function(b){if(JSON.parse(localSt
 const QUICKMODAL_SCRIPT = `
 function escQA(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function qaFmt(n){return 'Rp' + Math.round(n).toLocaleString('id-ID');}
-function qaDisc(q){var t=[[100,20],[50,10],[10,5],[5,2]];for(var i=0;i<t.length;i++){if(q>=t[i][0])return t[i][1];}return 0;}
-var qaD=null,qaV=null,qaQ=5;
+function qaDisc(q){return 0;}
+var qaD=null,qaV=null,qaQ=1;
 function openQA(p){qaD=p;qaV=p.variants[0]||null;qaQ=Number(p.minpack||1);renderQA();document.getElementById('qaOverlay').classList.add('open');document.body.style.overflow='hidden';}
 function closeQA(){document.getElementById('qaOverlay').classList.remove('open');document.body.style.overflow='';}
 function qaPick(n){if(!qaD)return;for(var i=0;i<qaD.variants.length;i++){if(qaD.variants[i].name===n){qaV=qaD.variants[i];break;}}renderQA();}
@@ -770,14 +762,14 @@ function qaCh(d){qaQ=Math.max(Number(qaD.minpack||1),Math.min(100000,(qaQ||Numbe
 function qaSet(){var el=document.getElementById('qaQty');if(!el)return;var v=parseInt(el.value)||0;if(v<Number(qaD.minpack||1))v=Number(qaD.minpack||1);if(v>100000)v=100000;qaQ=v;el.value=v;qaUpdateSum();}
 function qaSumHtml(){
   if(!qaD||!qaV)return '';
-  var disc=qaDisc(qaQ);
+  var disc=0;
   var sub=qaV.price*qaQ;
   var discAmt=Math.round(sub*disc/100);
   var total=sub-discAmt;
   var h='<div class="qa-sum-row"><span>Harga Satuan</span><span>'+qaFmt(qaV.price)+'</span></div>';
   h+='<div class="qa-sum-row"><span>Jumlah</span><span>'+qaQ+' unit</span></div>';
   h+='<div class="qa-sum-row"><span>Subtotal</span><span>'+qaFmt(sub)+'</span></div>';
-  if(disc>0)h+='<div class="qa-sum-row"><span style="color:#16A34A;font-weight:700"><svg class="ic" aria-hidden="true"><use href="#i-tag"/></svg> Diskon '+disc+'%</span><span class="neg">-'+qaFmt(discAmt)+'</span></div>';
+
   h+='<div class="qa-sum-row grand"><span>Total Harga</span><span>'+qaFmt(total)+'</span></div>';
   return h;
 }
@@ -810,16 +802,22 @@ function qaAdd(buy){
   if(window.MP&&MP.updateCartBadge)MP.updateCartBadge();
   closeQA();
   if(buy){setTimeout(function(){location.href='/checkout';},300);return;}
-  showQAToast('<svg class="ic" aria-hidden="true"><use href="#i-check-circle-2"/></svg> '+qaQ+' unit '+qaV.name+' masuk keranjang');
+  showQAToast(qaQ+' unit '+qaV.name+' masuk keranjang');
 }
 function showQAToast(msg){
   var t=document.createElement('div');
   t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#16A34A;color:white;padding:10px 20px;border-radius:30px;font-size:14px;font-weight:700;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.2);display:flex;align-items:center;gap:10px;transition:opacity 0.3s';
+  var ic=document.createElement('span');
+  ic.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-check-circle-2"/></svg>';
+  ic.style.cssText='display:inline-flex;align-items:center;flex-shrink:0';
+  var txt=document.createElement('span');
+  txt.textContent=msg;
   var link=document.createElement('a');
   link.textContent='Lihat Keranjang →';
   link.href='/cart';
   link.style.cssText='color:white;font-weight:800;text-decoration:underline;font-size:13px;white-space:nowrap';
-  t.appendChild(document.createTextNode(msg));
+  t.appendChild(ic);
+  t.appendChild(txt);
   t.appendChild(link);
   document.body.appendChild(t);
   setTimeout(function(){t.style.opacity='0';setTimeout(function(){t.remove()},300)},3500);
@@ -852,7 +850,7 @@ function homeCard(p) {
       vFirst = vs.filter(v => Number(v.price) > 0).sort((a, b) => Number(a.price) - Number(b.price))[0] || null;
     }
   } catch (e) {}
-  const minPack = 5;
+  const minPack = 1;
   const imgHtml = img
     ? `<div class="p-img"><img src="${esc(img)}" alt="${name}" loading="lazy" onerror="this.style.display='none'"></div>`
     : `<div class="p-img" style="display:flex;align-items:center;justify-content:center;font-size:42px"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg></div>`;
@@ -969,7 +967,7 @@ export async function renderShop(env, searchQuery) {
       const vcount = vs.length;
       const onerr = 'onerror="this.parentElement.innerHTML=' + q + '&#128230;' + q + '"';
       const img = p.img ? '<div class="p-img"><img src="' + p.img + '" alt="' + p.name.replace(/"/g,'&quot;') + '" loading="lazy" ' + onerr + '></div>' : '<div class="p-img" style="display:flex;align-items:center;justify-content:center;font-size:42px">&#128230;</div>';
-      const d = 'data-id="' + p.id + '" data-slug="' + encodeURIComponent(p.slug) + '" data-name="' + p.name.replace(/"/g,'&quot;') + '" data-img="' + p.img + '" data-minpack="5" data-variants=' + q + JSON.stringify(vs.filter(function(v){return Number(v.price)>0}).map(function(v){return {name:String(v.name||''),price:Number(v.price)}})).replace(/'/g,'&#39;') + q;
+      const d = 'data-id="' + p.id + '" data-slug="' + encodeURIComponent(p.slug) + '" data-name="' + p.name.replace(/"/g,'&quot;') + '" data-img="' + p.img + '" data-minpack="1" data-variants=' + q + JSON.stringify(vs.filter(function(v){return Number(v.price)>0}).map(function(v){return {name:String(v.name||''),price:Number(v.price)}})).replace(/'/g,'&#39;') + q;
       return '<a class="p-card" href="/produk/' + encodeURIComponent(p.slug) + '">' +
         '<div class="p-img" style="position:relative">' + img +
         (tag ? '<span class="p-pill">' + tag.replace(/</g,'&lt;') + '</span>' : '') +
@@ -979,7 +977,7 @@ export async function renderShop(env, searchQuery) {
         (vcount ? '<div class="p-vars">' + vcount + ' pilihan varian</div>' : '') +
         '<button class="p-btn" ' + d + ' onclick="quickAdd(this,event)">+ Keranjang</button></div></a>';
     }
-    function cardWish(id,e){if(e&&e.preventDefault)e.preventDefault();if(e&&e.stopPropagation)e.stopPropagation();let w=JSON.parse(localStorage.getItem('mp_wish')||'[]');const i=w.indexOf(id);const had=i>-1;if(had)w.splice(i,1);else w.push(id);localStorage.setItem('mp_wish',JSON.stringify(w));const b=e&&e.currentTarget;if(b){b.classList.toggle('active',!had);b.textContent=had?'<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>':'<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>';}const tok=localStorage.getItem('mp_token');if(tok){const h={'Authorization':'Bearer '+tok};if(had){fetch('/api/account/wishlist?product_id='+encodeURIComponent(id),{method:'DELETE',headers:h}).catch(function(){});}else{fetch('/api/account/wishlist',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},h),body:JSON.stringify({product_id:id})}).catch(function(){});}}}
+    function cardWish(id,e){if(e&&e.preventDefault)e.preventDefault();if(e&&e.stopPropagation)e.stopPropagation();let w=JSON.parse(localStorage.getItem('mp_wish')||'[]');const i=w.indexOf(id);const had=i>-1;if(had)w.splice(i,1);else w.push(id);localStorage.setItem('mp_wish',JSON.stringify(w));const b=e&&e.currentTarget;if(b){b.classList.toggle('active',!had);b.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>';}const tok=localStorage.getItem('mp_token');if(tok){const h={'Authorization':'Bearer '+tok};if(had){fetch('/api/account/wishlist?product_id='+encodeURIComponent(id),{method:'DELETE',headers:h}).catch(function(){});}else{fetch('/api/account/wishlist',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},h),body:JSON.stringify({product_id:id})}).catch(function(){});}}}
     function isWished(id){try{return JSON.parse(localStorage.getItem('mp_wish')||'[]').includes(id);}catch(err){return false;}}
     function applyShop(){
     const q = (document.getElementById('shopSearch').value || '').toLowerCase().trim();

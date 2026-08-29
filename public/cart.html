@@ -59,7 +59,6 @@ var IC = window.IC;
 <script src="/assets/site.js"></script>
 <script>
 (function () {
-  const DISC_TIERS = [{min:100,pct:20},{min:50,pct:10},{min:10,pct:5},{min:5,pct:2}];
   const SP = MP;
 
   function render() {
@@ -104,25 +103,19 @@ var IC = window.IC;
     }
     const sub = cart.reduce((s, c) => s + c.price * c.qty, 0);
     const tq = cart.reduce((s, c) => s + c.qty, 0);
-    const discPct = getDisc(tq);
-    const discAmt = sub * discPct / 100;
-    const afterDisc = sub - discAmt;
-    const freeShip = sub >= 500000;
+    const discPct = 0;
+    const discAmt = 0;
+    const afterDisc = sub;
 
     sum.innerHTML = `
       <div class="sum-row"><span>Total Item</span><span>${tq} unit</span></div>
       <div class="sum-row"><span>Subtotal</span><span>${SP.fmt(sub)}</span></div>
-      ${discPct > 0 ? `<div class="sum-row" style="color:#16A34A;font-weight:700"><span>Diskon ${discPct}%</span><span>-${SP.fmt(discAmt)}</span></div>` : ''}
-      <div class="sum-row"><span>Ongkir</span><span>${freeShip ? '' + IC("check-circle-2") + ' Gratis' : 'Dihitung saat konfirmasi'}</span></div>
+      <div class="sum-row"><span>Ongkir</span><span>Dihitung saat checkout</span></div>
       <div class="sum-row grand"><span>Total</span><span>${SP.fmt(afterDisc)}</span></div>
-      ${freeShip ? '<div style="font-size:12px;color:#16A34A;font-weight:600;margin-top:8px">' + IC("truck") + ' Gratis ongkir!</div>' : '<div style="font-size:12px;color:var(--muted);margin-top:8px">' + IC("dollar-sign") + ' Belanja Rp500rb+ gratis ongkir</div>'}
     `;
   }
 
-  function getDisc(qty) {
-    for (const t of DISC_TIERS) if (qty >= t.min) return t.pct;
-    return 0;
-  }
+  function getDisc(qty) { return 0; }
 
   window.cqty = function(i, d) {
     const cart = SP.getCart();

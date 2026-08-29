@@ -241,7 +241,7 @@
     'harga': 'Harga produk kami mulai dari Rp3.500/pack (isi 100 pcs). Cek semua harga di halaman produk ya! ' + IC("smile") + '',
     'ongkir': 'Gratis ongkir untuk pembelian min. Rp500.000! Untuk estimasi ongkir, cek di halaman produk ' + IC("arrow-right") + ' Cek Ongkir.',
     'diskon': 'Ada diskon otomatis: beli 5 pack -2%, 10 pack -5%, 50 pack -10%, 100 pack -20%. Plus diskon member 10% kalau login!',
-    'minimal': 'Minimal pembelian 5 pack per produk. Bisa mix ukuran ya!',
+    'minimal': 'Minimal pembelian 1 pcs per produk. Boleh campur varian!',
     'pembayaran': 'Kami terima Transfer Bank (BCA/Mandiri/BRI), GoPay, OVO, dan QRIS.',
     'retur': 'Retur bisa dilakukan dalam 3 hari setelah produk diterima. Klik menu Retur di topbar untuk info lengkap.',
     'ukuran': 'Tersedia banyak varian! Mulai dari alat tangan hingga mesin ukuran besar. Cek di halaman produk untuk pilihan lengkap.',
@@ -423,7 +423,12 @@
 
   function setAuthMsg(msg, isErr) {
     const el = document.getElementById('mpAuthMsg');
-    if (el) { el.textContent = msg || ''; el.style.color = isErr ? 'var(--red)' : '#16A34A'; }
+    if (!el) return;
+    el.style.color = isErr ? 'var(--red)' : '#16A34A';
+    if (!msg) { el.textContent = ''; return; }
+    // msg may contain IC() SVG — render as HTML, plain text via textContent
+    if (msg.indexOf('<svg') !== -1 || msg.indexOf('<use') !== -1) el.innerHTML = msg;
+    else el.textContent = msg;
   }
 
   function openAuth(tab) {
@@ -575,10 +580,14 @@
   .notif-bell-btn{position:relative;background:var(--light,#f5f0ea);border:1px solid var(--border,#e5ddd2);border-radius:50%;width:38px;height:38px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color .15s}
   .notif-bell-btn:hover{border-color:var(--gold,#c9890a)}
   .notif-badge{position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;font-size:10px;font-weight:800;border-radius:10px;min-width:17px;height:17px;padding:0 4px;display:flex;align-items:center;justify-content:center;border:2px solid #fff}
-  .mp-notif-panel{position:fixed;top:60px;right:12px;width:370px;max-width:calc(100vw - 24px);background:#fff;border:1px solid var(--border,#e5ddd2);border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,.18);z-index:9999;display:none;overflow:hidden;font-family:var(--font,'Plus Jakarta Sans',sans-serif)}
+  .mp-notif-panel{position:fixed;top:60px;right:12px;width:380px;max-width:calc(100vw - 24px);background:#fff;border:1px solid var(--border,#e5ddd2);border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,.18);z-index:9999;display:none;overflow:hidden;font-family:var(--font,'Plus Jakarta Sans',sans-serif)}
   .mp-notif-panel.open{display:block}
-  .mp-notif-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border,#e5ddd2);font-size:14px;font-weight:800;color:var(--dark,#1a1005);background:var(--light,#f5f0ea)}
+  .mp-notif-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border,#e5ddd2);font-size:14px;font-weight:800;color:var(--dark,#1a1005);background:var(--light,#f5f0ea)}
   .mp-notif-head button{background:none;border:none;cursor:pointer;font-size:14px;color:var(--muted,#8a7f6f);font-weight:800}
+  .mp-notif-head-actions{display:flex;align-items:center;gap:8px}
+  .mp-notif-mark{font-size:12px;font-weight:700;color:var(--accent,#c9890a);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px}
+  .mp-notif-mark:hover{background:rgba(201,137,10,.1)}
+  .mp-notif-mark:disabled{opacity:.4;cursor:default}
   .mp-notif-list{max-height:420px;overflow-y:auto}
   .mp-notif-item{display:flex;gap:11px;padding:13px 16px;cursor:pointer;border-bottom:1px solid #f0ebe2;transition:background .15s}
   .mp-notif-item:hover{background:#faf7f2}
@@ -605,7 +614,7 @@
 
   function notifPanelHTML() {
     return `<div class="mp-notif-panel" id="mpNotifPanel">
-      <div class="mp-notif-head"><span>${IC("bell")} Notifikasi</span><button type="button" onclick="MP.toggleNotif(event)">${IC("x")}</button></div>
+      <div class="mp-notif-head"><span>${IC("bell")} Notifikasi</span><div class="mp-notif-head-actions"><button type="button" class="mp-notif-mark" id="mpNotifMarkAll" onclick="MP.markAllNotifRead(event)">${IC("check-circle-2")} Tandai semua dibaca</button><button type="button" onclick="MP.toggleNotif(event)">${IC("x")}</button></div></div>
       <div class="mp-notif-list" id="mpNotifList"><div style="text-align:center;padding:30px;color:var(--muted,#8a7f6f)">${IC("clock")} Memuat...</div></div>
     </div>`;
   }
@@ -631,18 +640,19 @@
     if (p.classList.contains('open')) loadNotifs();
   }
 
-  // Server notif (member login) — localStorage fallback (guest, dari tracking order)
+  // Server notif (member login) — fetch SEMUA lalu bedakan read/unread
   async function serverNotifs() {
     const token = localStorage.getItem('mp_token');
     if (!token) return { list: [], unread: 0 };
     try {
       const h = { 'Content-Type': 'application/json' };
       if (token) h['Authorization'] = 'Bearer ' + token;
-      const [list, ur] = await Promise.all([
-        fetch('/api/notifications?unread=1', { headers: h }).then(r => r.ok ? r.json() : []),
+      const [all, ur] = await Promise.all([
+        fetch('/api/notifications', { headers: h }).then(r => r.ok ? r.json() : []),
         fetch('/api/notifications/unread-count', { headers: h }).then(r => r.ok ? r.json() : { count: 0 })
       ]);
-      return { list: Array.isArray(list) ? list : [], unread: (ur && ur.count) || 0 };
+      const list = Array.isArray(all) ? all : [];
+      return { list: list, unread: (ur && ur.count) || 0 };
     } catch (e) { return { list: [], unread: 0 }; }
   }
 
@@ -674,9 +684,28 @@
 
   async function getNotifs() {
     const isGuest = !localStorage.getItem('mp_token');
-    const src = isGuest ? await guestNotifs() : await serverNotifs();
-    const readKeys = JSON.parse(localStorage.getItem('mp_notif_read') || '[]');
-    return src.list.map(n => Object.assign({}, n, { unread: n.unread !== undefined ? n.unread : !readKeys.includes(n.key) }));
+    if (isGuest) {
+      const g = await guestNotifs();
+      const readKeys = JSON.parse(localStorage.getItem('mp_notif_read') || '[]');
+      return g.list.map(n => Object.assign({}, n, { unread: !readKeys.includes(n.key) }));
+    }
+    // Member: server mengembalikan is_read (0/1) — map ke unread boolean
+    const src = await serverNotifs();
+    return src.list.map(function(n){
+      var isUnread = n.is_read === 0 || n.is_read === '0' || n.is_read === false;
+      // fallback: kalau field tidak ada, anggap unread
+      if (n.is_read === undefined && n.isRead === undefined) isUnread = true;
+      if (n.isRead !== undefined) isUnread = !n.isRead;
+      return Object.assign({}, n, {
+        unread: isUnread,
+        icon: NOTIF_ICONS[n.type] || n.icon || '' + IC("bell") + '',
+        title: n.title || '',
+        desc: n.message || n.desc || '',
+        date: n.created_at || n.date || new Date().toISOString(),
+        key: n.id ? 'srv_' + n.id : (n.key || ''),
+        _id: n.id
+      });
+    });
   }
 
   async function updateNotifBadge() {
@@ -698,6 +727,9 @@
     el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted,#8a7f6f)">' + IC("clock") + ' Memuat...</div>';
     const notifs = await getNotifs();
     MP_NOTIFS = notifs;
+    const markBtn = document.getElementById('mpNotifMarkAll');
+    const hasUnread = notifs.some(function(n){return n.unread;});
+    if (markBtn) markBtn.style.display = hasUnread ? '' : 'none';
     if (!notifs.length) {
       el.innerHTML = `<div class="mp-notif-empty"><div>${IC("bell")}</div><div style="font-size:13px;font-weight:700">Belum ada notifikasi</div><div style="font-size:12px;margin-top:4px">Update pesanan & jawaban bakal muncul di sini.</div></div>`;
     } else {
@@ -714,21 +746,48 @@
         </div>`;
       }).join('');
     }
-    // Mark all read (member: server; guest: localStorage)
+  }
+
+  async function markAllNotifRead(e) {
+    if (e) e.stopPropagation();
+    const btn = document.getElementById('mpNotifMarkAll');
+    if (btn) btn.disabled = true;
+    // Member: server read-all; Guest: localStorage
     if (localStorage.getItem('mp_token')) {
       try {
         const h = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('mp_token') };
-        fetch('/api/notifications/read-all', { method: 'PUT', headers: h }).catch(() => {});
-      } catch (e) {}
+        await fetch('/api/notifications/read-all', { method: 'PUT', headers: h });
+      } catch (err) {}
     } else {
-      localStorage.setItem('mp_notif_read', JSON.stringify(notifs.map(n => n.key).filter(Boolean)));
+      var keys = (MP_NOTIFS || []).map(function(n){return n.key;}).filter(Boolean);
+      var prev = JSON.parse(localStorage.getItem('mp_notif_read') || '[]');
+      var set = new Set(prev.concat(keys));
+      localStorage.setItem('mp_notif_read', JSON.stringify(Array.from(set)));
     }
+    MP_NOTIFS.forEach(function(n){ n.unread = false; });
+    document.querySelectorAll('.mp-notif-item.unread').forEach(function(el){ el.classList.remove('unread'); });
+    if (btn) btn.style.display = 'none';
     updateNotifBadge();
+    if (btn) btn.disabled = false;
   }
 
   function openNotif(i) {
     const n = MP_NOTIFS[i];
     if (!n) return;
+    // Tandai satu notif dibaca (member: PUT /:id/read)
+    if (n.unread && n._id && localStorage.getItem('mp_token')) {
+      var h = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('mp_token') };
+      fetch('/api/notifications/' + n._id + '/read', { method: 'PUT', headers: h }).catch(function(){});
+      n.unread = false;
+      updateNotifBadge();
+      var markBtn = document.getElementById('mpNotifMarkAll');
+      if (markBtn && !MP_NOTIFS.some(function(x){return x.unread;})) markBtn.style.display = 'none';
+    } else if (n.unread && n.key) {
+      var rk = JSON.parse(localStorage.getItem('mp_notif_read') || '[]');
+      if (rk.indexOf(n.key) === -1) { rk.push(n.key); localStorage.setItem('mp_notif_read', JSON.stringify(rk)); }
+      n.unread = false;
+      updateNotifBadge();
+    }
     document.getElementById('mpNotifPanel').classList.remove('open');
     if (n.action) { n.action(); return; }
     if (n.link) location.href = n.link;
@@ -741,6 +800,6 @@
     getCart, saveCart, getTQ, updateCartBadge, addToCart, fmt, esc, toggleMenu, closeMenu, goSearch, openWA, waTemplate,
     getUser, getToken, authHeaders,
     openAuth, closeAuth, switchAuthTab, submitLogin, submitRegister, loginSuccess, logout, authAction, updateAuthUI, togglePw,
-    toggleNotif, openNotif, initNotif
+    toggleNotif, openNotif, markAllNotifRead, initNotif
   };
 })();

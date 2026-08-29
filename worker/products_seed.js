@@ -8,7 +8,7 @@ export const PRODUCTS_SEED = [
     desc: 'Mesin bor tangan 800W untuk kebutuhan industri dan konstruksi. Cocok untuk pengeboran kayu, besi, dan beton. Dilengkapi chuck 13mm, speed variabel, dan handle tambahan untuk kenyamanan.',
     category: 'Mesin & Tools',
     img_key: 'cat_mesin',
-    img: '/img/products/bor_800w.jpg',
+    img: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=700&auto=format&fit=crop&q=70',
     min_price: 350000,
     max_price: 450000,
     variants: [
@@ -25,7 +25,7 @@ export const PRODUCTS_SEED = [
     desc: 'Gerinda tangan 4 inci dengan daya 850W, cocok untuk memotong dan mengamplas logam, keramik, dan batu. Desain ergonomis, safety switch, dan carbon brush yang mudah diganti.',
     category: 'Mesin & Tools',
     img_key: 'cat_mesin',
-    img: '/img/products/gerinda_4.jpg',
+    img: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=700&auto=format&fit=crop&q=70',
     min_price: 280000,
     max_price: 380000,
     variants: [
@@ -42,7 +42,7 @@ export const PRODUCTS_SEED = [
     desc: 'Mesin las inverter MMA 200A dengan teknologi IGBT, hemat daya dan stabil. Cocok untuk las besi dan stainless steel. Dilengkapi hot start, anti-stick, dan arc force.',
     category: 'Mesin & Tools',
     img_key: 'cat_mesin',
-    img: '/img/products/las_200a.jpg',
+    img: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=700&auto=format&fit=crop&q=70',
     min_price: 650000,
     max_price: 850000,
     variants: [
@@ -59,7 +59,7 @@ export const PRODUCTS_SEED = [
     desc: 'Compressor angin 24 liter dengan motor 1HP, cocok untuk pemakaian industri ringan, bengkel, dan cat ulang. Tekanan max 8 bar, dilengkapi pressure gauge dan safety valve.',
     category: 'Mesin & Tools',
     img_key: 'cat_mesin',
-    img: '/img/products/compressor_24l.jpg',
+    img: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=700&auto=format&fit=crop&q=70',
     min_price: 1200000,
     max_price: 1500000,
     variants: [
@@ -76,7 +76,7 @@ export const PRODUCTS_SEED = [
     desc: 'Bor impact cordless 18V dengan 2 baterai lithium-ion. Cocok untuk pengeboran dan sekrup tanpa kabel. LED work light, quick chuck, dan carrying case.',
     category: 'Elektronik & Power Tools',
     img_key: 'cat_elektronik',
-    img: '/img/products/bor_impact_18v.jpg',
+    img: 'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=700&auto=format&fit=crop&q=70',
     min_price: 550000,
     max_price: 750000,
     variants: [
@@ -93,7 +93,7 @@ export const PRODUCTS_SEED = [
     desc: 'Mesin circular saw 7 inci dengan daya 1200W, mampu memotong kayu, multipleks, dan triplek dengan presisi. Depth adjustment, laser guide, dan dust blower.',
     category: 'Mesin & Tools',
     img_key: 'cat_mesin',
-    img: '/img/products/circular_7.jpg',
+    img: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=700&auto=format&fit=crop&q=70',
     min_price: 450000,
     max_price: 600000,
     variants: [
@@ -110,7 +110,7 @@ export const PRODUCTS_SEED = [
     desc: 'Helm safety standar proyek SNI, dilengkapi earplug dan strap adjustable. Tahan benturan, ringan, dan nyaman dipakai seharian. Pilihan warna: putih, kuning, biru, merah.',
     category: 'Safety & Perlengkapan',
     img_key: 'cat_safety',
-    img: '/img/products/safety_helmet.jpg',
+    img: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=700&auto=format&fit=crop&q=70',
     min_price: 45000,
     max_price: 65000,
     variants: [
@@ -130,7 +130,7 @@ export const PRODUCTS_SEED = [
     desc: 'Sarung tangan las dari kulit sapi asli, tahan percikan api dan panas tinggi. Cocok untuk las MMA, MIG, dan TIG. Jahitan double reinforced, panjang 35cm.',
     category: 'Safety & Perlengkapan',
     img_key: 'cat_safety',
-    img: '/img/products/welding_gloves.jpg',
+    img: 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=700&auto=format&fit=crop&q=70',
     min_price: 85000,
     max_price: 120000,
     variants: [
@@ -147,7 +147,7 @@ export const PRODUCTS_SEED = [
     desc: 'Kabel listrik NYYHY 3x2.5mm tembaga murni, panjang 50 meter. SNI certified, cocok untuk instalasi industri, panel listrik, dan power distribution. Fleksibel, tahan panas.',
     category: 'Elektronik & Power Tools',
     img_key: 'cat_elektronik',
-    img: '/img/products/kabel_nyyhy.jpg',
+    img: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=700&auto=format&fit=crop&q=70',
     min_price: 450000,
     max_price: 450000,
     variants: [
@@ -163,7 +163,7 @@ export const PRODUCTS_SEED = [
     desc: 'Meteran gulung fiberglass panjang 50 meter, cocok untuk survey lapangan, konstruksi, dan pengukuran industri. Anti karat, angka jelas, dan casing karet anti pecah.',
     category: 'Industri & Manufaktur',
     img_key: 'cat_industri',
-    img: '/img/products/meteran_50m.jpg',
+    img: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=700&auto=format&fit=crop&q=70',
     min_price: 65000,
     max_price: 95000,
     variants: [
@@ -180,7 +180,7 @@ export const PRODUCTS_SEED = [
     desc: 'Tool kit profesional 150 pcs dalam 1 box. Termasuk socket set, kunci ring/pas, obeng set, kunci L, tang, dan aksesoris. Cocok untuk bengkel, industri, dan rumah tangga.',
     category: 'Industri & Manufaktur',
     img_key: 'cat_industri',
-    img: '/img/products/toolkit_150.jpg',
+    img: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=700&auto=format&fit=crop&q=70',
     min_price: 250000,
     max_price: 350000,
     variants: [
@@ -197,7 +197,7 @@ export const PRODUCTS_SEED = [
     desc: 'Clamp meter digital untuk pengukuran arus AC/DC, tegangan, resistansi, dan kontinuitas. Dilengkapi backlight, data hold, dan NCV (non-contact voltage) detection.',
     category: 'Elektronik & Power Tools',
     img_key: 'cat_elektronik',
-    img: '/img/products/clamp_meter.jpg',
+    img: 'https://images.unsplash.com/photo-1560472355-536de3962603?w=700&auto=format&fit=crop&q=70',
     min_price: 180000,
     max_price: 280000,
     variants: [

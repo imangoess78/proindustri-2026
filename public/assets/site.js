@@ -183,7 +183,7 @@
       </div>
     </div>
     <hr class="f-divider">
-    <div class="f-bottom"><span>© 2024 ProIndustri · Distributor Mesin & Tools Industri</span><span>Tangerang, Indonesia</span></div>
+    <div class="f-bottom"><span>© <span id="footer-year">2026</span> ProIndustri · Distributor Mesin & Tools Industri</span><span>Tangerang, Indonesia</span></div>
   </div>`;
 
   // ── Floating widgets (WA + LiveChat) ──
@@ -340,7 +340,7 @@
     const navSlot = document.getElementById('site-nav');
     if (navSlot) navSlot.innerHTML = NAVBAR;
     const footSlot = document.getElementById('site-footer');
-    if (footSlot) footSlot.innerHTML = FOOTER;
+    if (footSlot) { footSlot.innerHTML = FOOTER; const y=document.getElementById('footer-year'); if(y) y.textContent=new Date().getFullYear(); }
     // Inject floating widgets (WA + LiveChat) if not already present
     if (!document.querySelector('.wa-float')) {
       document.body.insertAdjacentHTML('beforeend', FLOATING_WIDGETS);

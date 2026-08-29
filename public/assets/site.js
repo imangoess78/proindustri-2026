@@ -56,7 +56,7 @@
         <span></span><span></span><span></span>
       </button>
       <a class="brand" href="/">
-        <div class="brand-logo">M</div>
+        <div class="brand-logo">P</div>
         <div><div class="brand-name">ProIndustri</div><div class="brand-sub">by ProIndustri</div></div>
       </a>
       <div class="search-wrap">
@@ -82,7 +82,7 @@
     <div class="sidebar" id="mobileSidebar">
       <div class="sb-head">
         <a class="brand" href="/">
-          <div class="brand-logo">M</div>
+          <div class="brand-logo">P</div>
           <div><div class="brand-name">ProIndustri</div><div class="brand-sub">by ProIndustri</div></div>
         </a>
         <button class="sb-close" type="button" onclick="MP.closeMenu()" aria-label="Tutup menu">${IC("x")}</button>
@@ -130,7 +130,7 @@
     <div class="footer-grid">
       <div>
         <a class="brand" href="/" style="margin-bottom:12px">
-          <div class="brand-logo">M</div>
+          <div class="brand-logo">P</div>
           <div><div class="brand-name" style="color:#fff">ProIndustri</div><div class="brand-sub">by ProIndustri</div></div>
         </a>
         <p class="f-desc">Distributor mesin, tools, & perlengkapan industri impor China. Melayani bengkel, pabrik, dan UMKM dengan harga grosir & garansi.</p>
@@ -208,7 +208,7 @@
   <div class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Kembali ke atas">${IC("arrow-up")}</div>
   <div class="livechat-overlay" id="livechatOverlay">
     <div class="livechat-head">
-      <div class="livechat-avatar">M</div>
+      <div class="livechat-avatar">P</div>
       <div class="livechat-info">
         <div class="livechat-name">ProIndustri Support</div>
         <div class="livechat-status"><span class="livechat-online-dot"></span>Online sekarang</div>
@@ -382,7 +382,7 @@
     <div class="mp-auth-modal">
       <button class="mp-auth-x" type="button" onclick="MP.closeAuth()" aria-label="Tutup">${IC("x")}</button>
       <div class="mp-auth-head">
-        <div class="brand-logo">M</div>
+        <div class="brand-logo">P</div>
         <div class="mp-auth-title">ProIndustri Member</div>
         <div class="mp-auth-sub">Login & dapatkan diskon member 10% ${IC("gift")}</div>
       </div>

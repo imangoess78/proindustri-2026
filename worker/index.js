@@ -66,6 +66,7 @@ async function handleAPI(request, env, url) {
     const { searchParams } = url;
     const category = searchParams.get('kategori');
     const search = searchParams.get('q');
+    const sort = searchParams.get('sort') || 'newest';
     const page = parseInt(searchParams.get('page')) || 1;
     const limit = 24;
     const offset = (page - 1) * limit;
@@ -75,11 +76,14 @@ async function handleAPI(request, env, url) {
     if (category) { where += ' AND c.slug = ?'; params.push(category); }
     if (search) { where += ' AND (p.title LIKE ? OR p.description LIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
 
+    const orderMap = { newest: 'p.created_at DESC', price_asc: 'p.price ASC', price_desc: 'p.price DESC', name: 'p.title ASC' };
+    const orderBy = orderMap[sort] || 'p.created_at DESC';
+
     const rows = await db.prepare(`
       SELECT p.id, p.title, p.slug, p.price, p.image_url, p.stock, p.created_at,
         c.name as category_name, c.slug as category_slug
       FROM products p LEFT JOIN categories c ON p.category_id = c.id
-      ${where} ORDER BY p.created_at DESC LIMIT ? OFFSET ?
+      ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?
     `).bind(...params, limit, offset).all();
 
     const total = await db.prepare(`SELECT COUNT(*) as n FROM products p LEFT JOIN categories c ON p.category_id = c.id ${where}`).bind(...params).first();

@@ -3,60 +3,153 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>ProIndustri — Produk Industri Impor China | Harga Pabrik</title>
-<meta name="description" content="Jual mesin, tools, elektronik & perlengkapan industri impor langsung dari China. Harga pabrik, order mudah via WhatsApp.">
+<title>ProIndustri — Supplier Produk Industri Impor China | Harga Pabrik</title>
+<meta name="description" content="Jual mesin, tools, elektronik & perlengkapan industri impor langsung dari China. Harga pabrik, pengiriman nasional, order mudah via WhatsApp.">
+<meta name="theme-color" content="#0B0B0B">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23F97316'/><text x='50' y='68' font-size='52' text-anchor='middle'>⚙️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/site.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
 </head>
 <body>
-<header class="site-header">
-  <div class="container header-inner">
-    <a href="/" class="logo">Pro<span class="logo-accent">Industri</span></a>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-links">
+    <span>🚚 Pengiriman Nasional — Seluruh Indonesia</span>
+  </div>
+  <div class="topbar-right">
+    <a href="/produk">Katalog</a>
+    <a href="/admin">Admin</a>
+    <a href="https://wa.me/6281234567890" class="wa-link" target="_blank" rel="noopener">📱 6281234567890</a>
+  </div>
+</div>
+
+<!-- NAVBAR -->
+<header class="navbar">
+  <div class="navbar-inner">
+    <a href="/" class="brand">
+      <div class="brand-logo">⚙️</div>
+      <div>
+        <div class="brand-name">ProIndustri</div>
+        <div class="brand-sub">Impor China · Harga Pabrik</div>
+      </div>
+    </a>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="search" class="search-input" id="navSearch" placeholder="Cari mesin, tools, elektronik..." onkeydown="if(event.key==='Enter'&&this.value.trim()){location.href='/produk?q='+encodeURIComponent(this.value.trim());}">
+    </div>
     <nav class="nav-links">
-      <a href="/">Beranda</a>
-      <a href="/produk">Produk</a>
-      <a href="/admin">Admin</a>
+      <a href="/" class="nav-link active">Beranda</a>
+      <a href="/produk" class="nav-link">Produk</a>
     </nav>
-    <a href="/cart" class="cart-btn">🛒 <span id="cartCount">0</span></a>
+    <div class="nav-right">
+      <a href="/cart" class="cart-btn">🛒<span class="cart-label">Keranjang</span><span class="cart-count" id="cartCount">0</span></a>
+    </div>
   </div>
 </header>
 
+<!-- CAT NAV -->
+<nav class="cat-nav">
+  <div class="cat-nav-inner" id="catNavInner">
+    <a href="/produk" class="cat-nav-item">Semua Produk</a>
+  </div>
+</nav>
+
+<!-- HERO -->
 <section class="hero">
-  <div class="container">
-    <h1>Produk Industri Impor China<br><span class="hero-accent">Langsung dari Pabrik</span></h1>
-    <p>Mesin, tools, elektronik & perlengkapan industri berkualitas — harga terbaik karena impor langsung. Order cukup via WhatsApp.</p>
+  <div class="wrap">
+    <div class="hero-badge">🏭 Supplier Terpercaya Impor Langsung</div>
+    <h1>Produk Industri Berkualitas<br><span class="accent">Langsung dari Pabrik China</span></h1>
+    <p>Mesin, tools, elektronik & perlengkapan industri dengan harga terbaik — tanpa perantara, kualitas terjamin, order mudah via WhatsApp.</p>
     <div class="hero-cta">
-      <a href="/produk" class="btn btn-primary">Lihat Katalog</a>
-      <a href="https://wa.me/6281234567890" class="btn btn-outline" id="heroWaBtn">Order via WA</a>
+      <a href="/produk" class="btn btn-primary">🛍️ Lihat Katalog</a>
+      <a href="https://wa.me/6281234567890" class="btn btn-outline" target="_blank" rel="noopener">💬 Konsultasi via WA</a>
     </div>
-    <div class="hero-badges">
-      <span>⚡ Impor Langsung</span>
-      <span>🏭 Harga Pabrik</span>
-      <span>🚚 Pengiriman Nasional</span>
+    <div class="hero-stats">
+      <div class="h-stat"><b>100%</b><span>Impor Langsung</span></div>
+      <div class="h-stat"><b>34</b><span>Provinsi Terjangkau</span></div>
+      <div class="h-stat"><b>24/7</b><span>Order Online</span></div>
     </div>
   </div>
 </section>
 
-<main class="container">
+<main class="wrap">
+
+  <!-- PRODUK UNGGULAN -->
   <section class="section">
-    <h2 class="section-title">Produk Unggulan</h2>
-    <div id="featuredGrid" class="product-grid"><p class="loading">Memuat produk...</p></div>
+    <div class="section-head">
+      <h2 class="section-title">Produk Unggulan</h2>
+      <a href="/produk" class="section-more">Lihat Semua →</a>
+    </div>
+    <div id="featuredGrid" class="p-grid"><p class="shop-loading">Memuat produk...</p></div>
   </section>
 
-  <section class="how-it-works section">
-    <h2 class="section-title">Cara Order</h2>
-    <div class="steps">
-      <div class="step"><div class="step-num">1</div><h3>Pilih Produk</h3><p>Browse katalog, cari yang sesuai kebutuhan.</p></div>
-      <div class="step"><div class="step-num">2</div><h3>Tambah Keranjang</h3><p>Isi jumlah & masukkan ke keranjang.</p></div>
-      <div class="step"><div class="step-num">3</div><h3>Order via WA</h3><p>Checkout otomatis membuka WhatsApp dengan detail pesanan.</p></div>
+  <!-- WHY US -->
+  <section class="section">
+    <div class="section-head">
+      <h2 class="section-title">Kenapa ProIndustri?</h2>
+    </div>
+    <div class="why-grid">
+      <div class="why-item"><div class="why-icon">🚢</div><h3>Impor Langsung</h3><p>Tanpa perantara, harga paling kompetitif di pasar.</p></div>
+      <div class="why-item"><div class="why-icon">🔍</div><h3>Kualitas Terjaga</h3><p>Produk terkurasi & layak jual untuk industri.</p></div>
+      <div class="why-item"><div class="why-icon">🚚</div><h3>Pengiriman Nasional</h3><p>Jangkau seluruh Indonesia via ekspedisi tepercaya.</p></div>
+      <div class="why-item"><div class="why-icon">💬</div><h3>Order Mudah</h3><p>Checkout via WhatsApp — cepat, tanpa ribet.</p></div>
     </div>
   </section>
+
+  <!-- CARA ORDER -->
+  <section class="section">
+    <div class="section-head">
+      <h2 class="section-title">Cara Order</h2>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><h3>Pilih Produk</h3><p>Browse katalog, cari produk yang sesuai kebutuhan bisnis Anda.</p></div>
+      <div class="step"><div class="step-num">2</div><h3>Tambah Keranjang</h3><p>Atur jumlah & masukkan produk ke keranjang belanja.</p></div>
+      <div class="step"><div class="step-num">3</div><h3>Order via WA</h3><p>Isi data pembeli, checkout otomatis membuka WhatsApp dengan detail pesanan.</p></div>
+    </div>
+  </section>
+
 </main>
 
-<footer class="site-footer">
-  <div class="container">
-    <p>© 2026 ProIndustri. Produk impor China langsung dari pabrik.</p>
-    <p>Order via WA: <a href="https://wa.me/6281234567890">6281234567890</a></p>
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-orange"></div>
+  <div class="footer-main">
+    <div class="footer-grid">
+      <div>
+        <div class="f-logo">⚙️</div>
+        <div class="f-name">ProIndustri</div>
+        <p class="f-desc">Supplier produk industri impor China — mesin, tools, elektronik & perlengkapan industri dengan harga pabrik.</p>
+      </div>
+      <div>
+        <div class="f-col-title">Navigasi</div>
+        <ul class="f-links">
+          <li><a href="/">Beranda</a></li>
+          <li><a href="/produk">Katalog Produk</a></li>
+          <li><a href="/cart">Keranjang</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="f-col-title">Kategori</div>
+        <ul class="f-links" id="footerCats">
+          <li><a href="/produk">Semua Produk</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="f-col-title">Hubungi Kami</div>
+        <div class="f-contact">
+          <div class="f-contact-item">📱 <a href="https://wa.me/6281234567890" target="_blank" rel="noopener">6281234567890</a></div>
+          <div class="f-contact-item">🕐 Senin–Sabtu, 08.00–17.00 WIB</div>
+          <div class="f-contact-item">🚚 Pengiriman ke seluruh Indonesia</div>
+        </div>
+      </div>
+    </div>
+    <hr class="f-divider">
+    <div class="f-bottom">
+      <span>© 2026 ProIndustri. Hak cipta dilindungi.</span>
+      <span>Produk impor China · Harga Pabrik · Order via WhatsApp</span>
+    </div>
   </div>
 </footer>
 

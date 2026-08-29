@@ -1,9 +1,12 @@
 # ProIndustri — Cloudflare Worker config
 name = "proindustri"
 main = "worker/index.js"
-compatibility_date = "2025-08-01"
+compatibility_date = "2025-04-01"
 compatibility_flags = ["nodejs_compat"]
 
+routes = [
+  { pattern = "proindustri.com", custom_domain = true }
+]
 # Static assets
 [assets]
 directory = "./public"

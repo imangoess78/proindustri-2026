@@ -416,7 +416,7 @@ var IC = window.IC;
                             <p style="color:var(--muted);font-size:13px;margin:8px 0 0">Scan QR dengan <b>GoPay, OVO, DANA, ShopeePay,</b> atau <b>Mobile Banking</b></p>
                           </div>
                           <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px">
-                            <a class="btn-red" href="https://wa.me/${WA}?text=${encodeURIComponent('Halo Admin! Saya sudah bayar QRIS untuk pesanan ' + id)}">${IC("message-circle")} Konfirmasi via WA</a>
+                            <a class="btn-wa" href="https://wa.me/${WA}?text=${encodeURIComponent('Halo Admin! Saya sudah bayar QRIS untuk pesanan ' + id)}">${IC("message-circle")} Konfirmasi via WA</a>
                           </div>
                           <div style="font-size:11px;color:var(--muted);margin-top:10px">${IC("clock")} Halaman ini akan auto-refresh tiap 10 detik untuk cek status...</div>`);
                         // Render QR Code dari string QRIS (pakai library qrcode npm)
@@ -471,7 +471,7 @@ var IC = window.IC;
                 <div id="proofStatus" style="margin-top:8px;font-size:12px;font-weight:700"></div>
               </div>
               <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:6px">
-                <a class="btn-outline" href="https://wa.me/${WA}?text=${encodeURIComponent('Halo Admin ProIndustri! Saya sudah bayar untuk pesanan ' + id + ' (total: ' + SP.fmt(total) + '). Mohon segera diproses 🙏')}" style="text-decoration:none;padding:10px 16px;border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:800;color:var(--mid);display:inline-block">💬 Konfirmasi via WA</a>
+                <a class="btn-wa" href="https://wa.me/${WA}?text=${encodeURIComponent('Halo Admin ProIndustri! Saya sudah bayar untuk pesanan ' + id + ' (total: ' + SP.fmt(total) + '). Mohon segera diproses 🙏')}" style="text-decoration:none;padding:10px 16px;border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:800;color:var(--mid);display:inline-block">💬 Konfirmasi via WA</a>
               </div>`);
             window.uploadProof = async function(orderId) {
               const fileEl = document.getElementById('proofFile');

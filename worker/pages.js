@@ -68,12 +68,20 @@ function layout({ title, desc, canonical, ogImage, jsonLd, body, bodyClass = '',
 <meta property="og:url" content="${esc(canonical || ORIGIN + '/')}">
 ${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">
 <meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">` : ''}
+<meta property="og:image:height" content="630">` : `<meta property="og:image" content="${ORIGIN}/assets/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">`}
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(descText)}">
-${ogImage ? `<meta name="twitter:image" content="${esc(ogImage)}">` : ''}
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230EA5E9'/><text x='50' y='68' font-size='50' font-weight='900' fill='white' text-anchor='middle'>P</text></svg>">
+${ogImage ? `<meta name="twitter:image" content="${esc(ogImage)}">` : `<meta name="twitter:image" content="${ORIGIN}/assets/og-image.jpg">`}
+<meta property="og:image:alt" content="${esc(title)}">
+<meta property="og:locale" content="id_ID">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<meta name="theme-color" content="#0EA5E9">
+<link rel="manifest" href="/manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -606,10 +614,11 @@ export async function renderPost(env, slug) {
         <div class="post-content">${row.content || '<p>Konten belum tersedia.</p>'}</div>
         ${relatedHtml}
         <div class="post-share">
-          <span class="post-share-label">Bagikan:</span>
-          <button class="share-btn" onclick="shareWA()"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg> WhatsApp</button>
-          <button class="share-btn" onclick="shareFB()"><svg class="ic" aria-hidden="true"><use href="#i-facebook"/></svg> Facebook</button>
-          <button class="share-btn" onclick="shareTW()"><svg class="ic" aria-hidden="true"><use href="#i-twitter"/></svg> X / Twitter</button>
+          <span class="post-share-label"><svg class="ic" aria-hidden="true"><use href="#i-share-2"/></svg> Bagikan:</span>
+          <button class="share-btn share-wa" onclick="shareWA()"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg> WhatsApp</button>
+          <button class="share-btn share-fb" onclick="shareFB()"><svg class="ic" aria-hidden="true"><use href="#i-facebook"/></svg> Facebook</button>
+          <button class="share-btn share-tw" onclick="shareTW()"><svg class="ic" aria-hidden="true"><use href="#i-twitter"/></svg> X / Twitter</button>
+          <button class="share-btn share-copy" onclick="copyLink()"><svg class="ic" aria-hidden="true"><use href="#i-link"/></svg> Salin Link</button>
         </div>
       </div>
     </article>
@@ -618,7 +627,8 @@ export async function renderPost(env, slug) {
   const script = `
   function shareWA() { window.open('https://wa.me/?text=' + encodeURIComponent(document.title + ' ' + location.href), '_blank'); }
   function shareFB() { window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(location.href), '_blank'); }
-  function shareTW() { window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(document.title + ' ' + location.href), '_blank'); }`;
+  function shareTW() { window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(document.title + ' ' + location.href), '_blank'); }
+  function copyLink() { navigator.clipboard.writeText(location.href).then(function(){ var b=document.querySelector('.share-copy'); if(b){ var t=b.innerHTML; b.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-check-circle-2"/></svg> Tersalin!'; setTimeout(function(){ b.innerHTML=t; }, 2000); } }).catch(function(){ prompt('Salin link:', location.href); }); }`;
 
   return { html: layout({ title: `${title} — ${SITE_NAME}`, desc: truncate(stripHtml(row.content || ''), 155), canonical: ORIGIN + '/artikel/' + slug, ogImage: fullImg, jsonLd: jsonLdArr, body, bodyClass: 'page-post', script }), script };
 }
@@ -777,13 +787,13 @@ function renderQA(){
   var p=qaD,vsHtml='';
   for(var i=0;i<p.variants.length;i++){
     var v=p.variants[i];
-    vsHtml+='<div class="qa-var'+(v.name===qaV.name?' sel':'')+'" onclick="qaPick(\\''+String(v.name).replace(/'/g,"\\\\'")+'\\')">'+
+    vsHtml+='<div class="qa-var'+(v.name===qaV.name?' sel':'')+'" data-vname="'+escQA(v.name)+'" onclick="qaPick(this.dataset.vname)">'+
       '<div style="display:flex;align-items:center;gap:10px"><div class="qa-var-radio"></div><div class="qa-var-name">'+escQA(v.name)+'</div></div>'+
       '<div class="qa-var-price">'+qaFmt(v.price)+'</div></div>';
   }
   var el=document.getElementById('qaModal');
   el.innerHTML='<div class="qa-head">'+
-    '<div class="qa-thumb">'+(p.img?'<img src="'+p.img+'" alt="" onerror="this.style.display=\'none\'">':'<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg>')+'</div>'+
+    '<div class="qa-thumb">'+(p.img?'<img src="'+p.img+'" alt="" onerror="this.style.display=\\'none\\'">':'<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg>')+'</div>'+
     '<div class="qa-name">'+escQA(p.name)+'</div>'+
     '<button class="qa-close-btn" onclick="closeQA()">✕</button></div>'+
     '<div class="qa-lbl">Pilih Varian</div>'+vsHtml+

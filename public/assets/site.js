@@ -131,7 +131,7 @@
       <div>
         <a class="brand" href="/" style="margin-bottom:12px">
           <div class="brand-logo">P</div>
-          <div><div class="brand-name" style="color:#fff">ProIndustri</div><div class="brand-sub">by ProIndustri</div></div>
+          <div><div class="brand-name" style="color:var(--dark)">ProIndustri</div><div class="brand-sub">by ProIndustri</div></div>
         </a>
         <p class="f-desc">Distributor mesin, tools, & perlengkapan industri impor China. Melayani bengkel, pabrik, dan UMKM dengan harga grosir & garansi.</p>
         <div class="f-col-title">Grup Toko Online</div>

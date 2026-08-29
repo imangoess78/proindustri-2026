@@ -11,7 +11,7 @@
 <meta property="og:title" content="ProIndustri – Mesin & Tools Industri Impor Harga Grosir">
 <meta property="og:description" content="Distributor mesin, tools, & perlengkapan industri impor. Harga grosir, gratis ongkir, kirim seluruh Indonesia. Power tools, safety equipment & perlengkapan manufaktur.">
 <meta property="og:url" content="https://proindustri.com/">
-<meta property="og:image" content="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=1200&auto=format&fit=crop&q=70">
+<meta property="og:image" content="https://proindustri.com/assets/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="ProIndustri — Distributor Mesin & Tools Industri Harga Grosir">
@@ -19,8 +19,12 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="ProIndustri – Mesin & Tools Industri Impor Harga Grosir">
 <meta name="twitter:description" content="Distributor mesin, tools, & perlengkapan industri impor. Harga grosir, gratis ongkir, kirim seluruh Indonesia.">
-<meta name="twitter:image" content="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=1200&auto=format&fit=crop&q=70">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230EA5E9'/><text x='50' y='68' font-size='50' font-weight='900' fill='white' text-anchor='middle'>P</text></svg>">
+<meta name="twitter:image" content="https://proindustri.com/assets/og-image.jpg">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<meta name="theme-color" content="#0EA5E9">
+<link rel="manifest" href="/manifest.webmanifest">
 <title>ProIndustri – Mesin & Tools Industri Impor Harga Grosir</title>
 <script type="application/ld+json">
 {
@@ -29,7 +33,7 @@
   "name": "ProIndustri",
   "alternateName": "ProIndustri",
   "url": "https://proindustri.com/",
-  "logo": "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=1200&auto=format&fit=crop&q=70",
+  "logo": "https://proindustri.com/assets/og-image.jpg",
   "foundingDate": "2004",
   "description": "Distributor mesin industri, power tools, safety equipment, & perlengkapan manufaktur.",
   "address": {
@@ -68,14 +72,19 @@
 
 
 :root{
-  --red:#0EA5E9;--red-dark:#0284C7;--red-light:#E0F2FE;
+  --red:#DC2626;--red-dark:#B91C1C;--red-light:#FEF2F2;
   --gold:#0EA5E9;--gold-light:#E0F2FE;--gold-bright:#38BDF8;
-  --orange:#0EA5E9;
+  --orange:#F97316;--orange-dark:#EA580C;--orange-light:#FFF7ED;
+  --green:#16A34A;--green-dark:#15803D;--green-light:#F0FDF4;
+  --wa:#25D366;--wa-dark:#128C7E;
   --grad-hero:linear-gradient(135deg,#FFFFFF 0%,#F0F9FF 35%,#BAE6FD 65%,#0EA5E9 100%);
   --grad-section:linear-gradient(180deg,#FFFFFF 0%,#F0F9FF 100%);
   --grad-section-warm:linear-gradient(135deg,#FFFFFF 0%,#F0F9FF 50%,#BAE6FD 100%);
   --grad-gold:linear-gradient(90deg,#0284C7 0%,#38BDF8 50%,#0284C7 100%);
   --grad-btn:linear-gradient(135deg,#0EA5E9 0%,#0284C7 100%);
+  --grad-orange:linear-gradient(135deg,#F97316 0%,#EA580C 100%);
+  --grad-red:linear-gradient(135deg,#EF4444 0%,#DC2626 100%);
+  --grad-green:linear-gradient(135deg,#25D366 0%,#128C7E 100%);
   --dark:#1A1A1A;--mid:#3A3A3A;--muted:#8A8A8A;
   --light:#FAFAF8;--white:#fff;--border:#E8E8E4;
   --shadow:0 2px 16px rgba(20,10,0,.10);
@@ -119,8 +128,18 @@ a{text-decoration:none;color:inherit}
 .c-trust-item svg{opacity:0.9}
 .btn-red{background:var(--grad-btn);color:white;border:none;border-radius:10px;padding:13px 26px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font);box-shadow:0 4px 16px rgba(14,165,233,0.35);transition:transform .15s,box-shadow .15s}
 .btn-red:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(14,165,233,0.45)}
+.btn-orange{background:var(--grad-orange);color:white;border:none;border-radius:10px;padding:13px 26px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font);box-shadow:0 4px 14px rgba(249,115,22,.3);transition:transform .15s,box-shadow .15s}
+.btn-orange:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(249,115,22,.4)}
+.btn-green,.btn-wa{background:var(--grad-green);color:white;border:none;border-radius:10px;padding:13px 26px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font);box-shadow:0 4px 14px rgba(37,211,102,.3);transition:transform .15s,box-shadow .15s}
+.btn-green:hover,.btn-wa:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(37,211,102,.4)}
+.btn-buy{background:var(--grad-red);color:white;border:none;border-radius:10px;padding:13px 26px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font);box-shadow:0 4px 14px rgba(220,38,38,.3);transition:transform .15s,box-shadow .15s}
+.btn-buy:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(220,38,38,.4)}
 .btn-outline{background:rgba(255,255,255,0.08);color:white;border:1.5px solid rgba(255,255,255,0.25);border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);backdrop-filter:blur(8px);transition:all .15s}
 .btn-outline:hover{background:rgba(255,255,255,0.14);border-color:rgba(255,255,255,0.4)}
+.btn-outline-orange{background:transparent;color:var(--orange);border:2px solid var(--orange);border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .15s}
+.btn-outline-orange:hover{background:var(--orange-light)}
+.btn-outline-green{background:transparent;color:var(--green);border:2px solid var(--green);border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .15s}
+.btn-outline-green:hover{background:var(--green-light)}
 .c-dots{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10}
 .c-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.35);cursor:pointer;transition:all 0.2s}
 .c-dot.active{background:white;width:28px;border-radius:4px}
@@ -153,7 +172,8 @@ a{text-decoration:none;color:inherit}
 .f-name{font-size:11px;font-weight:700;color:var(--dark);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:30px;margin-bottom:4px}
 .f-orig{font-size:11px;color:var(--muted);text-decoration:line-through}
 .f-price{font-size:14px;font-weight:900;color:var(--red)}
-.f-btn{width:100%;background:var(--grad-btn);color:white;border:none;border-radius:var(--radius-sm);padding:7px;font-size:11px;font-weight:700;cursor:pointer;margin-top:6px;font-family:var(--font)}
+.f-btn{width:100%;background:var(--grad-orange);color:white;border:none;border-radius:var(--radius-sm);padding:7px;font-size:11px;font-weight:700;cursor:pointer;margin-top:6px;font-family:var(--font);transition:opacity .15s}
+.f-btn:hover{opacity:.9}
 .main{max-width:1280px;margin:0 auto;padding:0 24px}
 .section{padding:40px 0;background:var(--grad-section)}
 .section-alt{background:var(--grad-section);padding:40px 0}
@@ -201,7 +221,8 @@ a{text-decoration:none;color:inherit}
 .p-price{font-size:13px;font-weight:900;color:var(--red)}
 .p-sub{font-size:11px;color:var(--muted);margin-bottom:3px}
 .p-vars{font-size:11px;color:var(--muted);margin-bottom:10px}
-.p-btn{margin-top:auto;width:100%;background:var(--grad-btn);color:white;border:none;border-radius:var(--radius-sm);padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font)}
+.p-btn{margin-top:auto;width:100%;background:var(--grad-orange);color:white;border:none;border-radius:var(--radius-sm);padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);transition:opacity .15s}
+.p-btn:hover{opacity:.9}
 .disc-sec{background:var(--grad-section-warm);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:40px 0}
 .disc-wrap{max-width:1280px;margin:0 auto;padding:0 24px}
 .disc-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
@@ -257,7 +278,7 @@ a{text-decoration:none;color:inherit}
 .pw-toggle:hover{color:var(--dark);background:var(--light)}
 .fta{resize:vertical;min-height:80px}
 .f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.cf-btn{width:100%;background:var(--grad-btn);color:white;border:none;border-radius:var(--radius);padding:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font);margin-top:4px}
+.cf-btn{width:100%;background:var(--grad-red);color:white;border:none;border-radius:var(--radius);padding:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font);margin-top:4px;box-shadow:0 3px 12px rgba(220,38,38,.25)}
 .pd-overlay{display:none;position:fixed;inset:0;background:var(--light);z-index:800;overflow-y:auto}
 .pd-overlay.open{display:block}
 .pd-nav{background:white;padding:12px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;box-shadow:var(--shadow)}
@@ -299,9 +320,9 @@ a{text-decoration:none;color:inherit}
 .pd-total-lbl{font-size:13px;color:var(--mid);font-weight:600}
 .pd-total-price{font-size:20px;font-weight:900;color:var(--red)}
 .pd-actions{display:flex;gap:10px;margin-bottom:16px}
-.pd-cart-btn{flex:1;background:var(--red-light);color:var(--red);border:2px solid var(--red);border-radius:var(--radius);padding:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font);transition:all 0.15s}
-.pd-cart-btn:hover:not(:disabled){background:var(--red);color:white}
-.pd-buy-btn{flex:1;background:var(--grad-btn);color:white;border:none;border-radius:var(--radius);padding:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font)}
+.pd-cart-btn{flex:1;background:white;color:var(--orange);border:2px solid var(--orange);border-radius:var(--radius);padding:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font);transition:all 0.15s}
+.pd-cart-btn:hover:not(:disabled){background:var(--grad-orange);color:white;border-color:var(--orange)}
+.pd-buy-btn{flex:1;background:var(--grad-red);color:white;border:none;border-radius:var(--radius);padding:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font);box-shadow:0 3px 12px rgba(220,38,38,.25)}
 .pd-cart-btn:disabled,.pd-buy-btn:disabled{opacity:0.4;cursor:not-allowed}
 .pd-specs{background:white;border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);margin-bottom:14px}
 .pd-specs-title{font-size:15px;font-weight:800;color:var(--dark);margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--border)}
@@ -400,7 +421,7 @@ a{text-decoration:none;color:inherit}
 .order-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;gap:10px}
 .order-total-row{display:flex;justify-content:space-between;margin-bottom:7px;font-size:14px;color:var(--mid)}
 .order-total-row.grand{font-size:18px;font-weight:900;color:var(--red);padding-top:10px;border-top:2px solid var(--border)}
-.place-btn{width:100%;background:var(--grad-btn);color:white;border:none;border-radius:var(--radius);padding:14px;font-size:16px;font-weight:900;cursor:pointer;margin-top:10px;font-family:var(--font)}
+.place-btn{width:100%;background:var(--grad-red);color:white;border:none;border-radius:var(--radius);padding:14px;font-size:16px;font-weight:900;cursor:pointer;margin-top:10px;font-family:var(--font);box-shadow:0 4px 14px rgba(220,38,38,.3)}
 .page-ok{display:none;text-align:center;padding:72px 24px}
 .page-ok.show{display:block}
 .ok-icon{font-size:68px;margin-bottom:14px}
@@ -472,8 +493,8 @@ a{text-decoration:none;color:inherit}
 .qa-sum-row.grand{font-weight:800;font-size:14px;color:var(--red);border-top:1px dashed var(--border);padding-top:5px;margin-top:5px}
 .qa-sum-row .neg{color:#16A34A}
 .qa-actions{display:flex;gap:10px}
-.qa-cart-btn{flex:1;background:var(--grad-btn);color:white;border:none;border-radius:var(--radius);padding:13px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font)}
-.qa-buy-btn{flex:1;background:var(--dark);color:white;border:none;border-radius:var(--radius);padding:13px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font)}
+.qa-cart-btn{flex:1;background:var(--grad-orange);color:white;border:none;border-radius:var(--radius);padding:13px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font);box-shadow:0 3px 10px rgba(249,115,22,.25)}
+.qa-buy-btn{flex:1;background:var(--grad-red);color:white;border:none;border-radius:var(--radius);padding:13px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font);box-shadow:0 3px 10px rgba(220,38,38,.25)}
 .login-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1200;align-items:center;justify-content:center}
 .login-overlay.open{display:flex}
 .login-modal{background:white;border-radius:20px;width:90%;max-width:420px;overflow:hidden;animation:popIn 0.3s cubic-bezier(0.22,1,0.36,1)}

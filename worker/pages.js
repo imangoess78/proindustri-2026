@@ -80,7 +80,7 @@ ${ogImage ? `<meta name="twitter:image" content="${esc(ogImage)}">` : `<meta nam
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-192.png">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
-<meta name="theme-color" content="#0EA5E9">
+<meta name="theme-color" content="#0F1B2D">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

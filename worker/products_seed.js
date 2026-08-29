@@ -206,5 +206,180 @@ export const PRODUCTS_SEED = [
     ],
     specs: { 'Tipe': 'Clamp Meter Digital', 'AC Current': '0-600A', 'DC Current': '0-600A', 'Display': 'LCD Backlight', 'Fitur': 'NCV, Data Hold, True RMS' },
     slug: 'multimeter-digital-acdc-clamp-meter'
+  },  {
+    id: 'PI-013',
+    name: 'Pneumatic Rivet Nut Gun M3-M12 (Air Rivet Nut Tool)',
+    short_name: 'Pneumatic Rivet Nut Gun M3-M12',
+    desc: 'Pneumatic rivet nut gun untuk pemasangan rivet nut M3-M12 dengan cepat dan presisi. Tekanan kerja 5-7 bar, stroke adjustable, cocok untuk plat besi, aluminium, dan stainless. Dilengkapi nosepiece set lengkap M3-M12. Ideal untuk fabrikasi, otomotif, dan manufaktur.',
+    category: 'Mesin & Tools',
+    img_key: 'cat_mesin',
+    img: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=700&auto=format&fit=crop&q=70',
+    min_price: 850000,
+    max_price: 1450000,
+    variants: [
+      { name: 'M3-M8 Standard', price: 850000, stock: 20, min_qty: 1 },
+      { name: 'M3-M10 + Nosepiece Set', price: 1150000, stock: 15, min_qty: 1 },
+      { name: 'M3-M12 Heavy Duty + Case', price: 1450000, stock: 10, min_qty: 1 }
+    ],
+    specs: { 'Kapasitas': 'M3-M12', 'Tekanan': '5-7 Bar', 'Stroke': '7mm Adjustable', 'Berat': '1.6 kg', 'Garansi': '1 Tahun' },
+    slug: 'pneumatic-rivet-nut-gun-m3-m12'
+  },
+  {
+    id: 'PI-014',
+    name: 'Pneumatic Rivet Nut Gun M4-M10 Auto (Self-Locking)',
+    short_name: 'Rivet Nut Gun M4-M10 Auto',
+    desc: 'Pneumatic rivet nut tool otomatis dengan sistem self-locking, memudahkan pemasangan rivet nut M4-M10 tanpa perlu setting manual. Air consumption rendah, noise rendah, cocok untuk produksi massal dan assembly line.',
+    category: 'Mesin & Tools',
+    img_key: 'cat_mesin',
+    img: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=700&auto=format&fit=crop&q=70',
+    min_price: 950000,
+    max_price: 1350000,
+    variants: [
+      { name: 'M4-M10 Auto Standard', price: 950000, stock: 18, min_qty: 1 },
+      { name: 'M4-M10 Auto + Nosepiece Full Set', price: 1350000, stock: 12, min_qty: 1 }
+    ],
+    specs: { 'Kapasitas': 'M4-M10', 'Tekanan': '5-7 Bar', 'Stroke': '7mm', 'Air Consumption': '0.8L/cycle', 'Garansi': '1 Tahun' },
+    slug: 'pneumatic-rivet-nut-gun-m4-m10-auto'
+  },
+  {
+    id: 'PI-015',
+    name: 'Pneumatic Rivet Nut Tool M6-M12 Industrial Heavy Duty',
+    short_name: 'Rivet Nut Tool M6-M12 Heavy Duty',
+    desc: 'Pneumatic rivet nut tool industrial heavy duty untuk M6-M12, bodi aluminium alloy, tahan lama untuk pemakaian intensif. Dilengkapi quick-change nosepiece dan mandrel set. Cocok untuk konstruksi baja, container, dan heavy fabrication.',
+    category: 'Mesin & Tools',
+    img_key: 'cat_mesin',
+    img: 'https://images.unsplash.com/photo-1581092918056-0c4c3b09be60?w=700&auto=format&fit=crop&q=70',
+    min_price: 1200000,
+    max_price: 1650000,
+    variants: [
+      { name: 'M6-M12 Standard', price: 1200000, stock: 15, min_qty: 1 },
+      { name: 'M6-M12 + Mandrel Set + Case', price: 1650000, stock: 8, min_qty: 1 }
+    ],
+    specs: { 'Kapasitas': 'M6-M12', 'Tekanan': '6-7 Bar', 'Pull Force': '18kN', 'Berat': '2.1 kg', 'Garansi': '1 Tahun' },
+    slug: 'pneumatic-rivet-nut-tool-m6-m12-heavy-duty'
+  },
+  {
+    id: 'PI-016',
+    name: 'Heat Shrink Tube Printer / Label Printer Industrial',
+    short_name: 'Heat Shrink Label Printer',
+    desc: 'Heat shrink tube printer industrial untuk cetak label kabel, wire marker, dan identifikasi panel listrik. Support tube diameter 2-6mm, print thermal transfer tahan panas & kimia. Cocok untuk panel maker, elektrikal, dan telekomunikasi.',
+    category: 'Elektronik & Power Tools',
+    img_key: 'cat_elektronik',
+    img: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=700&auto=format&fit=crop&q=70',
+    min_price: 1800000,
+    max_price: 2500000,
+    variants: [
+      { name: 'Printer Only', price: 1800000, stock: 12, min_qty: 1 },
+      { name: 'Printer + 2 Roll Tube + Ribbon', price: 2500000, stock: 8, min_qty: 1 }
+    ],
+    specs: { 'Tipe': 'Thermal Transfer', 'Tube Dia': '2-6mm', 'Resolusi': '300 DPI', 'Koneksi': 'USB', 'Garansi': '1 Tahun' },
+    slug: 'heat-shrink-tube-printer-industrial'
+  },
+  {
+    id: 'PI-017',
+    name: 'Heat Shrink Tube Roll 2:1 (Kabel Label) — Per Roll',
+    short_name: 'Heat Shrink Tube Roll 2:1',
+    desc: 'Heat shrink tube roll rasio 2:1 untuk label kabel industrial. Bahan polyolefin, tahan panas hingga 125°C, flame retardant. Tersedia diameter 2mm-12mm, warna putih/kuning. Panjang per roll 100 meter. Cocok untuk wire marking dan cable management.',
+    category: 'Elektronik & Power Tools',
+    img_key: 'cat_elektronik',
+    img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=700&auto=format&fit=crop&q=70',
+    min_price: 85000,
+    max_price: 180000,
+    variants: [
+      { name: 'Dia 2mm x 100m (Putih)', price: 85000, stock: 50, min_qty: 2 },
+      { name: 'Dia 4mm x 100m (Putih)', price: 110000, stock: 50, min_qty: 2 },
+      { name: 'Dia 6mm x 100m (Kuning)', price: 135000, stock: 40, min_qty: 2 },
+      { name: 'Dia 12mm x 50m (Putih)', price: 180000, stock: 30, min_qty: 2 }
+    ],
+    specs: { 'Rasio': '2:1', 'Bahan': 'Polyolefin', 'Tahan Panas': '125°C', 'Panjang': '50-100m/roll', 'Sertifikasi': 'UL, RoHS' },
+    slug: 'heat-shrink-tube-roll-2-1-kabel-label'
+  },
+  {
+    id: 'PI-018',
+    name: 'Heat Shrink Label Tape / Cassette (Compatible Printer)',
+    short_name: 'Heat Shrink Label Cassette',
+    desc: 'Heat shrink label cassette compatible untuk printer label industrial (Max, Brady, Partex). Lebar 9mm-24mm, panjang 8m per cassette. Print jelas, tahan air, minyak, dan abrasi. Untuk identifikasi kabel dan komponen panel.',
+    category: 'Elektronik & Power Tools',
+    img_key: 'cat_elektronik',
+    img: 'https://images.unsplash.com/photo-1525598912003-663126343e1f?w=700&auto=format&fit=crop&q=70',
+    min_price: 95000,
+    max_price: 165000,
+    variants: [
+      { name: '9mm x 8m (Putih)', price: 95000, stock: 60, min_qty: 2 },
+      { name: '12mm x 8m (Putih)', price: 115000, stock: 60, min_qty: 2 },
+      { name: '18mm x 8m (Kuning)', price: 145000, stock: 40, min_qty: 2 },
+      { name: '24mm x 8m (Putih)', price: 165000, stock: 30, min_qty: 2 }
+    ],
+    specs: { 'Lebar': '9-24mm', 'Panjang': '8m/cassette', 'Tahan': 'Air, Minyak, Abrasi', 'Compatible': 'Max/Brady/Partex', 'Garansi': '—' },
+    slug: 'heat-shrink-label-cassette-compatible'
+  },
+  {
+    id: 'PI-019',
+    name: 'Cable Label Printer Tape Refill (Thermal Transfer Ribbon)',
+    short_name: 'Cable Label Ribbon Refill',
+    desc: 'Thermal transfer ribbon refill untuk heat shrink label printer. Hasil cetak tajam, tahan lama, tidak luntur. Ukuran 110mm x 70m, compatible dengan printer industrial umum. Cocok untuk cetak massal label kabel.',
+    category: 'Elektronik & Power Tools',
+    img_key: 'cat_elektronik',
+    img: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=700&auto=format&fit=crop&q=70',
+    min_price: 75000,
+    max_price: 120000,
+    variants: [
+      { name: 'Ribbon Hitam 110mm x 70m', price: 75000, stock: 80, min_qty: 2 },
+      { name: 'Ribbon Hitam 110mm x 70m (2 Roll)', price: 120000, stock: 50, min_qty: 1 }
+    ],
+    specs: { 'Tipe': 'Thermal Transfer', 'Ukuran': '110mm x 70m', 'Warna': 'Hitam', 'Compatible': 'Universal', 'Garansi': '—' },
+    slug: 'cable-label-ribbon-refill-thermal-transfer'
+  },
+  {
+    id: 'PI-020',
+    name: 'Wire Marker / Cable Tag Heat Shrink Kit (Assorted)',
+    short_name: 'Wire Marker Heat Shrink Kit',
+    desc: 'Wire marker heat shrink kit assorted untuk identifikasi kabel panel listrik. Isi 200-500 pcs dengan nomor/huruf/warna berbeda, diameter 2-6mm. Sudah pre-printed, tinggal pasang dan heat shrink. Praktis untuk panel maker dan instalasi listrik.',
+    category: 'Elektronik & Power Tools',
+    img_key: 'cat_elektronik',
+    img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=700&auto=format&fit=crop&q=70',
+    min_price: 65000,
+    max_price: 145000,
+    variants: [
+      { name: 'Kit 200 pcs (0-9, A-Z)', price: 65000, stock: 60, min_qty: 2 },
+      { name: 'Kit 500 pcs Assorted + Box', price: 145000, stock: 40, min_qty: 2 }
+    ],
+    specs: { 'Isi': '200-500 pcs', 'Diameter': '2-6mm', 'Bahan': 'Polyolefin', 'Tahan Panas': '125°C', 'Garansi': '—' },
+    slug: 'wire-marker-cable-tag-heat-shrink-kit'
+  },
+  {
+    id: 'PI-021',
+    name: 'Magnetic Drill Press / Drill Stand (Magnetic Base Drill)',
+    short_name: 'Magnetic Drill Press Stand',
+    desc: 'Magnetic drill press dengan base magnet 12000N, daya 1100W, kapasitas bor hingga 32mm. Cocok untuk pengeboran baja, konstruksi, dan fabrikasi di lapangan. Dilengkapi coolant tank dan chuck MT2. Berat 12kg, portable.',
+    category: 'Mesin & Tools',
+    img_key: 'cat_mesin',
+    img: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=700&auto=format&fit=crop&q=70',
+    min_price: 2800000,
+    max_price: 3500000,
+    variants: [
+      { name: '1100W 32mm Standard', price: 2800000, stock: 8, min_qty: 1 },
+      { name: '1100W 32mm + Annular Cutter Set', price: 3500000, stock: 5, min_qty: 1 }
+    ],
+    specs: { 'Daya': '1100W', 'Kapasitas': '32mm', 'Magnet': '12000N', 'Chuck': 'MT2', 'Berat': '12 kg', 'Garansi': '1 Tahun' },
+    slug: 'magnetic-drill-press-stand-1100w'
+  },
+  {
+    id: 'PI-022',
+    name: 'Drill Press Stand / Magnetic Drill Base (Portable Stand)',
+    short_name: 'Drill Press Stand Portable',
+    desc: 'Drill press stand portable dengan base magnet, cocok untuk bor tangan diubah jadi drill press presisi. Adjustable height, clamp kuat, base magnet on/off. Untuk bengkel, konstruksi baja ringan, dan fabrikasi.',
+    category: 'Mesin & Tools',
+    img_key: 'cat_mesin',
+    img: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=700&auto=format&fit=crop&q=70',
+    min_price: 650000,
+    max_price: 950000,
+    variants: [
+      { name: 'Stand Only (tanpa bor)', price: 650000, stock: 15, min_qty: 1 },
+      { name: 'Stand + Clamp Set + Case', price: 950000, stock: 10, min_qty: 1 }
+    ],
+    specs: { 'Tipe': 'Magnetic Base Stand', 'Height': 'Adjustable 0-300mm', 'Magnet': '8000N', 'Compatible': 'Bor 13mm', 'Garansi': '1 Tahun' },
+    slug: 'drill-press-stand-magnetic-portable'
   }
+
 ];

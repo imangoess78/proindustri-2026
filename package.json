@@ -1,0 +1,16 @@
+{
+  "name": "proindustri-2026",
+  "version": "1.0.0",
+  "description": "ProIndustri — e-commerce produk industri impor China, order via WhatsApp",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute proindustri-db --file=./schema.sql",
+    "scrape": "python3 scripts/scrape_proindustri.py"
+  },
+  "dependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Keranjang & Checkout | ProIndustri</title>
+<link rel="stylesheet" href="/assets/site.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+</head>
+<body>
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="/" class="logo">Pro<span class="logo-accent">Industri</span></a>
+    <nav class="nav-links">
+      <a href="/">Beranda</a>
+      <a href="/produk">Produk</a>
+    </nav>
+    <a href="/cart" class="cart-btn">🛒 <span id="cartCount">0</span></a>
+  </div>
+</header>
+
+<main class="container">
+  <h1 class="page-title">Keranjang & Checkout</h1>
+
+  <div id="cartEmpty" class="card empty-cart" style="display:none">
+    <p>🛒 Keranjang kosong. <a href="/produk">Lihat produk</a></p>
+  </div>
+
+  <div id="cartContent" class="checkout-layout" style="display:none">
+    <div class="card">
+      <h2>Item Keranjang</h2>
+      <div id="cartItems"></div>
+    </div>
+    <div class="card checkout-summary">
+      <h2>Data Pembeli</h2>
+      <input type="text" id="custName" placeholder="Nama lengkap" class="search-input">
+      <input type="text" id="custWa" placeholder="Nomor WhatsApp (contoh: 6281234567890)" class="search-input">
+      <textarea id="custNote" placeholder="Catatan (opsional)" class="search-input" rows="3"></textarea>
+      <div class="total-row"><span>Total</span><span id="totalAmount" class="total-amount">Rp 0</span></div>
+      <button class="btn btn-primary btn-block" onclick="checkoutWa()">📱 Order via WhatsApp</button>
+      <p class="hint">Klik order → WhatsApp terbuka otomatis dengan detail pesanan. Tinggal kirim.</p>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container"><p>© 2026 ProIndustri</p></div>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

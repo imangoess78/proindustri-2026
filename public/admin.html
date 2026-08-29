@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Admin ProIndustri — Kelola Produk</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/assets/site.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+</head>
+<body>
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="/" class="logo">Pro<span class="logo-accent">Industri</span> <span class="admin-tag">ADMIN</span></a>
+    <nav class="nav-links">
+      <a href="/">Beranda</a>
+      <a href="/produk">Produk</a>
+      <a href="/admin" class="active">Admin</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+  <h1 class="page-title">Panel Admin</h1>
+
+  <!-- Login gate -->
+  <div id="loginGate" class="card login-card">
+    <h2>Masuk Admin</h2>
+    <input type="password" id="pinInput" placeholder="PIN Admin" class="search-input">
+    <button class="btn btn-primary" onclick="adminLogin()">Masuk</button>
+    <p class="hint">PIN default: 1234 (ubah via <code>wrangler secret put ADMIN_PIN</code>)</p>
+  </div>
+
+  <!-- Admin panel (hidden until login) -->
+  <div id="adminPanel" style="display:none">
+
+    <!-- Tab nav -->
+    <div class="admin-tabs">
+      <button class="tab-btn active" data-tab="scrape">Scrape Produk</button>
+      <button class="tab-btn" data-tab="products">Daftar Produk</button>
+      <button class="tab-btn" data-tab="orders">Orders</button>
+    </div>
+
+    <!-- Tab: Scrape -->
+    <div id="tab-scrape" class="tab-panel">
+      <div class="card">
+        <h2>➕ Tambah Produk dari URL AliExpress</h2>
+        <p class="hint">Tempel URL produk AliExpress — nanti di-scrape otomatis (jalankan script lokal).</p>
+        <div class="scrape-form">
+          <input type="url" id="scrapeUrl" placeholder="https://www.aliexpress.com/item/..." class="search-input">
+          <button class="btn btn-primary" onclick="addToScrapeQueue()">Tambah ke Antrian</button>
+        </div>
+        <div id="scrapeResult" class="result-msg"></div>
+
+        <h3>Antrian Scrape</h3>
+        <div id="scrapeQueue" class="queue-list"><p class="loading">Memuat...</p></div>
+        <div class="scrape-instructions card-inner">
+          <h4>📋 Cara menjalankan scraper di laptop:</h4>
+          <ol>
+            <li>Install: <code>pip install requests beautifulsoup4</code></li>
+            <li>Download: <code>scripts/scrape_proindustri.py</code></li>
+            <li>Jalankan: <code>python3 scrape_proindustri.py --token PIN_ANDA</code></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Products -->
+    <div id="tab-products" class="tab-panel" style="display:none">
+      <div class="card">
+        <h2>📦 Daftar Produk</h2>
+        <table class="admin-table">
+          <thead><tr><th>Gambar</th><th>Judul</th><th>Harga</th><th>Stok</th><th>Status</th><th>Aksi</th></tr></thead>
+          <tbody id="productTable"><tr><td colspan="6" class="loading">Memuat...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Orders -->
+    <div id="tab-orders" class="tab-panel" style="display:none">
+      <div class="card">
+        <h2>🧾 Orders</h2>
+        <div id="orderList"><p class="loading">Memuat...</p></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container"><p>© 2026 ProIndustri Admin</p></div>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

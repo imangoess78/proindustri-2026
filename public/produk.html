@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Katalog Produk | ProIndustri</title>
+<meta name="description" content="Katalog produk industri impor China — mesin, tools, elektronik, safety. Harga pabrik, order via WhatsApp.">
+<link rel="stylesheet" href="/assets/site.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+</head>
+<body>
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="/" class="logo">Pro<span class="logo-accent">Industri</span></a>
+    <nav class="nav-links">
+      <a href="/">Beranda</a>
+      <a href="/produk" class="active">Produk</a>
+      <a href="/admin">Admin</a>
+    </nav>
+    <a href="/cart" class="cart-btn">🛒 <span id="cartCount">0</span></a>
+  </div>
+</header>
+
+<main class="container">
+  <h1 class="page-title">Katalog Produk</h1>
+
+  <div class="catalog-toolbar">
+    <input type="search" id="searchInput" placeholder="Cari produk..." class="search-input">
+    <select id="categoryFilter" class="category-select">
+      <option value="">Semua Kategori</option>
+    </select>
+  </div>
+
+  <div id="productGrid" class="product-grid"><p class="loading">Memuat produk...</p></div>
+  <div class="pagination" id="pagination"></div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p>© 2026 ProIndustri. Produk impor China langsung dari pabrik.</p>
+  </div>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

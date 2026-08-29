@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Admin ProIndustri — Kelola Produk</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0B0B0B">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23F97316'/><text x='50' y='68' font-size='52' text-anchor='middle'>⚙️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-links">
+    <span>🔐 Panel Admin — ProIndustri</span>
+  </div>
+  <div class="topbar-right">
+    <a href="/">Beranda</a>
+    <a href="/produk">Katalog</a>
+  </div>
+</div>
+
+<!-- NAVBAR -->
+<header class="navbar">
+  <div class="navbar-inner">
+    <a href="/" class="brand">
+      <div class="brand-logo">⚙️</div>
+      <div>
+        <div class="brand-name">ProIndustri <span style="font-size:10px;font-weight:700;color:var(--orange);background:var(--orange-light);padding:2px 8px;border-radius:4px;vertical-align:middle;margin-left:4px">ADMIN</span></div>
+        <div class="brand-sub">Panel Kelola Produk</div>
+      </div>
+    </a>
+    <nav class="nav-links" style="margin-left:auto">
+      <a href="/" class="nav-link">Beranda</a>
+      <a href="/produk" class="nav-link">Produk</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="breadcrumb"><a href="/">Beranda</a><span class="sep">›</span><span>Panel Admin</span></div>
+
+  <!-- Login gate -->
+  <div id="loginGate" class="card login-card" style="text-align:center">
+    <div style="font-size:48px;margin-bottom:12px">🔐</div>
+    <h2 style="margin-bottom:6px">Masuk Admin</h2>
+    <p class="hint" style="margin-bottom:18px">Masukkan PIN untuk mengelola produk.</p>
+    <div class="form-field">
+      <input type="password" id="pinInput" placeholder="PIN Admin" style="text-align:center;font-size:16px;letter-spacing:4px">
+    </div>
+    <button class="btn btn-primary btn-block" onclick="adminLogin()">Masuk</button>
+    <p class="hint" style="margin-top:12px">PIN default: 1234 (ubah via <code>wrangler secret put ADMIN_PIN</code>)</p>
+  </div>
+
+  <!-- Admin panel (hidden until login) -->
+  <div id="adminPanel" style="display:none">
+    <div class="page-head">
+      <h1 class="page-title">Panel Admin</h1>
+    </div>
+
+    <!-- Tab nav -->
+    <div class="admin-tabs">
+      <button class="tab-btn active" data-tab="scrape">➕ Scrape Produk</button>
+      <button class="tab-btn" data-tab="products">📦 Daftar Produk</button>
+      <button class="tab-btn" data-tab="orders">🧾 Orders</button>
+    </div>
+
+    <!-- Tab: Scrape -->
+    <div id="tab-scrape" class="tab-panel">
+      <div class="card">
+        <h2>➕ Tambah Produk dari URL AliExpress</h2>
+        <p class="hint">Tempel URL produk AliExpress — nanti di-scrape otomatis (jalankan script lokal).</p>
+        <div class="form-field" style="display:flex;gap:10px;flex-wrap:wrap">
+          <input type="url" id="scrapeUrl" placeholder="https://www.aliexpress.com/item/..." style="flex:1">
+          <button class="btn btn-primary" onclick="addToScrapeQueue()">Tambah ke Antrian</button>
+        </div>
+        <div id="scrapeResult" class="result-msg"></div>
+
+        <h3>Antrian Scrape</h3>
+        <div id="scrapeQueue" class="queue-list"><p class="loading">Memuat...</p></div>
+        <div class="card-inner">
+          <h4>📋 Cara menjalankan scraper:</h4>
+          <ol>
+            <li>Install: <code>pip install requests beautifulsoup4</code></li>
+            <li>Buka <code>scripts/scrape_proindustri.py</code></li>
+            <li>Isi <code>ADMIN_PIN</code> dan <code>SITE_URL</code> di script</li>
+            <li>Jalankan: <code>python3 scripts/scrape_proindustri.py</code></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Products -->
+    <div id="tab-products" class="tab-panel" style="display:none">
+      <div class="card">
+        <h2>📦 Daftar Produk</h2>
+        <table class="admin-table">
+          <thead><tr><th>Gambar</th><th>Judul</th><th>Harga</th><th>Stok</th><th>Status</th><th>Aksi</th></tr></thead>
+          <tbody id="productTable"><tr><td colspan="6" class="loading">Memuat...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Orders -->
+    <div id="tab-orders" class="tab-panel" style="display:none">
+      <div class="card">
+        <h2>🧾 Orders</h2>
+        <div id="orderList"><p class="loading">Memuat...</p></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-orange"></div>
+  <div class="footer-main">
+    <div class="f-bottom">
+      <span>© 2026 ProIndustri Admin Panel</span>
+      <span>🔒 Hanya untuk admin</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/site.js"></script>
+</body>
+</html>

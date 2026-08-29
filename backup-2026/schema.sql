@@ -129,11 +129,12 @@ CREATE TABLE IF NOT EXISTS categories (
   created_at TEXT DEFAULT (datetime('now'))
 );
 INSERT OR IGNORE INTO categories (slug, name, icon, featured_image, description, sort_order) VALUES
-('mesin-tools','Mesin & Tools','⚙️','','Mesin bor, gerinda, las, compressor & power tools impor China',1),
-('elektronik-power-tools','Elektronik & Power Tools','🔌','','Perkakas listrik, kabel, multimeter & perlengkapan elektronik industri',2),
-('industri-manufaktur','Industri & Manufaktur','🏭','','Perlengkapan manufaktur, alat ukur & kebutuhan pabrik',3),
-('safety-perlengkapan','Safety & Perlengkapan','🦺','','Helm, sarung tangan las & APD standar industri',4),
-('lainnya','Lainnya','📦','','Produk industri lainnya',5);
+('opp-lem-tipis','OPP Lem Tipis','🫱','/img/products/img_042.jpeg','17-18 Mikron · Ekonomis',1),
+('opp-lem-tebal','OPP Lem Tebal','💪','/img/products/img_043.jpeg','29-32 Mikron · Bakery',2),
+('opp-lem-super-tebal','OPP Lem Super Tebal','🛡️','/img/products/img_044.jpeg','38 Mikron · Double Seal',3),
+('opp-tanpa-lem','OPP Tanpa Lem','🧩','/img/products/img_045.jpeg','Non Seal · Serba Guna',4),
+('plastik-gusset-roti','Plastik Gusset Roti','🥖','/img/products/img_046.jpeg','32 Mikron · Roti & Bakery',5),
+('plastik-ziplock-klip','Plastik Ziplock/Klip','🤐','/img/products/img_047.jpeg','30-50 Mikron · Kedap Udara',6);
 
 -- Notifications: push-in-app untuk admin & customer
 CREATE TABLE IF NOT EXISTS notifications (

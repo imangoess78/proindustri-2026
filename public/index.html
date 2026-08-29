@@ -246,6 +246,10 @@ a{text-decoration:none;color:inherit}
 .fl{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:0.5px}
 .fi,.fs,.fta{width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:14px;font-family:var(--font);outline:none;transition:border-color 0.2s;color:var(--dark)}
 .fi:focus,.fs:focus,.fta:focus{border-color:var(--gold)}
+.pw-wrap{position:relative;display:flex;align-items:center}
+.pw-wrap .fi{padding-right:40px}
+.pw-toggle{position:absolute;right:10px;background:none;border:none;cursor:pointer;color:var(--muted);display:flex;align-items:center;justify-content:center;padding:4px;border-radius:6px;transition:color .15s,background .15s}
+.pw-toggle:hover{color:var(--dark);background:var(--light)}
 .fta{resize:vertical;min-height:80px}
 .f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .cf-btn{width:100%;background:var(--grad-btn);color:white;border:none;border-radius:var(--radius);padding:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--font);margin-top:4px}
@@ -1525,14 +1529,14 @@ a{text-decoration:none;color:inherit}
       <div class="login-divider">atau</div>
       <div class="login-form-tab active" id="loginFormTab">
         <div class="fg"><label class="fl">Email</label><input class="fi" type="email" id="loginEmail" placeholder="email@kamu.com"></div>
-        <div class="fg"><label class="fl">Password</label><input class="fi" type="password" id="loginPassword" placeholder="••••••••"></div>
+        <div class="fg"><label class="fl">Password</label><div class="pw-wrap"><input class="fi" type="password" id="loginPassword" placeholder="••••••••"><button type="button" class="pw-toggle" onclick="togglePw('loginPassword',this)" aria-label="Lihat password"><svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg></button></div></div>
         <button class="login-submit-btn" onclick="doLogin()">Masuk <svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg></button>
         <div class="login-switch">Belum punya akun? <a onclick="switchLoginTab('register')">Daftar sekarang</a></div>
       </div>
       <div class="login-form-tab" id="registerFormTab">
         <div class="fg"><label class="fl">Nama Lengkap</label><input class="fi" type="text" id="regName" placeholder="Nama kamu"></div>
         <div class="fg"><label class="fl">Email</label><input class="fi" type="email" id="regEmail" placeholder="email@kamu.com"></div>
-        <div class="fg"><label class="fl">Password</label><input class="fi" type="password" id="regPassword" placeholder="Min. 6 karakter"></div>
+        <div class="fg"><label class="fl">Password</label><div class="pw-wrap"><input class="fi" type="password" id="regPassword" placeholder="Min. 6 karakter"><button type="button" class="pw-toggle" onclick="togglePw('regPassword',this)" aria-label="Lihat password"><svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg></button></div></div>
         <button class="login-submit-btn" onclick="doRegister()">Daftar & Dapatkan Diskon <svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg></button>
         <div class="login-switch">Sudah punya akun? <a onclick="switchLoginTab('login')">Masuk</a></div>
       </div>
@@ -3160,6 +3164,12 @@ function switchLoginTab(tab){ if(window.MP) MP.switchAuthTab(tab); }
 function loginWithGoogle(){ if(window.MP) MP.openAuth('register'); }
 async function doLogin(){ return window.MP ? MP.submitLogin() : undefined; }
 async function doRegister(){ return window.MP ? MP.submitRegister() : undefined; }
+function togglePw(id,btn){
+  var inp=document.getElementById(id); if(!inp) return;
+  var show=inp.type==='password';
+  inp.type=show?'text':'password';
+  if(btn) btn.innerHTML=show?'<svg class="ic" aria-hidden="true"><use href="#i-eye-off"/></svg>':'<svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg>';
+}
 
 function loginSuccess(user){
   if(window.MP && window.MP.loginSuccess){ window.MP.loginSuccess(user); return; }

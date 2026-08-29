@@ -1214,6 +1214,231 @@ export default {
       return json({ url: publicUrl, confirmation_id: cid });
     }
 
+    // ── POST /api/admin/ae-scrape ── fetch AE page + parse preview (admin)
+    if (path === '/api/admin/ae-scrape' && request.method === 'POST') {
+      if (!await isAdmin(request, env)) return json({ error: 'Unauthorized' }, 401);
+      const { url: aeUrl } = await request.json().catch(() => ({}));
+      if (!aeUrl || !String(aeUrl).includes('aliexpress.com')) return json({ error: 'URL harus aliexpress.com' }, 400);
+      // Fetch AE HTML with browser-like headers
+      let html = '';
+      try {
+        const r = await fetch(aeUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
+          },
+          cf: { cacheTtl: 0 },
+        });
+        html = await r.text();
+      } catch (e) { return json({ error: 'Gagal fetch AE: ' + e.message }, 502); }
+      if (!html || html.length < 500) return json({ error: 'Gagal ambil halaman AE (terblokir / kosong)' }, 502);
+
+      // Helpers
+      const m1 = (re) => { const m = html.match(re); return m ? m[1] : ''; };
+      const tryJson = (s) => { try { return JSON.parse(s); } catch { return null; } };
+
+      // 1) Title
+      let title = m1(/<meta property="og:title" content="([^"]+)"/) || m1(/<title>([^<]+)<\/title>/) || '';
+      title = title.replace(/\s*-\s*AliExpress.*$/i, '').trim().slice(0, 200);
+
+      // 2) Try to find embedded JSON with product data
+      // AE embeds data in: window._dida_config_ / window.runParams / __AERENDER_DATA__ / data: { ... }
+      let aeData = null;
+      // Look for runParams
+      const runParamsRaw = m1(/window\.runParams\s*=\s*(\{[\s\S]*?\});\s*\n/) || m1(/window\.runParams\s*=\s*(\{[\s\S]*?\});/);
+      if (runParamsRaw) aeData = tryJson(runParamsRaw);
+      // Fallback: _dida_config_
+      if (!aeData) {
+        const didaRaw = m1(/window\._dida_config_\s*=\s*(\{[\s\S]*?\});/);
+        if (didaRaw) aeData = tryJson(didaRaw);
+      }
+      // Fallback: data with sku
+      let skuData = null;
+      // Search for sku price patterns directly in HTML
+      const priceHints = [];
+      // USD prices like "US $12.34" or "$12.34"
+      const usdRe = /US\s*\$\s*([\d,]+\.?\d*)/gi;
+      let pm;
+      while ((pm = usdRe.exec(html)) !== null) priceHints.push(parseFloat(pm[1].replace(/,/g, '')));
+      // Also "salePrice":"12.34" or "minPrice":"12.34"
+      const jsonPriceRe = /"(?:salePrice|minPrice|actSkuPrice|skuPrice|price)"\s*:\s*"?([\d.]+)"?/gi;
+      while ((pm = jsonPriceRe.exec(html)) !== null) { const v = parseFloat(pm[1]); if (v > 0.5 && v < 10000) priceHints.push(v); }
+
+      // 3) Images: og:image + imagePathList / imageUrlList
+      const images = [];
+      const ogImg = m1(/<meta property="og:image" content="([^"]+)"/);
+      if (ogImg) images.push(ogImg);
+      // imagePathList
+      const imgListRaw = m1(/"imagePathList"\s*:\s*(\[[^\]]+\])/) || m1(/"imageUrlList"\s*:\s*(\[[^\]]+\])/) || m1(/"imageURL"\s*:\s*"([^"]+)"/);
+      if (imgListRaw) {
+        const arr = tryJson(imgListRaw);
+        if (Array.isArray(arr)) arr.forEach(u => { if (typeof u === 'string' && u.startsWith('http')) images.push(u); });
+        else if (typeof imgListRaw === 'string' && imgListRaw.startsWith('http')) images.push(imgListRaw);
+      }
+      // Also collect all ae***.alicdn.com images
+      const cdnRe = /https:\/\/ae\d*\.alicdn\.com\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+      let cm;
+      while ((cm = cdnRe.exec(html)) !== null) {
+        const u = cm[0].replace(/_\d+x\d+\.(jpg|png|webp)/, '.$1').replace(/\.jpg_\w+/, '.jpg');
+        if (!images.includes(u)) images.push(u);
+        if (images.length >= 12) break;
+      }
+      const uniqImages = [...new Set(images)].slice(0, 8);
+
+      // 4) Price: pick median of hints, or first valid — plus fallback dari URL pdp_npi jika captcha
+      const isCaptcha = html.includes('x5secdata') || html.includes('/punish?') || html.includes('x5step');
+      if (isCaptcha) {
+        try {
+          const u = new URL(aeUrl);
+          const npi = u.searchParams.get('pdp_npi') ? decodeURIComponent(u.searchParams.get('pdp_npi')) : '';
+          const m = npi.match(/IDR!([\d.]+)!([\d.]+)/);
+          if (m) {
+            const saleIDR = parseFloat(m[2]);
+            if (saleIDR > 1000) priceHints.push(saleIDR / 16500);
+          }
+        } catch {}
+      }
+      let priceUSD = 0;
+      if (priceHints.length) {
+        priceHints.sort((a,b)=>a-b);
+        priceUSD = priceHints[Math.floor(priceHints.length/2)];
+        // Filter outliers: if median > 100 and min < 20, likely parsing error — use min
+        if (priceUSD > 50 && Math.min(...priceHints) < 20) priceUSD = Math.min(...priceHints.filter(v=>v>1));
+      }
+      // Try aeData price
+      if (aeData) {
+        const dp = aeData?.data?.price?.salePrice || aeData?.data?.price?.minPrice || aeData?.price?.salePrice;
+        if (dp) { const v = parseFloat(String(dp).replace(/[^0-9.]/g,'')); if (v>0) priceUSD = v; }
+      }
+      if (!priceUSD || priceUSD < 0.5) priceUSD = 10; // fallback $10
+
+      // 5) Variants: try skuProperty
+      let variantsRaw = [];
+      const skuPropRaw = m1(/"skuProperty"\s*:\s*(\[[\s\S]*?\])\s*,\s*"skuPrice"/) || m1(/"skuProperty"\s*:\s*(\[[\s\S]*?\])/);
+      if (skuPropRaw) {
+        const arr = tryJson(skuPropRaw);
+        if (Array.isArray(arr)) variantsRaw = arr;
+      }
+      // Also try skuPrice map
+      let skuPriceMap = {};
+      const skuPriceRaw = m1(/"skuPrice"\s*:\s*(\{[\s\S]*?\})\s*,\s*"skuProperty"/) || m1(/"skuPrice"\s*:\s*(\{[\s\S]*?\})/);
+      if (skuPriceRaw) { const o = tryJson(skuPriceRaw); if (o && typeof o === 'object') skuPriceMap = o; }
+
+      // Build variants for preview
+      let previewVariants = [];
+      if (variantsRaw.length && Object.keys(skuPriceMap).length) {
+        // Complex: each sku key maps to price
+        for (const k in skuPriceMap) {
+          const sp = skuPriceMap[k];
+          const p = parseFloat(String(sp?.salePrice || sp?.price || priceUSD).replace(/[^0-9.]/g,'')) || priceUSD;
+          previewVariants.push({ name: k.slice(0,60) || 'Varian', priceUSD: p });
+        }
+      } else if (variantsRaw.length) {
+        variantsRaw.forEach(prop => {
+          const propName = prop?.propertyName || prop?.name || '';
+          (prop?.values || prop?.skuPropertyValues || []).forEach(v => {
+            const vn = v?.propertyValueName || v?.name || v?.value || '';
+            if (vn) previewVariants.push({ name: (propName ? propName + ' ' : '') + vn, priceUSD });
+          });
+        });
+      }
+      if (!previewVariants.length) previewVariants = [{ name: 'Standard', priceUSD }];
+
+      // 6) Description: meta description — AE sering blokir (captcha) jadi meta pendek
+      let desc = m1(/<meta name="description" content="([^"]+)"/) || m1(/<meta property="og:description" content="([^"]+)"/) || '';
+      if (!desc) desc = title;
+      // Jika deskripsi pendek (<120 char) — generate template SEO panjang dari judul (biar tidak kosong di toko)
+      const genDesc = (t) => {
+        const tt = t || 'Produk Pilihan';
+        return `${tt} — Produk Berkualitas untuk Kebutuhan Industri & Rumah Tangga.\n\n${tt} adalah produk pilihan dengan kualitas terjamin, cocok untuk penggunaan harian maupun profesional. Dibuat dengan material berkualitas tinggi dan desain ergonomis, produk ini menawarkan daya tahan dan performa optimal untuk berbagai kebutuhan.\n\nKeunggulan:\n- Material premium, tahan lama dan presisi\n- Desain ergonomis, nyaman digunakan seharian\n- Performa stabil, cocok untuk industri, bengkel, dan rumah tangga\n- Perawatan mudah, suku cadang tersedia\n- Garansi kualitas — kepuasan pelanggan prioritas kami\n\nCocok untuk: bengkel, konstruksi, industri ringan, hingga kebutuhan rumah tangga. Stok terbatas — pesan sekarang dan nikmati pengiriman cepat ke seluruh Indonesia!\n\nCatatan: Deskripsi ini auto-generate dari judul. Silakan edit di preview sebelum Publish agar lebih akurat (tambah ukuran, bahan, isi paket).`;
+      };
+      if (desc.length < 120) {
+        desc = genDesc(title);
+      } else {
+        desc = desc.slice(0, 800);
+        // Jika meta description pendek tapi ada judul, tetap perpanjang dengan template
+        if (desc.length < 250 && title) {
+          desc = desc + '\n\n' + genDesc(title).split('\n').slice(2).join('\n');
+          desc = desc.slice(0, 1200);
+        }
+      }
+
+      // 7) Markup 2x + USD→IDR (kurs 16500)
+      const RATE = 16500;
+      const toIDR = (usd) => Math.round(usd * RATE * 2);
+      // Round to nice price: 1000
+      const nice = (n) => Math.round(n / 1000) * 1000 || n;
+      previewVariants = previewVariants.slice(0, 8).map(v => ({
+        name: String(v.name).slice(0, 60),
+        priceUSD: v.priceUSD,
+        priceIDR: nice(toIDR(v.priceUSD)),
+        stock: 50, min_qty: 1,
+      }));
+      const minPrice = Math.min(...previewVariants.map(v=>v.priceIDR));
+      const maxPrice = Math.max(...previewVariants.map(v=>v.priceIDR));
+
+      return json({
+        title, desc, images: uniqImages, variants: previewVariants,
+        priceUSD, minPrice, maxPrice, rate: RATE, markup: 2,
+        aeUrl, rawHints: priceHints.slice(0,5),
+      });
+    }
+
+    // ── POST /api/admin/ae-import ── create product from preview + fetch images to R2
+    if (path === '/api/admin/ae-import' && request.method === 'POST') {
+      if (!await isAdmin(request, env)) return json({ error: 'Unauthorized' }, 401);
+      const b = await request.json().catch(() => null);
+      if (!b || !b.title) return json({ error: 'Missing title' }, 400);
+      const title = String(b.title).slice(0, 200).trim();
+      if (!title) return json({ error: 'Title kosong' }, 400);
+      const desc = String(b.desc || '').slice(0, 5000);
+      const category = String(b.category || 'Mesin & Tools').slice(0, 80);
+      const variants = Array.isArray(b.variants) ? b.variants.slice(0, 12).map(v => ({
+        name: String(v.name || 'Standard').slice(0, 60),
+        price: Math.max(1000, Math.round(Number(v.priceIDR || v.price || 0))),
+        stock: Math.max(0, Number(v.stock) || 50),
+        min_qty: Math.max(1, Number(v.min_qty) || 1),
+      })).filter(v=>v.name && v.price>0) : [];
+      if (!variants.length) return json({ error: 'Varian kosong' }, 400);
+      const min_price = Math.min(...variants.map(v=>v.price));
+      const max_price = Math.max(...variants.map(v=>v.price));
+      const specs = b.specs && typeof b.specs === 'object' ? b.specs : {};
+      if (b.weight) specs.weight = Number(b.weight) || undefined;
+      // Images: fetch AE CDN -> R2 (max 4)
+      let img = '';
+      const imgUrls = Array.isArray(b.images) ? b.images.slice(0, 4) : [];
+      for (const u of imgUrls) {
+        try {
+          const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+          if (!r.ok) continue;
+          const buf = await r.arrayBuffer();
+          if (buf.byteLength < 1000) continue;
+          const ct = r.headers.get('content-type') || 'image/jpeg';
+          const ext = ct.includes('png') ? 'png' : ct.includes('webp') ? 'webp' : 'jpg';
+          const key = `products/${nanoid()}.${ext}`;
+          await env.IMAGES.put(key, buf, { httpMetadata: { contentType: ct } });
+          if (!img) img = '/img/' + key;
+          // store additional images in specs if needed (first is main)
+        } catch {}
+        if (img) break;
+      }
+      if (!img && b.img) img = String(b.img).slice(0, 500);
+      if (!img) img = 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=700&auto=format&fit=crop&q=70';
+      const id = 'P-' + nanoid();
+      const slug = slugify(title).slice(0, 80) || id.toLowerCase();
+      // Ensure slug unique
+      let finalSlug = slug, n = 2;
+      while (await env.DB.prepare('SELECT 1 FROM products WHERE slug=? LIMIT 1').bind(finalSlug).first()) {
+        finalSlug = slug + '-' + (n++);
+      }
+      await env.DB.prepare(
+        `INSERT INTO products (id, slug, name, short_name, desc, category, img_key, img, min_price, max_price, variants, specs, active)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1)`
+      ).bind(id, finalSlug, title, title.slice(0,80), desc, category, '', img, min_price, max_price, JSON.stringify(variants), JSON.stringify(specs)).run();
+      return json({ ok: true, id, slug: finalSlug, img, min_price, max_price });
+    }
+
     // ── GET /api/products ── (public — seed otomatis jika kosong)
     if (path === '/api/products' && request.method === 'GET') {
       await ensureProducts(env);

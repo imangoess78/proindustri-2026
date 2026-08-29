@@ -2434,7 +2434,7 @@ function renderQA(){
   const el=document.getElementById('qaModal');
   el.innerHTML=`
     <div class="qa-head">
-      <div class="qa-thumb"><img src="${getImg(p)}" alt="" onerror="this.parentElement.innerHTML='${IC("package")}'"></div>
+      <div class="qa-thumb"><img src="${getImg(p)}" alt="" onerror="this.style.display='none'"></div>
       <div class="qa-name">${(p.short_name||p.name).replace(/\\(.*?\\)/g,'').trim()}</div>
       <button class="qa-close-btn" onclick="closeQA()">${IC("x")}</button>
     </div>

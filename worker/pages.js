@@ -188,7 +188,7 @@ export async function renderProduct(env, p) {
     <div class="pd-main">
       <div class="pd-gallery">
         <div class="pd-img-box">
-          ${img ? `<img src="${esc(img)}" alt="${esc(p.name)}" onerror="this.outerHTML='<div style=&quot;display:flex;align-items:center;justify-content:center;height:100%;font-size:72px&quot;><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg></div>'">` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:72px"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg></div>'}
+          ${img ? `<img src="${esc(img)}" alt="${esc(p.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` + `<div style="display:none;align-items:center;justify-content:center;height:100%;font-size:72px"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg></div>` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:72px"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg></div>'}
         </div>
         <div class="pd-badges">${badges.map(b => `<span class="pd-badge">${b}</span>`).join('')}</div>
       </div>
@@ -708,7 +708,7 @@ export async function renderArticles(env) {
     cards = `<div class="a-grid">${results.map(a => {
       const img = (a.image || '').replace(/^https:\/\/pub-[a-f0-9]+\.r2\.dev\//, '/img/');
       return `<a class="a-card" href="/artikel/${esc(a.slug)}">
-        ${img ? `<div class="a-thumb"><img src="${esc(img)}" alt="${esc(a.title)}" loading="lazy" onerror="this.parentElement.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg>'"></div>` : `<div class="a-thumb"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg></div>`}
+        ${img ? `<div class="a-thumb"><img src="${esc(img)}" alt="${esc(a.title)}" loading="lazy" onerror="this.style.display='none'"></div>` : `<div class="a-thumb"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg></div>`}
         <div class="a-body">
           <div class="a-tag">${esc(a.category || 'Blog')}</div>
           <div class="a-title">${esc(a.title)}</div>
@@ -783,7 +783,7 @@ function renderQA(){
   }
   var el=document.getElementById('qaModal');
   el.innerHTML='<div class="qa-head">'+
-    '<div class="qa-thumb">'+(p.img?'<img src="'+p.img+'" alt="" onerror="this.parentElement.innerHTML=\\'<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg>\\'">':'<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg>')+'</div>'+
+    '<div class="qa-thumb">'+(p.img?'<img src="'+p.img+'" alt="" onerror="this.style.display=\'none\'">':'<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg>')+'</div>'+
     '<div class="qa-name">'+escQA(p.name)+'</div>'+
     '<button class="qa-close-btn" onclick="closeQA()">✕</button></div>'+
     '<div class="qa-lbl">Pilih Varian</div>'+vsHtml+
@@ -844,7 +844,7 @@ function homeCard(p) {
   } catch (e) {}
   const minPack = 5;
   const imgHtml = img
-    ? `<div class="p-img"><img src="${esc(img)}" alt="${name}" loading="lazy" onerror="this.parentElement.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg>'"></div>`
+    ? `<div class="p-img"><img src="${esc(img)}" alt="${name}" loading="lazy" onerror="this.style.display='none'"></div>`
     : `<div class="p-img" style="display:flex;align-items:center;justify-content:center;font-size:42px"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg></div>`;
   let variantsJson = '[]';
   try {

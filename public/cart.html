@@ -79,7 +79,7 @@ var IC = window.IC;
         <div class="c-item-info">
           <a class="c-item-name" href="/produk/${encodeURIComponent(item.slug || item.productId)}">${SP.esc(item.productName.replace(/\(.*?\)/g,'').trim().substring(0,46))}</a>
           <div class="c-item-var">${SP.esc(item.variantName)}</div>
-          <div class="c-item-price">${SP.fmt(item.price)} / pack</div>
+          <div class="c-item-price">${SP.fmt(item.price)} / unit</div>
           <div class="c-qty-row">
             <button class="cqb" type="button" onclick="cqty(${i},-1)">−</button>
             <input type="number" id="ciq${i}" class="c-qty-input" value="${item.qty}" min="1" step="1" inputmode="numeric" aria-label="Jumlah ${SP.esc(item.variantName)}" oninput="cqtyInput(${i},this)" onchange="cqtyCommit(${i},this)" style="width:60px;text-align:center;font-weight:800;font-size:14px;padding:4px 6px;border:1.5px solid var(--border);border-radius:8px;background:white;color:var(--dark);font-family:var(--font)">
@@ -110,7 +110,7 @@ var IC = window.IC;
     const freeShip = sub >= 500000;
 
     sum.innerHTML = `
-      <div class="sum-row"><span>Total Item</span><span>${tq} pack</span></div>
+      <div class="sum-row"><span>Total Item</span><span>${tq} unit</span></div>
       <div class="sum-row"><span>Subtotal</span><span>${SP.fmt(sub)}</span></div>
       ${discPct > 0 ? `<div class="sum-row" style="color:#16A34A;font-weight:700"><span>Diskon ${discPct}%</span><span>-${SP.fmt(discAmt)}</span></div>` : ''}
       <div class="sum-row"><span>Ongkir</span><span>${freeShip ? '' + IC("check-circle-2") + ' Gratis' : 'Dihitung saat konfirmasi'}</span></div>

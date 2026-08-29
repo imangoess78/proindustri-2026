@@ -422,12 +422,12 @@ export default {
       await ensureProducts(env);
       const q = url.searchParams.get('q') || '';
       const page = await renderShop(env, q);
-      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' } });
+      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store' } });
     }
     if (path === '/produk') {
       await ensureProducts(env);
       const page = await renderArchive(env);
-      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' } });
+      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store' } });
     }
     if (path.startsWith('/produk/')) {
       const key = decodeURIComponent(path.slice('/produk/'.length));
@@ -443,24 +443,24 @@ export default {
       }
       const page = await renderProduct(env, prod);
       if (!page) return new Response('Produk tidak ditemukan', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' } });
+      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store' } });
     }
     if (path.startsWith('/kategori/')) {
       const slug = decodeURIComponent(path.slice('/kategori/'.length));
       await ensureProducts(env);
       const page = await renderCategory(env, slug);
       if (!page) return new Response('Kategori tidak ditemukan', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' } });
+      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store' } });
     }
     if (path.startsWith('/artikel/')) {
       const slug = decodeURIComponent(path.slice('/artikel/'.length));
       const page = await renderPost(env, slug);
       if (!page) return new Response('Artikel tidak ditemukan', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' } });
+      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store' } });
     }
     if (path === '/artikel') {
       const page = await renderArticles(env);
-      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' } });
+      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store' } });
     }
 
     // ── Sitemap XML (dinamis: produk, kategori, artikel) ──

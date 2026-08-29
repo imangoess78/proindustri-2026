@@ -10,7 +10,7 @@ routes = [
 # Static assets
 [assets]
 directory = "./public"
-not_found_handling = "single-page-application"
+not_found_handling = "none"
 
 # D1 database
 [[d1_databases]]
@@ -28,4 +28,4 @@ bucket_name = "proindustri-images"
 SITE_NAME = "ProIndustri"
 SITE_URL = "https://proindustri.imangoess78.workers.dev"
 # WhatsApp number for orders (format: 6281234567890)
-WA_NUMBER = "CHANGE_ME"
+WA_NUMBER = "6281394191904"

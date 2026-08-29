@@ -3,7 +3,7 @@
 const ORIGIN = 'https://proindustri.com';
 const SITE_NAME = 'ProIndustri';
 const TAGLINE = 'Distributor Mesin & Tools Industri Impor China — Harga Grosir, Garansi, Kirim Seluruh Indonesia';
-const WA_STORE = 'https://wa.me/CHANGE_ME';
+const WA_STORE = 'https://wa.me/6281394191904';
 
 function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

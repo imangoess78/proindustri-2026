@@ -534,7 +534,7 @@ var IC = window.IC;
         + '<div class="od-actions">'
         + (canReorder ? '<button class="btn" onclick="Akun.reorder(\'' + o.id + '\')">' + IC("refresh-cw") + ' Order Ulang</button>' : '')
         + (o.resi ? '<a class="btn-sm" href="https://cekresi.com/?noresi=' + encodeURIComponent(o.resi) + '" target="_blank" rel="noopener">' + IC("mail") + ' Lacak Resi</a>' : '')
-        + '<a class="btn-sm" href="https://wa.me/CHANGE_ME?text=' + encodeURIComponent('Halo Admin! Saya mau tanya tentang pesanan ' + o.id) + '" target="_blank" rel="noopener">💬 Tanya via WA</a>'
+        + '<a class="btn-sm" href="https://wa.me/6281394191904?text=' + encodeURIComponent('Halo Admin! Saya mau tanya tentang pesanan ' + o.id) + '" target="_blank" rel="noopener">💬 Tanya via WA</a>'
         + '</div></div></div>';
     }).join('');
   }
@@ -615,7 +615,7 @@ var IC = window.IC;
           + (c.reply ? '<div style="margin-top:12px;padding:10px 12px;background:#F0FDF4;border-left:3px solid #16A34A;border-radius:8px;font-size:13px"><b style="color:#16A34A">' + IC("message-circle") + ' Balasan Admin</b><div style="margin-top:4px">' + SP.esc(c.reply) + '</div></div>'
             : '<div style="margin-top:12px;padding:10px 12px;background:#FFFBEB;border-left:3px solid var(--gold);border-radius:8px;font-size:12px;color:var(--muted)">' + IC("clock") + ' Menunggu balasan admin. Kami akan merespon maksimal 1×24 jam.</div>')
           + (hist.length ? '<div style="margin-top:10px;font-size:12px;color:var(--muted)"><b>Riwayat status:</b> ' + hist.map(function(h) { return (h.from || 'Diajukan') + ' ' + IC("arrow-right") + ' ' + h.to + ' (' + fmtDate(h.at) + ')'; }).join(' · ') + '</div>' : '')
-          + '<div class="od-actions"><a class="btn btn-wa" style="text-decoration:none;text-align:center" href="https://wa.me/CHANGE_ME?text=' + encodeURIComponent('Halo Admin! Saya mau tanya perkembangan komplain order ' + o.id + ' (jenis: ' + (c.type || 'Komplain') + ')') + '" target="_blank" rel="noopener">💬 Tanya Perkembangan</a></div>'
+          + '<div class="od-actions"><a class="btn btn-wa" style="text-decoration:none;text-align:center" href="https://wa.me/6281394191904?text=' + encodeURIComponent('Halo Admin! Saya mau tanya perkembangan komplain order ' + o.id + ' (jenis: ' + (c.type || 'Komplain') + ')') + '" target="_blank" rel="noopener">💬 Tanya Perkembangan</a></div>'
           + '</div></div>';
       }).join('');
     }
@@ -905,7 +905,7 @@ var IC = window.IC;
           + '<div style="font-size:17px;font-weight:900;color:var(--dark);margin-top:10px">Pengajuan Komplain Terkirim!</div>'
           + '<div style="font-size:13px;color:var(--muted);margin-top:6px;line-height:1.6">Komplain order <b>' + komplainOrder.id + '</b> berhasil diajukan dan sudah masuk ke tim kami.</div>'
           + '<div style="font-size:13px;color:var(--muted);margin-top:4px;line-height:1.6">Sekarang kirim <b>foto & video unboxing</b> sebagai bukti via WhatsApp:</div>'
-          + '<a href="https://wa.me/CHANGE_ME?text=' + waMsg + '" target="_blank" rel="noopener" style="display:block;background:#25D366;color:#fff;text-decoration:none;border-radius:14px;padding:14px;font-size:14px;font-weight:900;margin-top:16px">📲 Kirim Foto & Video Bukti via WhatsApp</a>'
+          + '<a href="https://wa.me/6281394191904?text=' + waMsg + '" target="_blank" rel="noopener" style="display:block;background:#25D366;color:#fff;text-decoration:none;border-radius:14px;padding:14px;font-size:14px;font-weight:900;margin-top:16px">📲 Kirim Foto & Video Bukti via WhatsApp</a>'
           + '<div style="font-size:11px;color:var(--muted);margin-top:10px">WhatsApp akan terbuka dengan detail komplain sudah terisi. Cukup lampirkan foto & video lalu kirim.</div>'
           + '<button onclick="Akun.closeKmpModal()" style="width:100%;background:var(--light,#f5f0ea);border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:800;color:var(--dark);cursor:pointer;margin-top:10px;font-family:inherit">' + IC("check") + ' Selesai, Lihat Status Komplain</button>'
           + '</div>';

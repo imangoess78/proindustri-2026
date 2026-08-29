@@ -1,5 +1,5 @@
-/* ProIndustri — Service Worker (PWA) v1.0.4 */
-const VERSION = 'proindustri-v1.0.4';
+/* ProIndustri — Service Worker (PWA) v1.1.1 — bump versi: HAPUS total cache lama yg berisi homepage utk /shop & /produk/* */
+const VERSION = 'proindustri-v1.1.1';
 const CORE_CACHE = VERSION + '-core';
 const ASSET_CACHE = VERSION + '-assets';
 const PAGE_CACHE = VERSION + '-pages';
@@ -72,11 +72,15 @@ self.addEventListener('fetch', (e) => {
           return res;
         })
         .catch(async () => {
-          const cached = await caches.match(url.pathname);
-          if (cached) return cached;
+          // Jangan pernah serve homepage untuk halaman lain (mencegah tampil "semua jadi homepage")
+          if (url.pathname !== '/' && url.pathname !== '') {
+            const cached = await caches.match(url.pathname);
+            if (cached) return cached;
+            return caches.match('/offline');
+          }
           const home = await caches.match('/');
           if (home) return home;
-          return caches.match('/offline.html');
+          return caches.match('/offline');
         })
     );
     return;

@@ -1154,7 +1154,7 @@ a{text-decoration:none;color:inherit}
         <div class="contact-title">Ada Pertanyaan?<br>Kami Siap Bantu!</div>
         <div class="contact-sub">Tim kami siap membantu Anda menemukan produk industri yang tepat untuk bisnis Anda.</div>
         <div class="ch-list">
-          <a href="https://wa.me/CHANGE_ME" target="_blank" class="ch-item"><div class="ch-icon"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg></div><div><div class="ch-label">WA Utama (No Call)</div><div class="ch-val">0812-915-3811</div></div></a>
+          <a href="https://wa.me/6281394191904" target="_blank" class="ch-item"><div class="ch-icon"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg></div><div><div class="ch-label">WA Utama (No Call)</div><div class="ch-val">0813-9419-1904</div></div></a>
           <a href="https://wa.me/6285104778700" target="_blank" class="ch-item"><div class="ch-icon"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg></div><div><div class="ch-label">WA Alternatif (No Call)</div><div class="ch-val">0851-0477-8700</div></div></a>
           <a href="mailto:proindustri@gmail.com" class="ch-item"><div class="ch-icon"><svg class="ic" aria-hidden="true"><use href="#i-mail"/></svg></div><div><div class="ch-label">Email</div><div class="ch-val">proindustri@gmail.com</div></div></a>
         </div>
@@ -1464,7 +1464,7 @@ a{text-decoration:none;color:inherit}
   <div class="wa-popup" id="waPopup">
     <div class="wa-popup-title"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg> Hubungi Kami</div>
     <div class="wa-popup-sub">Chat langsung, kami siap bantu!</div>
-    <a href="https://wa.me/CHANGE_ME" target="_blank" class="wa-popup-btn"><div><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg></div><div><div class="wa-popup-label">WA Utama (No Call)</div><div class="wa-popup-num">0812-915-3811</div></div></a>
+    <a href="https://wa.me/6281394191904" target="_blank" class="wa-popup-btn"><div><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg></div><div><div class="wa-popup-label">WA Utama (No Call)</div><div class="wa-popup-num">0813-9419-1904</div></div></a>
     <a href="https://wa.me/6285104778700" target="_blank" class="wa-popup-btn"><div><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg></div><div><div class="wa-popup-label">WA Alternatif (No Call)</div><div class="wa-popup-num">0851-0477-8700</div></div></a>
   </div>
   <div style="position:relative" onclick="toggleWA()">
@@ -2892,7 +2892,7 @@ async function placeOrder(){
     `Tim kami akan memproses pesanan setelah pembayaran dikonfirmasi.\n`+
     `Estimasi proses: 1-2 hari kerja ⏱️\n\n`+
     `Ada pertanyaan? Chat kami:\n`+
-    `WA: 0812-915-3811 (No Call)\n\n`+
+    `WA: 0813-9419-1904 (No Call)\n\n`+
     `Terima kasih! 🙏\n_ProIndustri - ProIndustri_`;
 
   // Simpan order ke Firestore (database pusat — bisa diakses admin dari device manapun)
@@ -2976,7 +2976,7 @@ function showOrderNotifications(storeMsg,buyerMsg,phone){
 function sendStoreNotif(){
   if(!window._lastOrder)return;
   const msg=encodeURIComponent(window._lastOrder.storeMsg);
-  window.open('https://wa.me/CHANGE_ME?text='+msg,'_blank');
+  window.open('https://wa.me/6281394191904?text='+msg,'_blank');
 }
 
 function sendBuyerConfirm(){
@@ -3192,7 +3192,7 @@ function submitContact(){
   const phone=(document.getElementById('cfPhone')||{}).value||'';
   const msg=(document.getElementById('cfMsg')||{}).value||'';
   const text=`Halo ProIndustri!%0A%0ANama: ${name}%0AHP: ${phone}%0APesan: ${msg}`;
-  window.open(`https://wa.me/CHANGE_ME?text=${text}`,'_blank');
+  window.open(`https://wa.me/6281394191904?text=${text}`,'_blank');
 }
 
 // ── KEYBOARD ──
@@ -4217,7 +4217,7 @@ const snap={exists:!!(_ord&&_ord.id),data:()=>_ord};
         style="flex:1;background:var(--grad-btn);color:white;border:none;border-radius:var(--radius);padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font)">
         ${IC("refresh-cw")} Beli Lagi
       </button>`:''}
-      <a href="https://wa.me/CHANGE_ME?text=Halo, saya mau tanya status pesanan ${order.id}" 
+      <a href="https://wa.me/6281394191904?text=Halo, saya mau tanya status pesanan ${order.id}" 
         target="_blank"
         style="flex:1;background:#25D366;color:white;border-radius:var(--radius);padding:11px;font-size:13px;font-weight:700;text-decoration:none;text-align:center">
         ${IC("message-circle")} Tanya via WA
@@ -4324,7 +4324,7 @@ function submitCustomerPhoto(){
   localStorage.setItem('mp_customer_photos',JSON.stringify(photos.slice(0,20)));
   
   closePhotoUpload();
-  window.open(`https://wa.me/CHANGE_ME?text=${msg}`,'_blank');
+  window.open(`https://wa.me/6281394191904?text=${msg}`,'_blank');
   alert('Terima kasih! Silakan kirim foto via WhatsApp yang terbuka 😊');
 }
 
@@ -4360,7 +4360,7 @@ function joinAffiliate(){
   
   // WA notification
   const msg = `Halo! Saya mau daftar program affiliate ProIndustri.%0ANama: ${currentUser.name}%0AEmail: ${currentUser.email}%0AKode Referral: ${myAff.code}`;
-  window.open(`https://wa.me/CHANGE_ME?text=${msg}`,'_blank');
+  window.open(`https://wa.me/6281394191904?text=${msg}`,'_blank');
 }
 
 function copyAffiliateLink(){
@@ -4417,7 +4417,7 @@ const CHAT_RESPONSES = {
   'ukuran': 'Tersedia banyak varian daya dan kapasitas! Cek di halaman produk untuk pilihan lengkap.',
   'tebal': 'Kami punya grade kualitas standar hingga premium. Cek spesifikasi tiap produk di halaman detail.',
   'original': 'Ya, semua produk kami original impor China dengan kualitas ekspor dan sudah teruji. ' + IC("check-circle-2") + '',
-  'grosir': 'Untuk pembelian partai besar/grosir, hubungi WA 0812-915-3811. Ada harga spesial!',
+  'grosir': 'Untuk pembelian partai besar/grosir, hubungi WA 0813-9419-1904. Ada harga spesial!',
   'pengiriman': 'Kami kirim via JNE, J&T, SiCepat, dan Anteraja ke seluruh Indonesia. International shipping juga tersedia!',
   'stok': 'Stok selalu tersedia! Kalau ada ukuran yang kosong, silakan hubungi WA kami.',
 };
@@ -4484,7 +4484,7 @@ function sendQuickReply(key){
     
     // Show WA option after response
     setTimeout(()=>{
-      addChatMsg('Ada pertanyaan lain? Atau mau langsung chat dengan tim kami via WhatsApp?<br><a href="https://wa.me/CHANGE_ME" target="_blank" style="color:#25D366;font-weight:700">' + IC("message-circle") + ' Chat via WhatsApp ' + IC("arrow-right") + '</a>', false);
+      addChatMsg('Ada pertanyaan lain? Atau mau langsung chat dengan tim kami via WhatsApp?<br><a href="https://wa.me/6281394191904" target="_blank" style="color:#25D366;font-weight:700">' + IC("message-circle") + ' Chat via WhatsApp ' + IC("arrow-right") + '</a>', false);
       renderQuickReplies();
     }, 800);
   }, 600);
@@ -4506,7 +4506,7 @@ function sendChatMsg(){
       if(lower.includes(key)){response = val;break;}
     }
     if(!response){
-      response = `Terima kasih pesannya! 😊 Untuk pertanyaan lebih detail, silakan chat langsung via WA ya:<br><a href="https://wa.me/CHANGE_ME?text=${encodeURIComponent(text)}" target="_blank" style="color:#25D366;font-weight:700">💬 Lanjut di WhatsApp →</a>`;
+      response = `Terima kasih pesannya! 😊 Untuk pertanyaan lebih detail, silakan chat langsung via WA ya:<br><a href="https://wa.me/6281394191904?text=${encodeURIComponent(text)}" target="_blank" style="color:#25D366;font-weight:700">💬 Lanjut di WhatsApp →</a>`;
     }
     addChatMsg(response, false);
     renderQuickReplies();
@@ -4777,7 +4777,7 @@ function acknowledgeUnboxingWarning(){
   apiCall('PUT','/api/orders/'+o.id,{status:'Diproses'})
     .catch(err=>console.error('Gagal update status pesanan:',err));
   
-  window.open(`https://wa.me/CHANGE_ME?text=${msg}`,'_blank');
+  window.open(`https://wa.me/6281394191904?text=${msg}`,'_blank');
   
   // Clear reminders
   payReminderTimeouts.forEach(t=>clearTimeout(t));
@@ -5025,7 +5025,7 @@ async function submitKomplain(){
     `🎥 *Video unboxing* (singkat)%0A%0A`+
     `Terima kasih ${IC("hand")}`;
 
-  window.open(`https://wa.me/CHANGE_ME?text=${waMsg}`,'_blank');
+  window.open(`https://wa.me/6281394191904?text=${waMsg}`,'_blank');
 
   document.getElementById('komplainOverlay').classList.remove('open');
   alert('✅ Pengajuan komplain berhasil dikirim!\n\n📲 WhatsApp sudah terbuka — kirim foto produk & video unboxing sebagai bukti di chat itu ya.\n\nDana akan diproses 1-3 hari kerja setelah tim kami verifikasi bukti.');

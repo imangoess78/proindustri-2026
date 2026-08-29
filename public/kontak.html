@@ -27,7 +27,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/site.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"ContactPage","name":"Kontak ProIndustri","description":"Hubungi ProIndustri distributor mesin & tools industri. Konsultasi gratis, WhatsApp, email, atau datang langsung ke Tangerang.","url":"https://proindustri.com/kontak","mainEntity":{"@type":"Organization","name":"ProIndustri","telephone":"+628129153811","email":"proindustri@gmail.com","address":{"@type":"PostalAddress","addressLocality":"Tangerang","addressCountry":"ID"}}}
+{"@context":"https://schema.org","@type":"ContactPage","name":"Kontak ProIndustri","description":"Hubungi ProIndustri distributor mesin & tools industri. Konsultasi gratis, WhatsApp, email, atau datang langsung ke Tangerang.","url":"https://proindustri.com/kontak","mainEntity":{"@type":"Organization","name":"ProIndustri","telephone":"+6281394191904","email":"proindustri@gmail.com","address":{"@type":"PostalAddress","addressLocality":"Tangerang","addressCountry":"ID"}}}
 </script>
 <style>
   .contact-wrap{max-width:1100px;margin:0 auto;padding:40px 20px 60px}
@@ -79,7 +79,7 @@
         <div class="contact-card">
           <div class="contact-card-icon"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg></div>
           <div class="contact-card-title">WhatsApp</div>
-          <div class="contact-card-desc">Respon cepat via WhatsApp.<br><a href="https://wa.me/628129153811" target="_blank" rel="noopener">0812-915-3811</a> (No Call)<br><a href="https://wa.me/6285104778700" target="_blank" rel="noopener">0851-0477-8700</a> (No Call)</div>
+          <div class="contact-card-desc">Respon cepat via WhatsApp.<br><a href="https://wa.me/6281394191904" target="_blank" rel="noopener">0813-9419-1904</a> (No Call)<br><a href="https://wa.me/6285104778700" target="_blank" rel="noopener">0851-0477-8700</a> (No Call)</div>
         </div>
         <div class="contact-card">
           <div class="contact-card-icon"><svg class="ic" aria-hidden="true"><use href="#i-mail"/></svg></div>
@@ -153,7 +153,7 @@ function sendContact(){
   const message = document.getElementById('cfMessage').value.trim();
   if(!name || !contact || !message){ alert('Harap isi nama, kontak, dan pesan.'); return; }
   const waMsg = encodeURIComponent('Halo ProIndustri, saya ' + name + '.\n' + (subject ? 'Subjek: ' + subject + '\n' : '') + '\n' + message + '\n\nHubungi: ' + contact);
-  window.open('https://wa.me/628129153811?text=' + waMsg, '_blank');
+  window.open('https://wa.me/6281394191904?text=' + waMsg, '_blank');
   document.getElementById('formFields').style.display = 'none';
   document.getElementById('cfSuccess').style.display = 'block';
 }

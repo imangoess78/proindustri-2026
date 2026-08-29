@@ -44,7 +44,7 @@
     </div>
     <div class="topbar-right">
       <span>${IC("message-circle")} WA Partai:</span>
-      <a href="https://wa.me/CHANGE_ME" target="_blank" rel="noopener" class="wa-link">0812-915-3811</a>
+      <a href="https://wa.me/6281394191904" target="_blank" rel="noopener" class="wa-link">0813-9419-1904</a>
       <span>|</span>
       <a href="https://wa.me/6285104778700" target="_blank" rel="noopener" class="wa-link">0851-0477-8700</a>
       <span style="opacity:0.4">(No Call)</span>
@@ -108,8 +108,8 @@
         <a class="sb-link" href="/kategori/lainnya"><span class="sb-ic">${IC("wheat")}</span> Lainnya</a>
       </div>
       <div class="sb-foot">
-        <a class="sb-wa-btn" href="https://wa.me/CHANGE_ME" target="_blank" rel="noopener">${IC("message-circle")} Chat WhatsApp</a>
-        <div class="sb-contact">0812-915-3811 · 0851-0477-8700</div>
+        <a class="sb-wa-btn" href="https://wa.me/6281394191904" target="_blank" rel="noopener">${IC("message-circle")} Chat WhatsApp</a>
+        <div class="sb-contact">0813-9419-1904 · 0851-0477-8700</div>
       </div>
     </div>
     <div class="sidebar-overlay" onclick="MP.closeMenu()"></div>
@@ -171,7 +171,7 @@
       <div>
         <div class="f-col-title">Hubungi Kami</div>
         <div class="f-contact">
-          <div class="f-contact-item">${IC("message-circle")} <a href="https://wa.me/CHANGE_ME" target="_blank" rel="noopener">0812-915-3811</a> <span style="color:var(--gold);font-size:11px">(No Call)</span></div>
+          <div class="f-contact-item">${IC("message-circle")} <a href="https://wa.me/6281394191904" target="_blank" rel="noopener">0813-9419-1904</a> <span style="color:var(--gold);font-size:11px">(No Call)</span></div>
           <div class="f-contact-item">${IC("message-circle")} <a href="https://wa.me/6285104778700" target="_blank" rel="noopener">0851-0477-8700</a> <span style="color:var(--gold);font-size:11px">(No Call)</span></div>
           <div class="f-contact-item">${IC("mail")} <a href="mailto:proindustri@gmail.com">proindustri@gmail.com</a></div>
           <div class="f-contact-item">${IC("map-pin")} Tangerang, Indonesia</div>
@@ -192,7 +192,7 @@
     <div class="wa-popup" id="waPopup">
       <div class="wa-popup-title">${IC("message-circle")} Hubungi Kami</div>
       <div class="wa-popup-sub">Chat langsung, kami siap bantu!</div>
-      <a href="https://wa.me/CHANGE_ME" target="_blank" class="wa-popup-btn"><div>${IC("message-circle")}</div><div><div class="wa-popup-label">WA Utama (No Call)</div><div class="wa-popup-num">0812-915-3811</div></div></a>
+      <a href="https://wa.me/6281394191904" target="_blank" class="wa-popup-btn"><div>${IC("message-circle")}</div><div><div class="wa-popup-label">WA Utama (No Call)</div><div class="wa-popup-num">0813-9419-1904</div></div></a>
       <a href="https://wa.me/6285104778700" target="_blank" class="wa-popup-btn"><div>${IC("message-circle")}</div><div><div class="wa-popup-label">WA Alternatif (No Call)</div><div class="wa-popup-num">0851-0477-8700</div></div></a>
     </div>
     <div style="position:relative" onclick="toggleWA()">
@@ -238,7 +238,7 @@
     'ukuran': 'Tersedia banyak varian! Mulai dari alat tangan hingga mesin ukuran besar. Cek di halaman produk untuk pilihan lengkap.',
     'tebal': 'Kami punya berbagai tipe: power tools, alat tangan, safety equipment, dan perlengkapan manufaktur.',
     'garansi': 'Ya, semua produk kami original dan bergaransi 1 tahun untuk kerusakan pabrik! ' + IC("check-circle-2") + '',
-    'grosir': 'Untuk pembelian partai besar/grosir, hubungi WA 0812-915-3811. Ada harga spesial!',
+    'grosir': 'Untuk pembelian partai besar/grosir, hubungi WA 0813-9419-1904. Ada harga spesial!',
     'pengiriman': 'Kami kirim via JNE, J&T, SiCepat, dan Anteraja ke seluruh Indonesia. International shipping juga tersedia!',
     'stok': 'Stok selalu tersedia! Kalau ada ukuran yang kosong, silakan hubungi WA kami.',
   };
@@ -295,7 +295,7 @@
       const response = CHAT_RESPONSES[key] || 'Terima kasih pertanyaannya! Untuk info lebih lanjut, hubungi WA kami ya ' + IC("smile") + '';
       addChatMsg(response, false);
       setTimeout(()=>{
-        addChatMsg('Ada pertanyaan lain? Atau mau langsung chat dengan tim kami via WhatsApp?<br><a href="https://wa.me/CHANGE_ME" target="_blank" style="color:#25D366;font-weight:700">' + IC("message-circle") + ' Lanjut di WhatsApp ' + IC("arrow-right") + '</a>', false);
+        addChatMsg('Ada pertanyaan lain? Atau mau langsung chat dengan tim kami via WhatsApp?<br><a href="https://wa.me/6281394191904" target="_blank" style="color:#25D366;font-weight:700">' + IC("message-circle") + ' Lanjut di WhatsApp ' + IC("arrow-right") + '</a>', false);
         renderQuickReplies();
       }, 800);
     }, 600);
@@ -316,7 +316,7 @@
         if(lower.includes(key)){response = val;break;}
       }
       if(!response){
-        response = `Terima kasih pesannya! 😊 Untuk pertanyaan lebih detail, silakan chat langsung via WA ya:<br><a href="https://wa.me/CHANGE_ME?text=${encodeURIComponent(text)}" target="_blank" style="color:#25D366;font-weight:700">💬 Lanjut di WhatsApp →</a>`;
+        response = `Terima kasih pesannya! 😊 Untuk pertanyaan lebih detail, silakan chat langsung via WA ya:<br><a href="https://wa.me/6281394191904?text=${encodeURIComponent(text)}" target="_blank" style="color:#25D366;font-weight:700">💬 Lanjut di WhatsApp →</a>`;
       }
       addChatMsg(response, false);
       renderQuickReplies();

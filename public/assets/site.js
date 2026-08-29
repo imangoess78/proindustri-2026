@@ -395,7 +395,7 @@
         <div class="mp-auth-pane active" id="mpPaneLogin">
           <form onsubmit="MP.submitLogin();return false">
           <div class="fg"><label class="fl">Email</label><input class="fi" type="email" id="mpLoginEmail" placeholder="email@kamu.com" autocomplete="email"></div>
-          <div class="fg"><label class="fl">Password</label><input class="fi" type="password" id="mpLoginPass" placeholder="••••••••" autocomplete="current-password"></div>
+          <div class="fg"><label class="fl">Password</label><div style="position:relative;display:flex;align-items:center"><input class="fi" type="password" id="mpLoginPass" placeholder="••••••••" autocomplete="current-password" style="padding-right:40px"><button type="button" onclick="MP.togglePw('mpLoginPass',this)" aria-label="Lihat password" style="position:absolute;right:10px;background:none;border:none;cursor:pointer;color:var(--muted);display:flex;align-items:center;padding:4px;border-radius:6px">${IC("eye")}</button></div></div>
           <button class="mp-auth-btn" type="submit">Masuk ${IC("arrow-right")}</button>
           </form>
         </div>
@@ -403,7 +403,7 @@
           <form onsubmit="MP.submitRegister();return false">
           <div class="fg"><label class="fl">Nama Lengkap</label><input class="fi" type="text" id="mpRegName" placeholder="Nama kamu" autocomplete="name"></div>
           <div class="fg"><label class="fl">Email</label><input class="fi" type="email" id="mpRegEmail" placeholder="email@kamu.com" autocomplete="email"></div>
-          <div class="fg"><label class="fl">Password</label><input class="fi" type="password" id="mpRegPass" placeholder="Min. 6 karakter" autocomplete="new-password"></div>
+          <div class="fg"><label class="fl">Password</label><div style="position:relative;display:flex;align-items:center"><input class="fi" type="password" id="mpRegPass" placeholder="Min. 6 karakter" autocomplete="new-password" style="padding-right:40px"><button type="button" onclick="MP.togglePw('mpRegPass',this)" aria-label="Lihat password" style="position:absolute;right:10px;background:none;border:none;cursor:pointer;color:var(--muted);display:flex;align-items:center;padding:4px;border-radius:6px">${IC("eye")}</button></div></div>
           <button class="mp-auth-btn" type="submit">Daftar & Dapatkan Diskon ${IC("arrow-right")}</button>
           </form>
         </div>
@@ -505,6 +505,13 @@
     t.innerHTML = `${IC("gift")} Halo, ${u.name.split(' ')[0]}!<br><span style="font-size:12px;font-weight:500;opacity:.9">Diskon member 10% aktif!</span>`;
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 4000);
+  }
+
+  function togglePw(id, btn) {
+    var inp = document.getElementById(id); if (!inp) return;
+    var show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    if (btn) btn.innerHTML = show ? IC('eye-off') : IC('eye');
   }
 
   async function logout() {
@@ -724,7 +731,7 @@
   window.MP = {
     getCart, saveCart, getTQ, updateCartBadge, addToCart, fmt, esc, toggleMenu, closeMenu, goSearch,
     getUser, getToken, authHeaders,
-    openAuth, closeAuth, switchAuthTab, submitLogin, submitRegister, loginSuccess, logout, authAction, updateAuthUI,
+    openAuth, closeAuth, switchAuthTab, submitLogin, submitRegister, loginSuccess, logout, authAction, updateAuthUI, togglePw,
     toggleNotif, openNotif, initNotif
   };
 })();

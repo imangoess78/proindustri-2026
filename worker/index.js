@@ -721,7 +721,9 @@ export default {
     // ── POST /api/users/register ──
     if (path === '/api/users/register' && request.method === 'POST') {
       await ensureUserSessions(env);
-      const { name, email, password } = await request.json();
+      let { name, email, password } = await request.json();
+      // site.js sends btoa(password) — decode if looks like base64
+      try { const d = atob(password); if (btoa(d) === password) password = d; } catch(e) {}
       if (!name || !email || !password) return json({ error: 'Missing fields' }, 400);
       const existing = await env.DB.prepare('SELECT id FROM users WHERE email=?').bind(email).first();
       if (existing) return json({ error: 'Email already exists' }, 409);
@@ -737,7 +739,8 @@ export default {
     // ── POST /api/users/login ──
     if (path === '/api/users/login' && request.method === 'POST') {
       await ensureUserSessions(env);
-      const { email, password } = await request.json();
+      let { email, password } = await request.json();
+      try { const d = atob(password); if (btoa(d) === password) password = d; } catch(e) {}
       if (!email || !password) return json({ error: 'Missing fields' }, 400);
       const user = await env.DB.prepare('SELECT * FROM users WHERE email=?').bind(email).first();
       if (!user) return json({ error: 'Email not found' }, 404);

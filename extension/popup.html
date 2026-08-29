@@ -1,0 +1,69 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:420px;max-height:600px;font-family:system-ui,sans-serif;font-size:12px;background:#faf7f2;color:#1a1005}
+.hdr{background:#1a1005;color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
+.hdr b{font-size:13px}
+.hdr a{color:#ff6a00;font-size:11px;text-decoration:none}
+.tabs{display:flex;border-bottom:1px solid #e5ddd2;background:#fff}
+.tab{flex:1;padding:8px;text-align:center;cursor:pointer;font-weight:700;font-size:11px;border-bottom:2px solid transparent}
+.tab.active{border-color:#ff6a00;color:#ff6a00}
+.pane{padding:10px;display:none;max-height:420px;overflow:auto}
+.pane.active{display:block}
+.btn{background:#ff6a00;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:800;cursor:pointer;font-size:11px}
+.btn:disabled{opacity:.4}
+.btn-outline{background:#fff;border:1px solid #e5ddd2;color:#1a1005}
+.input{width:100%;border:1px solid #e5ddd2;border-radius:8px;padding:7px 10px;font-size:11px}
+.row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.card{border:1px solid #e5ddd2;border-radius:10px;padding:8px;background:#fff;margin-bottom:8px}
+.small{font-size:10px;color:#8a7f6f}
+.progress{height:6px;background:#f0ebe2;border-radius:99px;overflow:hidden;margin:6px 0}
+.progress i{display:block;height:100%;background:#ff6a00;width:0%;transition:width .3s}
+.thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid #e5ddd2}
+</style></head><body>
+<div class="hdr"><b>ProIndustri AE Scraper</b><a href="#" id="linkAdmin">Admin →</a></div>
+<div class="tabs">
+  <div class="tab active" data-tab="single">Single</div>
+  <div class="tab" data-tab="bulk">Bulk</div>
+  <div class="tab" data-tab="settings">Setting</div>
+</div>
+
+<div class="pane active" id="pane-single">
+  <div class="row"><input id="singleUrl" class="input" placeholder="https://www.aliexpress.com/item/..."></div>
+  <div class="row">
+    <button class="btn" id="btnScrapeSingle">Scrape Halaman Aktif</button>
+    <button class="btn btn-outline" id="btnPasteScrape">Scrape URL di atas</button>
+  </div>
+  <div id="singlePreview"></div>
+  <div id="singleLog" class="small" style="margin-top:6px"></div>
+</div>
+
+<div class="pane" id="pane-bulk">
+  <div class="small" style="margin-bottom:6px">Mode A: Kumpulkan dari listing AE (floating panel di halaman AE) — atau Mode B: Paste list URL (1 per baris)</div>
+  <textarea id="bulkUrls" class="input" rows="5" placeholder="https://www.aliexpress.com/item/100500...\nhttps://www.aliexpress.com/item/100500..."></textarea>
+  <div class="row" style="margin-top:6px">
+    <button class="btn" id="btnLoadBulk">Load dari Storage</button>
+    <button class="btn" id="btnScrapeBulk">Scrape Bulk</button>
+    <button class="btn btn-outline" id="btnClearBulk">Clear</button>
+  </div>
+  <div class="progress"><i id="bulkProg"></i></div>
+  <div id="bulkLog" class="small"></div>
+  <div id="bulkPreview" style="margin-top:6px"></div>
+  <div class="row" style="margin-top:8px">
+    <button class="btn" id="btnPostBulk" disabled>Post Semua ke ProIndustri</button>
+    <span id="postProg" class="small"></span>
+  </div>
+</div>
+
+<div class="pane" id="pane-settings">
+  <div class="row"><label style="flex:1">API Base</label><input id="cfgBase" class="input" value="https://proindustri.com"></div>
+  <div class="row"><label style="flex:1">Admin Token</label><input id="cfgToken" class="input" placeholder="Auto-isi via Admin →"></div>
+  <div class="row"><label style="flex:1">Kurs</label><input id="cfgRate" class="input" value="18000" style="width:100px"></div>
+  <div class="row"><label style="flex:1">Markup</label><input id="cfgMarkup" class="input" value="2" style="width:100px"> <span class="small">2 = 100%</span></div>
+  <div class="row"><button class="btn" id="btnSaveCfg">Simpan</button><button class="btn btn-outline" id="btnAutoToken" style="margin-left:6px">Ambil Token Otomatis</button><span id="cfgMsg" class="small"></span></div>
+  <div class="small" style="margin-top:8px">Featured image akan di-resize max 1200px & convert WebP q80 sebelum upload ke R2. Deskripsi embed hotlink AE.</div>
+</div>
+
+<script src="popup.js"></script>
+</body></html>

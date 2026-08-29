@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "ProIndustri AE Scraper",
+  "version": "1.0.0",
+  "description": "Scrape produk AliExpress → ProIndustri (kurs 18000 + markup 100%, deskripsi asli embed, featured WebP ke R2)",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://*.aliexpress.com/*",
+    "https://*.alicdn.com/*",
+    "https://aeproductsourcesite.alicdn.com/*",
+    "https://ae01.alicdn.com/*",
+    "https://proindustri.com/*",
+    "https://*.proindustri.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ProIndustri AE Scraper"
+  },
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://*.aliexpress.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

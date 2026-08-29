@@ -31,6 +31,7 @@ function slugify(s) {
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '') || 'artikel-' + Date.now();
 }
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ── Customer session (member login/register, token di user_sessions) ──
 async function ensureUserSessions(env) {
@@ -284,11 +285,14 @@ async function getUserByToken(env, request) {
 }
 
 async function ensureProducts(env) {
-  // Migration: tambah kolom slug jika belum ada
+  // Migration: tambah kolom slug & ae_url jika belum ada
   try {
     const cols = await env.DB.prepare('PRAGMA table_info(products)').all();
     if (!cols.results.some(c => c.name === 'slug')) {
       await env.DB.prepare('ALTER TABLE products ADD COLUMN slug TEXT DEFAULT \'\'').run();
+    }
+    if (!cols.results.some(c => c.name === 'ae_url')) {
+      await env.DB.prepare('ALTER TABLE products ADD COLUMN ae_url TEXT DEFAULT \'\'').run();
     }
   } catch (e) { /* ignore */ }
 
@@ -1477,27 +1481,100 @@ export default {
       }
       if (!previewVariants.length) previewVariants = [{ name: 'Standard', priceUSD }];
 
-      // 6) Description: meta description — AE sering blokir (captcha) jadi meta pendek
+      // 6) Description: pakai deskripsi asli AE (tidak generate template)
+      // AE deskripsi lengkap ada di tab #nav-description — di-load via descUrl terpisah (aeproductsourcesite.alicdn.com)
       let desc = m1(/<meta name="description" content="([^"]+)"/) || m1(/<meta property="og:description" content="([^"]+)"/) || '';
-      if (!desc) desc = title;
-      // Jika deskripsi pendek (<120 char) — generate template SEO panjang dari judul (biar tidak kosong di toko)
-      const genDesc = (t) => {
-        const tt = t || 'Produk Pilihan';
-        return `${tt} — Produk Berkualitas untuk Kebutuhan Industri & Rumah Tangga.\n\n${tt} adalah produk pilihan dengan kualitas terjamin, cocok untuk penggunaan harian maupun profesional. Dibuat dengan material berkualitas tinggi dan desain ergonomis, produk ini menawarkan daya tahan dan performa optimal untuk berbagai kebutuhan.\n\nKeunggulan:\n- Material premium, tahan lama dan presisi\n- Desain ergonomis, nyaman digunakan seharian\n- Performa stabil, cocok untuk industri, bengkel, dan rumah tangga\n- Perawatan mudah, suku cadang tersedia\n- Garansi kualitas — kepuasan pelanggan prioritas kami\n\nCocok untuk: bengkel, konstruksi, industri ringan, hingga kebutuhan rumah tangga. Stok terbatas — pesan sekarang dan nikmati pengiriman cepat ke seluruh Indonesia!\n\nCatatan: Deskripsi ini auto-generate dari judul. Silakan edit di preview sebelum Publish agar lebih akurat (tambah ukuran, bahan, isi paket).`;
+      // Coba ambil descriptionModule / detailDesc dari JSON AE
+      const descRaw = m1(/"descriptionModule"[\s\S]{0,3000}?"content"[\s\S]*?\[([\s\S]*?)\]/) || '';
+      const detailDescRaw = m1(/"detailDesc"[\s\S]{0,5000}?"content"[\s\S]*?\[([\s\S]*?)\]/) || '';
+      // Kumpulkan image deskripsi AE (hotlink, tidak upload R2)
+      const descImages = [];
+      const descCdnRe2 = /https:\/\/ae\d*\.alicdn\.com\/[^"'\\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+      let dm;
+      const descSearchScope = (descRaw || detailDescRaw || html).slice(0, 80000);
+      while ((dm = descCdnRe2.exec(descSearchScope)) !== null) {
+        const u = dm[0].replace(/_\d+x\d+\.(jpg|png|webp)/, '.$1').replace(/\.jpg_\w+/, '.jpg');
+        if (!descImages.includes(u)) descImages.push(u);
+        if (descImages.length >= 20) break;
+      }
+      // Coba fetch descUrl lengkap (aeproductsourcesite) jika ada — ini sumber #nav-description
+      let descHtmlFetched = '';
+      const descUrlCandidates = [];
+      const pushUrl = (u) => {
+        if (!u) return;
+        let url = u.replace(/\\\//g, '/').replace(/\\u002F/g, '/');
+        if (url.startsWith('//')) url = 'https:' + url;
+        if (url.startsWith('http') && !descUrlCandidates.includes(url)) descUrlCandidates.push(url);
       };
-      if (desc.length < 120) {
-        desc = genDesc(title);
+      // Cari semua pola descUrl di HTML — tiru ALD: descriptionModule.descriptionUrl primary
+      const mDescMod = html.match(/"descriptionModule"\s*:\s*\{[\s\S]*?"descriptionUrl"\s*:\s*"([^"]+)"/);
+      if(mDescMod) pushUrl(mDescMod[1]);
+      pushUrl(m1(/"productDescUrl"\s*:\s*"([^"]+)"/));
+      pushUrl(m1(/"descriptionUrl"\s*:\s*"([^"]+)"/));
+      pushUrl(m1(/"descUrl"\s*:\s*"([^"]+)"/));
+      pushUrl(m1(/"detailDescUrl"\s*:\s*"([^"]+)"/));
+      pushUrl(m1(/"productDescriptionUrl"\s*:\s*"([^"]+)"/));
+      // ALD fallback: window.runParams.detailDesc
+      pushUrl(m1(/window\.runParams\.detailDesc\s*=\s*"([^"]+)"/));
+      // Juga cari aeproductsourcesite langsung
+      const aeDescRe = /https?:\/\/(?:aeproductsourcesite|ae01)\.alicdn\.com\/[^"'\\s<>]+\.html/gi;
+      let am;
+      while ((am = aeDescRe.exec(html)) !== null) pushUrl(am[0]);
+      // Fetch descUrl — tiru ALD get_product_description_from_url: timeout 10, strip <script> only, return $body
+      for (const durl of descUrlCandidates.slice(0, 2)) {
+        try {
+          const dr = await fetch(durl, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', 'Accept': 'text/html,*/*', 'Referer': 'https://www.aliexpress.com/' }, signal: AbortSignal.timeout(10000) });
+          if (!dr.ok) continue;
+          const dhtml = await dr.text();
+          if (!dhtml || dhtml.length < 200) continue;
+          // Ambil semua image AE di halaman deskripsi
+          const dImgs = [];
+          const dRe2 = /https:\/\/ae\d*\.alicdn\.com\/[^"'\\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+          let dm2;
+          while ((dm2 = dRe2.exec(dhtml)) !== null) {
+            const u = dm2[0].replace(/_\d+x\d+\.(jpg|png|webp)/, '.$1').replace(/\.jpg_\w+/, '.jpg');
+            if (!dImgs.includes(u) && !descImages.includes(u)) dImgs.push(u);
+            if (dImgs.length >= 30) break;
+          }
+          // Tiru ALD: $body = preg_replace('/<script\>[\s\S]*?<\/script>/im', '', $request['body']); $description = $body;
+          // ALD hanya strip <script>, tidak strip <style> atau rebuild text — body asli dipakai langsung
+          const cleanBody = dhtml.replace(/<script[\s\S]*?<\/script>/gi, '').trim();
+          if (cleanBody.length > 200) {
+            dImgs.forEach(u => { if (!descImages.includes(u)) descImages.push(u); });
+            // ALD: $description .= $body — pakai cleanBody langsung jika ada <img> atau panjang cukup
+            if (cleanBody.includes('<img') && cleanBody.length < 60000) {
+              descHtmlFetched = cleanBody.slice(0, 60000).replace(/on\w+="[^"]*"/gi, '');
+            } else if (cleanBody.length > 500) {
+              const textOnly = cleanBody.replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 2000);
+              const tPart = textOnly ? '<p>' + escHtml(textOnly.slice(0, 1500)) + '</p>' : '';
+              const iPart = dImgs.map(u => `<img src="${u}" alt="" loading="lazy" style="max-width:100%;height:auto;display:block;margin:12px 0;border-radius:8px">`).join('\n');
+              descHtmlFetched = (tPart ? tPart + '\n' : '') + iPart;
+            }
+            if (descHtmlFetched) break;
+          }
+        } catch {}
+      }
+      // Build descHtml: prioritaskan fetch, fallback ke meta + images
+      let descHtml = '';
+      if (descHtmlFetched) {
+        descHtml = descHtmlFetched;
+        if (!desc && descHtmlFetched) {
+          // Ambil teks pertama untuk desc pendek
+          const t = descHtmlFetched.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 800);
+          if (t) desc = t;
+        }
       } else {
-        desc = desc.slice(0, 800);
-        // Jika meta description pendek tapi ada judul, tetap perpanjang dengan template
-        if (desc.length < 250 && title) {
-          desc = desc + '\n\n' + genDesc(title).split('\n').slice(2).join('\n');
-          desc = desc.slice(0, 1200);
+        if (desc) descHtml = '<p>' + escHtml(desc.slice(0, 800)) + '</p>';
+        else if (title) descHtml = '<p>' + escHtml(title) + '</p>';
+        if (descImages.length) {
+          descHtml += '\n' + descImages.map(u => `<img src="${u}" alt="" loading="lazy" style="max-width:100%;height:auto;display:block;margin:12px 0;border-radius:8px">`).join('\n');
         }
       }
+      // Fallback desc text untuk preview jika kosong
+      if (!desc) desc = title || 'Deskripsi produk — lihat gambar detail di bawah.';
 
-      // 7) Markup 2x + USD→IDR (kurs 16500)
-      const RATE = 16500;
+      // 7) Markup 2x + USD→IDR (kurs 18000)
+      const RATE = 18000;
       const toIDR = (usd) => Math.round(usd * RATE * 2);
       // Round to nice price: 1000
       const nice = (n) => Math.round(n / 1000) * 1000 || n;
@@ -1511,7 +1588,7 @@ export default {
       const maxPrice = Math.max(...previewVariants.map(v=>v.priceIDR));
 
       return json({
-        title, desc, images: uniqImages, variants: previewVariants,
+        title, desc, descHtml, descImages, images: uniqImages, variants: previewVariants,
         priceUSD, minPrice, maxPrice, rate: RATE, markup: 2,
         aeUrl, rawHints: priceHints.slice(0,5),
       });
@@ -1524,7 +1601,8 @@ export default {
       if (!b || !b.title) return json({ error: 'Missing title' }, 400);
       const title = String(b.title).slice(0, 200).trim();
       if (!title) return json({ error: 'Title kosong' }, 400);
-      const desc = String(b.desc || '').slice(0, 5000);
+      const desc = String(b.descHtml || b.desc || '').slice(0, 20000);
+      const aeUrl = String(b.ae_url || b.aeUrl || '').slice(0, 500);
       const category = String(b.category || 'Mesin & Tools').slice(0, 80);
       const variants = Array.isArray(b.variants) ? b.variants.slice(0, 12).map(v => ({
         name: String(v.name || 'Standard').slice(0, 60),
@@ -1565,10 +1643,10 @@ export default {
         finalSlug = slug + '-' + (n++);
       }
       await env.DB.prepare(
-        `INSERT INTO products (id, slug, name, short_name, desc, category, img_key, img, min_price, max_price, variants, specs, active)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1)`
-      ).bind(id, finalSlug, title, title.slice(0,80), desc, category, '', img, min_price, max_price, JSON.stringify(variants), JSON.stringify(specs)).run();
-      return json({ ok: true, id, slug: finalSlug, img, min_price, max_price });
+        `INSERT INTO products (id, slug, name, short_name, desc, category, img_key, img, min_price, max_price, variants, specs, ae_url, active)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)`
+      ).bind(id, finalSlug, title, title.slice(0,80), desc, category, '', img, min_price, max_price, JSON.stringify(variants), JSON.stringify(specs), aeUrl).run();
+      return json({ ok: true, id, slug: finalSlug, img, min_price, max_price, ae_url: aeUrl });
     }
 
     // ── GET /api/products ── (public — seed otomatis jika kosong)

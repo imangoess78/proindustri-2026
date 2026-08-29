@@ -269,17 +269,8 @@ async function ensureProducts(env) {
       ).run();
     }
   } else {
-    // D1 sudah ada isi (mis. produk AE) — tetap pastikan seed PI-xxx ada (INSERT OR IGNORE, tidak overwrite AE)
-    for (const p of PRODUCTS_SEED) {
-      await env.DB.prepare(
-        `INSERT OR IGNORE INTO products (id, slug, name, short_name, desc, category, img_key, img, min_price, max_price, variants, specs, active)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1)`
-      ).bind(
-        p.id, p.slug || slugify(p.short_name || p.name), p.name, p.short_name || '', p.desc || '', p.category || '',
-        p.img_key || '', p.img || '', p.min_price || 0, p.max_price || 0,
-        JSON.stringify(p.variants || []), JSON.stringify(p.specs || {})
-      ).run();
-    }
+    await backfillSlugs(env);
+    return;
   }
   await backfillSlugs(env);
 }

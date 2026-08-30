@@ -8,6 +8,14 @@ const WA_STORE = 'https://wa.me/6281394191904';
 function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+// Sanitize HTML deskripsi: hanya render tag aman, strip script + event handler
+function sanitizeHtml(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/javascript\s*:/gi, 'blocked:');
+}
 function fmt(n) {
   return 'Rp' + Math.round(Number(n) || 0).toLocaleString('id-ID');
 }
@@ -237,7 +245,7 @@ export async function renderProduct(env, p) {
 
     <div class="pd-panel">
       <div class="pd-panel-title"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg> Deskripsi Produk</div>
-      <div class="pd-desc">${esc(p.desc || 'Tidak ada deskripsi.')}</div>
+      <div class="pd-desc">${sanitizeHtml(p.desc) || 'Tidak ada deskripsi.'}</div>
     </div>
 
     <div class="pd-panel">

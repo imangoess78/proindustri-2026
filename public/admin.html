@@ -108,6 +108,16 @@ tr:hover td{background:rgba(201,137,10,.04)}
 .action-btn.del:hover{background:var(--red);color:white}
 .action-btn.primary{background:var(--grad-btn);border:none;color:white}
 .action-btn.primary:hover{opacity:.9}
+.pagination{display:flex;align-items:center;justify-content:center;gap:6px;padding:14px 16px;flex-wrap:wrap}
+.pg-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:800;color:var(--gold);background:var(--gold-light);text-decoration:none;cursor:pointer;transition:all .15s;font-family:var(--font)}
+.pg-btn:hover{background:var(--gold);color:#fff}
+.pg-btn.disabled{opacity:.4;pointer-events:none}
+.pg-btn .ic{width:14px;height:14px}
+.pg-num{min-width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:12px;font-weight:800;color:var(--mid);background:var(--light);text-decoration:none;cursor:pointer;transition:all .15s;font-family:var(--font)}
+.pg-num:hover{background:var(--gold-light);color:var(--gold)}
+.pg-num.active{background:var(--grad-orange);color:#fff;box-shadow:0 2px 8px rgba(249,115,22,.3)}
+.pg-dots{color:var(--mid);font-weight:800;padding:0 2px}
+.pagination-wrap{display:flex;justify-content:center;margin:18px 0}
 .status-select{background:white;border:2px solid var(--border);color:var(--dark);padding:4px 8px;border-radius:8px;font-size:12px;font-family:var(--font);cursor:pointer;font-weight:600;outline:none}
 .status-select:focus{border-color:var(--gold)}
 .search-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
@@ -822,10 +832,13 @@ function renderOrderDetail(c, o) {
         <div class="card" style="padding:14px;margin-bottom:12px">
           <div class="table-title" style="margin-bottom:8px">${IC("shopping-cart")} Produk</div>
           <table style="width:100%;font-size:12px"><thead><tr><th>Produk</th><th>Varian</th><th>Qty</th><th>Harga</th><th>Subtotal</th></tr></thead>
-          <tbody>${items.map(it => `<tr>
-            <td>${esc(it.productName||it.name||'')}</td><td>${esc(it.variant||it.variantName||'-')}</td>
+          <tbody>${items.map(it => {
+            const aeUrl = (PRODUCTS.find(pp=>pp.id===it.productId)||{}).ae_url || it.ae_url || '';
+            const aeLink = aeUrl ? ` <a href="${esc(aeUrl)}" target="_blank" rel="noopener" title="Buka sumber AE" style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;background:#ff6a00;color:#fff;text-decoration:none;font-size:9px;font-weight:900;vertical-align:middle">AE</a>` : '';
+            return `<tr>
+            <td>${esc(it.productName||it.name||'')}${aeLink}</td><td>${esc(it.variant||it.variantName||'-')}</td>
             <td>${it.qty}</td><td>${fmt(it.price||0)}</td><td>${fmt((it.price||0)*(it.qty||1))}</td>
-          </tr>`).join('') || '<tr><td colspan="5">-</td></tr>'}</tbody></table>
+          </tr>`}).join('') || '<tr><td colspan="5">-</td></tr>'}</tbody></table>
         </div>
         <div class="card" style="padding:14px;margin-bottom:12px">
           <div class="table-title" style="margin-bottom:8px">${IC("dollar-sign")} Rincian Pembayaran</div>
@@ -1438,10 +1451,31 @@ function exportOrders() {
 }
 
 // ── Products ──
+const PROD_PAGE_SIZE = 20;
+let curProductPage = 1;
 function renderProducts(c) {
   const q = productSearch.toLowerCase();
   const cats = [...new Set(PRODUCTS.map(p => p.category))].sort();
   const filtered = PRODUCTS.filter(p => !q || (p.name||'').toLowerCase().includes(q) || (p.category||'').toLowerCase().includes(q) || (p.short_name||'').toLowerCase().includes(q));
+  const total = filtered.length;
+  const pages = Math.max(1, Math.ceil(total / PROD_PAGE_SIZE));
+  let page = curProductPage;
+  if (page < 1) page = 1;
+  if (page > pages) page = pages;
+  const start = (page - 1) * PROD_PAGE_SIZE;
+  const pageItems = filtered.slice(start, start + PROD_PAGE_SIZE);
+  function prodPagerHtml(){
+    if (pages <= 1) return '';
+    const L = '<svg class="ic" aria-hidden="true"><use href="#i-arrow-left"/></svg>';
+    const R = '<svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg>';
+    const nums = [];
+    for (let i = 1; i <= pages; i++) if (i === 1 || i === pages || Math.abs(i - page) <= 2) nums.push(i);
+    const out = []; let prev = 0;
+    for (const n of nums) { if (n - prev > 1) out.push('<span class="pg-dots">…</span>'); out.push('<a class="pg-num' + (n === page ? ' active' : '') + '" href="#" onclick="curProductPage=' + n + ';renderProducts(document.getElementById(\'mainContent\'));return false">' + n + '</a>'); prev = n; }
+    const prevBtn = page > 1 ? '<a class="pg-btn" href="#" onclick="curProductPage=' + (page - 1) + ';renderProducts(document.getElementById(\'mainContent\'));return false" rel="prev">' + L + ' Sebelumnya</a>' : '<span class="pg-btn disabled">' + L + ' Sebelumnya</span>';
+    const nextBtn = page < pages ? '<a class="pg-btn" href="#" onclick="curProductPage=' + (page + 1) + ';renderProducts(document.getElementById(\'mainContent\'));return false" rel="next">Berikutnya ' + R + '</a>' : '<span class="pg-btn disabled">Berikutnya ' + R + '</span>';
+    return prevBtn + out.join('') + nextBtn;
+  }
 
   c.innerHTML = `
     <div class="stats-grid">
@@ -1451,22 +1485,22 @@ function renderProducts(c) {
     </div>
 
     <div class="search-bar">
-      <input class="search-input" placeholder="🔍 Cari produk / kategori..." value="${esc(productSearch)}" oninput="debounce(()=>{productSearch=this.value;renderProducts(document.getElementById('mainContent'))},300)">
+      <input class="search-input" placeholder="🔍 Cari produk / kategori..." value="${esc(productSearch)}" oninput="debounce(()=>{productSearch=this.value;curProductPage=1;renderProducts(document.getElementById('mainContent'))},300)">
       <button class="action-btn primary" style="padding:8px 16px" onclick="openProductModal()">+ Produk Baru</button>
     </div>
 
     <div class="table-wrap">
-      <div class="table-head"><div class="table-title">${filtered.length} produk</div></div>
-      ${filtered.length === 0 ? '<div class="empty"><div class="empty-icon">' + IC("shopping-bag") + '️</div><div class="empty-text">Tidak ada produk ditemukan</div></div>' : `
+      <div class="table-head"><div class="table-title">${total} produk (halaman ${page}/${pages})</div></div>
+      ${total === 0 ? '<div class="empty"><div class="empty-icon">' + IC("shopping-bag") + '️</div><div class="empty-text">Tidak ada produk ditemukan</div></div>' : `
       <table>
         <thead><tr><th>Gambar</th><th>Nama Produk</th><th>Kategori</th><th>Harga</th><th>Varian</th><th>Aksi</th></tr></thead>
-        <tbody>${filtered.map(p => {
+        <tbody>${pageItems.map(p => {
           const variants = p.variants || [];
           const stock = variants.reduce((s,v)=>s+(v.stock||0),0);
           const img = p.img || '';
           return `<tr>
             <td>${img ? `<img src="${esc(img)}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--border)" onerror="this.style.display='none'">` : '<span style="font-size:22px">' + IC("shopping-bag") + '️</span>'}</td>
-            <td style="max-width:280px"><b style="font-size:12px">${esc((p.short_name||p.name||'').substring(0,80))}</b><br><span style="font-size:10px;color:var(--muted);font-family:monospace">${esc(p.id)}</span></td>
+            <td style="max-width:280px"><b style="font-size:12px">${esc((p.short_name||p.name||'').substring(0,80))}</b> ${p.ae_url ? `<a href="${esc(p.ae_url)}" target="_blank" rel="noopener" title="Buka sumber AE" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#ff6a00;color:#fff;text-decoration:none;font-size:11px;font-weight:900;vertical-align:middle;margin-left:4px">AE</a>` : ''}<br><span style="font-size:10px;color:var(--muted);font-family:monospace">${esc(p.id)}</span></td>
             <td><span style="background:var(--gold-light);color:var(--gold);padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">${esc(p.category||'-')}</span></td>
             <td style="font-weight:800;white-space:nowrap">${fmt(p.min_price||0)}<br><span style="font-size:10px;color:var(--muted);font-weight:600">– ${fmt(p.max_price||0)}</span></td>
             <td><b>${variants.length}</b> <span style="font-size:10px;color:var(--muted)">varian · stok ${stock.toLocaleString('id-ID')}</span></td>
@@ -1477,7 +1511,7 @@ function renderProducts(c) {
             </div></td>
           </tr>`;
         }).join('')}</tbody>
-      </table>`}
+      </table>${prodPagerHtml()}`}
     </div>
   `;
 }

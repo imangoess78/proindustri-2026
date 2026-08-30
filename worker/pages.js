@@ -43,6 +43,42 @@ function slugify(s) {
     .replace(/^-|-$/g, '') || 'artikel-' + Date.now();
 }
 
+// ── Pagination (20 produk per halaman) ──
+const PAGE_SIZE = 20;
+function pageNums(page, pages) {
+  const nums = [];
+  for (let i = 1; i <= pages; i++) {
+    if (i === 1 || i === pages || Math.abs(i - page) <= 2) nums.push(i);
+  }
+  const out = [];
+  let prev = 0;
+  for (const n of nums) {
+    if (n - prev > 1) out.push(null); // ellipsis
+    out.push(n);
+    prev = n;
+  }
+  return out;
+}
+function paginationHtml(page, total, basePath) {
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (pages <= 1) return '';
+  const href = (n) => `${basePath}${n > 1 ? (basePath.includes('?') ? '&' : '?') + 'page=' + n : ''}`;
+  const L = '<svg class="ic" aria-hidden="true"><use href="#i-arrow-left"/></svg>';
+  const R = '<svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg>';
+  const prev = page > 1
+    ? `<a class="pg-btn" href="${href(page - 1)}" rel="prev">${L} Sebelumnya</a>`
+    : `<span class="pg-btn disabled">${L} Sebelumnya</span>`;
+  const next = page < pages
+    ? `<a class="pg-btn" href="${href(page + 1)}" rel="next">Berikutnya ${R}</a>`
+    : `<span class="pg-btn disabled">Berikutnya ${R}</span>`;
+  const nums = pageNums(page, pages).map(n =>
+    n === null
+      ? '<span class="pg-dots">…</span>'
+      : `<a class="pg-num${n === page ? ' active' : ''}" href="${href(n)}">${n}</a>`
+  ).join('');
+  return `<nav class="pagination" aria-label="Paginasi produk">${prev}${nums}${next}</nav>`;
+}
+
 // ── Layout shell ──
 const IC_HELPER = `// Icon helper: returns inline SVG referencing the sprite
 window.IC = function(n){return '<svg class="ic" aria-hidden="true"><use href="#i-'+n+'"/></svg>'};
@@ -900,7 +936,7 @@ export async function renderShop(env, searchQuery) {
   }))).replace(/</g, '\\u003c');
 
   const catHtml = cats.map(c => `
-    <label class="shop-cat"><input type="checkbox" value="${esc(c)}" onchange="applyShop()">${esc(c)}<span class="count">${products.filter(p => p.category === c).length}</span></label>`).join('');
+    <label class="shop-cat"><input type="checkbox" value="${esc(c)}" onchange="applyShop(true)">${esc(c)}<span class="count">${products.filter(p => p.category === c).length}</span></label>`).join('');
 
   const body = `
   <div class="wrap">
@@ -919,7 +955,7 @@ export async function renderShop(env, searchQuery) {
       <aside class="shop-side" id="shopSide">
         <div class="shop-side-group">
           <div class="shop-side-title"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg> Cari Produk</div>
-          <input class="shop-search" id="shopSearch" placeholder="Cari nama / ukuran..." oninput="applyShop()">
+          <input class="shop-search" id="shopSearch" placeholder="Cari nama / ukuran..." oninput="applyShop(true)">
         </div>
         <div class="shop-side-group">
           <div class="shop-side-title"><svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg> Kategori</div>
@@ -928,14 +964,14 @@ export async function renderShop(env, searchQuery) {
         <div class="shop-side-group">
           <div class="shop-side-title"><svg class="ic" aria-hidden="true"><use href="#i-banknote"/></svg> Rentang Harga</div>
           <div class="shop-range">
-            <input type="number" id="priceMin" placeholder="Min" min="0" oninput="applyShop()">
+            <input type="number" id="priceMin" placeholder="Min" min="0" oninput="applyShop(true)">
             <span class="sep">–</span>
-            <input type="number" id="priceMax" placeholder="Max" min="0" oninput="applyShop()">
+            <input type="number" id="priceMax" placeholder="Max" min="0" oninput="applyShop(true)">
           </div>
         </div>
         <div class="shop-side-group">
           <div class="shop-side-title"><svg class="ic" aria-hidden="true"><use href="#i-arrow-up-down"/></svg> Urutkan</div>
-          <select class="shop-sort" id="shopSort" onchange="applyShop()">
+          <select class="shop-sort" id="shopSort" onchange="applyShop(true)">
             <option value="default">Default</option>
             <option value="priceAsc">Harga Terendah</option>
             <option value="priceDesc">Harga Tertinggi</option>
@@ -948,7 +984,7 @@ export async function renderShop(env, searchQuery) {
         <div class="shop-toolbar">
           <button class="shop-filter-toggle" style="display:none" onclick="document.getElementById('shopSide').classList.toggle('open')"><svg class="ic" aria-hidden="true"><use href="#i-sliders-horizontal"/></svg> Filter</button>
           <div class="shop-count">Menampilkan <b id="shopTotal">${products.length}</b> produk</div>
-          <select class="shop-sort shop-sort-mobile" id="shopSortM" onchange="document.getElementById('shopSort').value=this.value;applyShop()">
+          <select class="shop-sort shop-sort-mobile" id="shopSortM" onchange="document.getElementById('shopSort').value=this.value;applyShop(true)">
             <option value="default">Default</option>
             <option value="priceAsc">Harga Terendah</option>
             <option value="priceDesc">Harga Tertinggi</option>
@@ -956,8 +992,9 @@ export async function renderShop(env, searchQuery) {
           </select>
         </div>
         <div class="shop-grid" id="shopGrid">
-          ${products.map(homeCard).join('')}
+          ${products.slice(0, PAGE_SIZE).map(homeCard).join('')}
         </div>
+        <nav class="pagination" id="shopPager" aria-label="Paginasi shop"></nav>
       </main>
     </div>
   </div>`;
@@ -987,7 +1024,23 @@ export async function renderShop(env, searchQuery) {
     }
     function cardWish(id,e){if(e&&e.preventDefault)e.preventDefault();if(e&&e.stopPropagation)e.stopPropagation();let w=JSON.parse(localStorage.getItem('mp_wish')||'[]');const i=w.indexOf(id);const had=i>-1;if(had)w.splice(i,1);else w.push(id);localStorage.setItem('mp_wish',JSON.stringify(w));const b=e&&e.currentTarget;if(b){b.classList.toggle('active',!had);b.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>';}const tok=localStorage.getItem('mp_token');if(tok){const h={'Authorization':'Bearer '+tok};if(had){fetch('/api/account/wishlist?product_id='+encodeURIComponent(id),{method:'DELETE',headers:h}).catch(function(){});}else{fetch('/api/account/wishlist',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},h),body:JSON.stringify({product_id:id})}).catch(function(){});}}}
     function isWished(id){try{return JSON.parse(localStorage.getItem('mp_wish')||'[]').includes(id);}catch(err){return false;}}
-    function applyShop(){
+    const SHOP_PAGE_SIZE = 20;
+    let shopPage = 1;
+    function shopPagerHtml(page, pages){
+      if (pages <= 1) return '';
+      const L = '<svg class="ic" aria-hidden="true"><use href="#i-arrow-left"/></svg>';
+      const R = '<svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg>';
+      const nums = [];
+      for (let i = 1; i <= pages; i++) if (i === 1 || i === pages || Math.abs(i - page) <= 2) nums.push(i);
+      const out = []; let prev = 0;
+      for (const n of nums) { if (n - prev > 1) out.push('<span class="pg-dots">…</span>'); out.push('<a class="pg-num' + (n === page ? ' active' : '') + '" href="#" onclick="goShopPage(' + n + ');return false">' + n + '</a>'); prev = n; }
+      const prevBtn = page > 1 ? '<a class="pg-btn" href="#" onclick="goShopPage(' + (page - 1) + ');return false" rel="prev">' + L + ' Sebelumnya</a>' : '<span class="pg-btn disabled">' + L + ' Sebelumnya</span>';
+      const nextBtn = page < pages ? '<a class="pg-btn" href="#" onclick="goShopPage(' + (page + 1) + ');return false" rel="next">Berikutnya ' + R + '</a>' : '<span class="pg-btn disabled">Berikutnya ' + R + '</span>';
+      return prevBtn + out.join('') + nextBtn;
+    }
+    function goShopPage(n){ shopPage = n; applyShop(false); window.scrollTo({top: document.getElementById('shopGrid').getBoundingClientRect().top + window.scrollY - 90, behavior: 'smooth'}); }
+    function applyShop(resetPage){
+    if (resetPage) shopPage = 1;
     const q = (document.getElementById('shopSearch').value || '').toLowerCase().trim();
     const selCats = [...document.querySelectorAll('.shop-cat input:checked')].map(i => i.value);
     const pMin = parseFloat(document.getElementById('priceMin').value) || 0;
@@ -1001,10 +1054,15 @@ export async function renderShop(env, searchQuery) {
     if (sort === 'priceAsc') list.sort((a,b) => a.min - b.min);
     else if (sort === 'priceDesc') list.sort((a,b) => b.min - a.min);
     else if (sort === 'nameAsc') list.sort((a,b) => a.name.localeCompare(b.name,'id'));
-    document.getElementById('shopGrid').innerHTML = list.length
-      ? list.map(cardHtml).join('')
+    const pages = Math.max(1, Math.ceil(list.length / SHOP_PAGE_SIZE));
+    if (shopPage > pages) shopPage = pages;
+    const start = (shopPage - 1) * SHOP_PAGE_SIZE;
+    const slice = list.slice(start, start + SHOP_PAGE_SIZE);
+    document.getElementById('shopGrid').innerHTML = slice.length
+      ? slice.map(cardHtml).join('')
       : '<div class="shop-empty"><span class="big"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg></span>Tidak ada produk yang cocok dengan filter. Coba ubah pencarian atau reset filter.</div>';
     document.getElementById('shopTotal').textContent = list.length;
+    document.getElementById('shopPager').innerHTML = shopPagerHtml(shopPage, pages);
   }
   function resetShop(){
     document.getElementById('shopSearch').value = '';
@@ -1012,25 +1070,33 @@ export async function renderShop(env, searchQuery) {
     document.getElementById('priceMin').value = ''; document.getElementById('priceMax').value = '';
     document.getElementById('shopSort').value = 'default';
     document.getElementById('shopSortM').value = 'default';
-    applyShop();
+    shopPage = 1;
+    applyShop(false);
   }
   // tampilkan tombol filter di mobile
   if (window.innerWidth <= 1024) document.querySelector('.shop-filter-toggle').style.display = 'inline-flex';
   // Terapkan query search dari header (?q=...)
   const headerQ = ${JSON.stringify(searchQuery || '')};
-  if (headerQ) { document.getElementById('shopSearch').value = headerQ; applyShop(); }
+  if (headerQ) { document.getElementById('shopSearch').value = headerQ; }
+  applyShop(false);
   // Init wishlist server→lokal untuk member
   (function(){var tok=localStorage.getItem('mp_token');if(!tok)return;fetch('/api/account/wishlist/ids',{headers:{'Authorization':'Bearer '+tok}}).then(function(r){return r.ok?r.json():Promise.reject();}).then(function(ids){if(!Array.isArray(ids))return;document.querySelectorAll('.wish-btn').forEach(function(b){if(ids.indexOf(b.getAttribute('data-id'))>-1){b.classList.add('active');b.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>';}});}).catch(function(){});})();`;
 
   return { html: layout({ title: `Shop Produk Tools & Industri Grosir — ${SITE_NAME}`, desc: 'Katalog lengkap mesin & tools industri, power tools, dan perlengkapan manufaktur ProIndustri. Harga distributor, garansi 1 tahun, kirim seluruh Indonesia.', canonical: ORIGIN + '/shop', body, bodyClass: 'page-shop', script: script + QUICKMODAL_SCRIPT }), script };
 }
 
-// ── Halaman Product Archive (semua produk, grouped by category) ──
-export async function renderArchive(env) {
+// ── Halaman Product Archive (semua produk, grouped by category, paginated) ──
+export async function renderArchive(env, page = 1) {
   const { results } = await env.DB.prepare(
     'SELECT id,slug,name,short_name,category,img,min_price,max_price,variants FROM products WHERE active=1 ORDER BY category, min_price'
   ).all();
-  const products = results;
+  const all = results;
+  const total = all.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (page < 1) page = 1;
+  if (page > pages) page = pages;
+  const start = (page - 1) * PAGE_SIZE;
+  const products = all.slice(start, start + PAGE_SIZE);
   const cats = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
 
   const groups = cats.map(c => {
@@ -1044,18 +1110,20 @@ export async function renderArchive(env) {
       <div class="p-grid">${items.map(homeCard).join('')}</div>
     </div>`;
   }).join('');
+  const pager = paginationHtml(page, total, '/produk');
 
   const body = `
   <div class="wrap">
     ${breadcrumb([{ href: '/produk', label: 'Semua Produk' }])}
     <div class="page-head">
       <div class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg> Arsip Produk</div>
-      <div class="page-sub">Seluruh ${products.length} produk ProIndustri dikelompokkan berdasarkan kategori. Klik produk untuk melihat detail, ukuran, dan harga.</div>
+      <div class="page-sub">Seluruh ${total} produk ProIndustri dikelompokkan berdasarkan kategori. Klik produk untuk melihat detail, ukuran, dan harga.</div>
     </div>
     ${groups}
+    ${pager}
   </div>`;
 
-  return { html: layout({ title: `Semua Produk (${products.length}) — ${SITE_NAME}`, desc: `Arsip lengkap ${products.length} produk industri, tools, dan perlengkapan manufaktur ProIndustri, dikelompokkan per kategori.`, canonical: ORIGIN + '/produk', body, bodyClass: 'page-archive', script: WISH_SCRIPT + QUICKMODAL_SCRIPT }), script: '' };
+  return { html: layout({ title: `Semua Produk (${total}) — ${SITE_NAME}`, desc: `Arsip lengkap ${total} produk industri, tools, dan perlengkapan manufaktur ProIndustri, dikelompokkan per kategori.`, canonical: ORIGIN + '/produk' + (page > 1 ? '?page=' + page : ''), body, bodyClass: 'page-archive', script: WISH_SCRIPT + QUICKMODAL_SCRIPT }), script: '' };
 }
 
 // ── Slug SEO standar per kategori ──
@@ -1081,7 +1149,7 @@ export function categoryBySlug(slug) {
 }
 
 // ── Halaman Kategori (SSR) — produk per kategori dengan slug SEO standar ──
-export async function renderCategory(env, slug) {
+export async function renderCategory(env, slug, page = 1) {
   // Kategori dinamis dari tabel categories (dikelola admin), fallback ke slug map lama
   let catInfo = null;
   try { catInfo = await env.DB.prepare('SELECT * FROM categories WHERE slug=? AND active=1').bind(slug).first(); } catch (e) {}
@@ -1090,14 +1158,21 @@ export async function renderCategory(env, slug) {
   const { results } = await env.DB.prepare(
     'SELECT id,slug,name,short_name,category,img,min_price,max_price,variants FROM products WHERE active=1 AND category=? ORDER BY min_price'
   ).bind(name).all();
+  const total = results.length;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (page < 1) page = 1;
+  if (page > pages) page = pages;
+  const start = (page - 1) * PAGE_SIZE;
+  const pageProducts = results.slice(start, start + PAGE_SIZE);
 
-  const items = results.map(homeCard).join('');
+  const items = pageProducts.map(homeCard).join('');
   const featImg = catInfo && catInfo.featured_image ? catInfo.featured_image.replace(/^https:\/\/pub-[a-f0-9]+\.r2\.dev\//, '/img/') : imgUrl(results[0] || {});
-  const desc = catInfo && catInfo.description ? catInfo.description : `${results.length} produk ${name} tersedia di ProIndustri.`;
+  const desc = catInfo && catInfo.description ? catInfo.description : `${total} produk ${name} tersedia di ProIndustri.`;
   const EMOJI_TO_LUCIDE = { '🫱': 'hand', '💪': 'dumbbell', '🛡️': 'shield', '🧩': 'puzzle', '🥖': 'wheat', '🤐': 'lock', '<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg>': 'package', '📁': 'folder', '🏷️': 'tag', '⭐': 'star', '📂': 'folder' };
   const rawIcon = catInfo && catInfo.icon ? catInfo.icon : '<svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg>';
   const iconName = EMOJI_TO_LUCIDE[rawIcon] || 'folder';
-  const emptyMsg = results.length ? '' : `<div class="wl-empty" style="padding:32px"><div class="wl-empty-icon"><svg class="ic" aria-hidden="true"><use href="#i-inbox"/></svg></div><div class="akun-empty-sub" style="font-size:14px;color:var(--muted)">Belum ada produk di kategori <strong>${esc(name)}</strong>.<br>Kategori ini baru dibuat — produk akan tampil di sini begitu ditambahkan.</div></div>`;
+  const emptyMsg = total ? '' : `<div class="wl-empty" style="padding:32px"><div class="wl-empty-icon"><svg class="ic" aria-hidden="true"><use href="#i-inbox"/></svg></div><div class="akun-empty-sub" style="font-size:14px;color:var(--muted)">Belum ada produk di kategori <strong>${esc(name)}</strong>.<br>Kategori ini baru dibuat — produk akan tampil di sini begitu ditambahkan.</div></div>`;
+  const pager = paginationHtml(page, total, '/kategori/' + slug);
   const body = `
   <div class="wrap">
     ${breadcrumb([{ href: '/shop', label: 'Shop' }, { href: '/kategori/' + slug, label: name }])}
@@ -1107,10 +1182,11 @@ export async function renderCategory(env, slug) {
     </div>
     <div class="p-grid">${items}</div>
     ${emptyMsg}
+    ${pager}
     <div style="text-align:center;margin:28px 0 8px">
       <a class="btn-red" style="text-decoration:none;display:inline-block" href="/shop"><svg class="ic" aria-hidden="true"><use href="#i-shopping-bag"/></svg> Lihat Semua Produk</a>
     </div>
   </div>`;
 
-  return { html: layout({ title: `Jual ${name} Grosir — ${SITE_NAME}`, desc: `Beli ${name} harga grosir di ProIndustri. ${results.length} varian, original & bergaransi, kirim seluruh Indonesia.`, canonical: ORIGIN + '/kategori/' + slug, ogImage: featImg, body, bodyClass: 'page-category', script: WISH_SCRIPT + QUICKMODAL_SCRIPT }), script: '' };
+  return { html: layout({ title: `Jual ${name} Grosir — ${SITE_NAME}`, desc: `Beli ${name} harga grosir di ProIndustri. ${total} varian, original & bergaransi, kirim seluruh Indonesia.`, canonical: ORIGIN + '/kategori/' + slug + (page > 1 ? '?page=' + page : ''), ogImage: featImg, body, bodyClass: 'page-category', script: WISH_SCRIPT + QUICKMODAL_SCRIPT }), script: '' };
 }

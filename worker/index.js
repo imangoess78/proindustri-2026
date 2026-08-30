@@ -465,7 +465,7 @@ export default {
     }
     if (path === '/produk') {
       await ensureProducts(env);
-      const page = await renderArchive(env);
+      const page = await renderArchive(env, parseInt(url.searchParams.get('page') || '1', 10) || 1);
       return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store' } });
     }
     if (path.startsWith('/produk/')) {
@@ -487,7 +487,7 @@ export default {
     if (path.startsWith('/kategori/')) {
       const slug = decodeURIComponent(path.slice('/kategori/'.length));
       await ensureProducts(env);
-      const page = await renderCategory(env, slug);
+      const page = await renderCategory(env, slug, parseInt(url.searchParams.get('page') || '1', 10) || 1);
       if (!page) return new Response('Kategori tidak ditemukan', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
       return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store' } });
     }

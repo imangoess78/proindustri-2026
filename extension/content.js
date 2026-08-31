@@ -79,6 +79,7 @@
     let desc = '';
     let descImages = [];
     let descHtml = '';
+    let specsHtmlMtop = '';
     let descriptionUrl = '';
     // 1) Cari descriptionUrl — tiru 100% ALD (woo-alidropship/includes/data.php line 447)
     // ALD: preg_match('/"descriptionModule":(.*?),"features":\{\},"feedbackModule"/', $html) -> json -> descriptionUrl
@@ -145,6 +146,76 @@
         descriptionUrl = descriptionUrl.replace(/\\\//g,'/').replace(/\\u002F/g,'/').replace(/\\u0026/g,'&').trim();
       }
     }catch{}
+    // 1.5) CSR FALLBACK (tiru ALD): kalau descriptionUrl masih kosong di HTML statis (produk CSR seperti
+    // Bench Drill — runParams kosong, data dimuat via MTOP API), panggil API MTOP yang SAMA dengan halaman:
+    // mtop.aliexpress.pdp.pc.query via window.lib.mtop (sudah ada token/sign milik halaman, paling andal).
+    if(!descriptionUrl){
+      const pid = (location.pathname.match(/\/item\/(\d+)/)||[])[1] || '';
+      if(pid){
+        try{
+          const s = document.createElement('script');
+          s.textContent = `(function(){
+            var pid = ${JSON.stringify(pid)};
+            var ext = '{}';
+            try{ ext = JSON.stringify((window._d_c_ && window._d_c_.DCData && window._d_c_.DCData.extParams) || {}); }catch(e){}
+            var done = function(url, descH, specs){
+              var el = document.documentElement;
+              el.setAttribute('data-pi-desc-url', url||'');
+              el.setAttribute('data-pi-desc-html', (descH||'').slice(0,60000));
+              el.setAttribute('data-pi-specs', (specs||'').slice(0,20000));
+            };
+            var attempt = function(){
+              try{
+                if(!window.lib || !window.lib.mtop) return setTimeout(attempt, 300);
+                window.lib.mtop.request({
+                  api:'mtop.aliexpress.pdp.pc.query',
+                  v:'1.0', type:'GET', dataType:'originaljsonp',
+                  data:{ productId: pid, _lang:'en_US', _currency:'USD', country:'US',
+                         province:'', city:'', channel:'', pdp_ext_f:'', pdpNPI:'',
+                         sourceType:'', clientType:'pc', ext: ext }
+                }, function(res){
+                  try{
+                    var d = (res && res.data && res.data.result) || {};
+                    var dm = d.descriptionModule || {};
+                    var url = dm.descriptionUrl || '';
+                    var descH = dm.description || '';
+                    var specs = '';
+                    try{
+                      var sm = d.specsModule || {};
+                      var props = sm.props || (sm.groups && sm.groups[0] && sm.groups[0].properties) || [];
+                      var items = props.slice(0,20).map(function(sp){
+                        var k = sp.attrName || sp.name || '', v = sp.attrValue || sp.value || '';
+                        if(!k || !v) return '';
+                        return '<li class="product-prop"><span class="property-title">'+k+':&nbsp;</span><span class="property-desc">'+v+'</span></li>';
+                      }).filter(Boolean).join('');
+                      if(items) specs = '<div class="product-specs-list-container"><ul class="product-specs-list">'+items+'</ul></div>';
+                    }catch(e){}
+                    done(url, descH, specs);
+                  }catch(e){}
+                }, function(){});
+              }catch(e){}
+            };
+            attempt();
+          })();`;
+          (document.head||document.documentElement).appendChild(s);
+          setTimeout(()=>{ try{ s.remove(); }catch{} }, 60000);
+          // polling hasil MTOP sampai ~7 detik
+          const t0 = Date.now();
+          while(Date.now()-t0 < 7000){
+            const u = document.documentElement.getAttribute('data-pi-desc-url') || '';
+            if(u){
+              descriptionUrl = u.replace(/\\\//g,'/').replace(/\\u002F/g,'/').replace(/\\u0026/g,'&').trim();
+              break;
+            }
+            await new Promise(r=>setTimeout(r,200));
+          }
+          const rawDesc = document.documentElement.getAttribute('data-pi-desc-html') || '';
+          if(rawDesc && !descHtml) descHtml = rawDesc;
+          const rawSpecs = document.documentElement.getAttribute('data-pi-specs') || '';
+          if(rawSpecs) specsHtmlMtop = rawSpecs;
+        }catch(e){ console.warn('PI: MTOP fallback gagal', e); }
+      }
+    }
     // 2) ALD PRIORITY: selalu fetch descriptionUrl DULUAN (tiru get_product_description_from_url ALD)
     // Respon descriptionUrl = HTML deskripsi produk ASLI dari aeproductsourcesite — TANPA heading
     // "Description", TANPA tombol "Report"/"Share"/chrome UI lainnya. Murni konten seller.
@@ -349,6 +420,7 @@
         }
       }
     }catch{}
+    if(!specsHtml && specsHtmlMtop) specsHtml = specsHtmlMtop; // CSR: specs dari MTOP API (tiru ALD specsModule)
     if(specsHtml){
       if(descHtml && descHtml.length > 50 && !descHtml.includes('brandPlus') && !(descHtml.includes('Buy ') && descHtml.includes('at Aliexpress for'))){
         descHtml = descHtml + '\n' + specsHtml;  // desc asli dulu, specs di bawah

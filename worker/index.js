@@ -1726,6 +1726,54 @@ export default {
       return json({ id });
     }
 
+    // ── POST /api/admin/branding-cleanup ── scan semua produk, replace branding AE -> ProIndustri
+    if (path === '/api/admin/branding-cleanup' && request.method === 'POST') {
+      if (!await isAdmin(request, env)) return json({ error: 'Unauthorized' }, 401);
+      const { results } = await env.DB.prepare('SELECT id, name, short_name, desc, category, variants, specs FROM products').all();
+      let cleaned = 0, skipped = 0;
+      const updated = [];
+      for (const r of results) {
+        const vOld = { name: r.name, short_name: r.short_name, desc: r.desc, category: r.category };
+        let variants = [];
+        try { variants = JSON.parse(r.variants || '[]'); } catch {}
+        let specs = {};
+        try { specs = JSON.parse(r.specs || '{}'); } catch {}
+        let dirty = false;
+        // Teks field
+        const nName = replaceBrand(r.name), nShort = replaceBrand(r.short_name), nDesc = replaceBrand(r.desc), nCat = replaceBrand(r.category);
+        if (nName !== r.name) dirty = true;
+        if (nShort !== r.short_name) dirty = true;
+        if (nDesc !== r.desc) dirty = true;
+        if (nCat !== r.category) dirty = true;
+        // Variants (nama)
+        variants = (Array.isArray(variants) ? variants : []).map(v => {
+          if (v && typeof v.name === 'string') {
+            const nn = replaceBrand(v.name);
+            if (nn !== v.name) dirty = true;
+            return { ...v, name: nn };
+          }
+          return v;
+        });
+        // Specs (nilai string)
+        for (const k of Object.keys(specs)) {
+          if (typeof specs[k] === 'string') {
+            const ns = replaceBrand(specs[k]);
+            if (ns !== specs[k]) { dirty = true; specs[k] = ns; }
+          }
+        }
+        if (dirty) {
+          await env.DB.prepare(
+            "UPDATE products SET name=?, short_name=?, desc=?, category=?, variants=?, specs=?, updated_at=datetime('now') WHERE id=?"
+          ).bind(nName, nShort, nDesc, nCat, JSON.stringify(variants), JSON.stringify(specs), r.id).run();
+          cleaned++;
+          updated.push(r.id);
+        } else {
+          skipped++;
+        }
+      }
+      return json({ ok: true, cleaned, skipped, total: results.length, updated });
+    }
+
     // ── PUT /api/products/:id ── (admin)
     const pMatch = path.match(/^\/api\/products\/([^/]+)$/);
     if (pMatch && request.method === 'PUT') {

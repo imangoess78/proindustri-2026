@@ -1487,6 +1487,7 @@ function renderProducts(c) {
 
     <div class="search-bar">
       <input class="search-input" placeholder="🔍 Cari produk / kategori..." value="${esc(productSearch)}" oninput="debounce(()=>{productSearch=this.value;curProductPage=1;renderProducts(document.getElementById('mainContent'))},300)">
+      <button class="action-btn" style="padding:8px 16px;background:var(--red-light);color:var(--red);border:1px solid rgba(220,38,38,.25)" onclick="cleanupBranding()" title="Scan semua produk, ganti otomatis AliExpress / Ali Express / aliexpress.com -> ProIndustri">${IC("broom")} Bersihkan Branding AE</button>
       <button class="action-btn primary" style="padding:8px 16px" onclick="openProductModal()">+ Produk Baru</button>
     </div>
 
@@ -1854,6 +1855,21 @@ function deleteProduct(id) {
   api('DELETE', '/api/products/' + id)
     .then(() => { PRODUCTS = PRODUCTS.filter(p => p.id !== id); renderTab(); toast('Produk dihapus', 'success'); })
     .catch(e => toast('Gagal hapus: ' + e.message, 'error'));
+}
+
+// ── Bersihkan Branding AliExpress dari semua produk (server-side scan + replace) ──
+function cleanupBranding() {
+  if (!confirm('Scan semua produk dan ganti otomatis wording "AliExpress / Ali Express / aliexpress.com" menjadi "ProIndustri / ProIndustri.com"?')) return;
+  api('POST', '/api/admin/branding-cleanup', {})
+    .then(r => {
+      if (r && r.ok) {
+        toast(`Bersih: ${r.cleaned} produk diperbarui, ${r.skipped} sudah bersih`, 'success');
+        fetchAll().then(() => renderTab());
+      } else {
+        toast('Gagal: ' + (r && r.error ? r.error : 'respons tidak valid'), 'error');
+      }
+    })
+    .catch(e => toast('Gagal cleanup: ' + e.message, 'error'));
 }
 
 // ── Customers ──

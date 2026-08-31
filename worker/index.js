@@ -535,7 +535,7 @@ export default {
         for (const p of prods.results || []) urls.push({ loc: '/produk/' + p.slug, prio: '0.8', freq: 'weekly', lastmod: p.updated_at ? p.updated_at.slice(0, 10) : undefined });
         const cats = await env.DB.prepare('SELECT slug FROM categories').all();
         for (const c of cats.results || []) urls.push({ loc: '/kategori/' + c.slug, prio: '0.7', freq: 'weekly' });
-        const arts = await env.DB.prepare("SELECT slug, created_at FROM articles WHERE status='Published'").all();
+        const arts = await env.DB.prepare("SELECT slug, created_at FROM articles WHERE (status='Published' OR (status='Scheduled' AND created_at <= datetime('now')))").all();
         for (const a of arts.results || []) urls.push({ loc: '/artikel/' + a.slug, prio: '0.7', freq: 'monthly', lastmod: a.created_at ? a.created_at.slice(0, 10) : undefined });
       } catch (e) { /* sitemap tetap jalan walau DB error */ }
       const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(u => `  <url><loc>${ORIGIN}${u.loc}</loc>${u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : ''}<changefreq>${u.freq}</changefreq><priority>${u.prio}</priority></url>`).join('\n')}\n</urlset>`;
@@ -1609,6 +1609,90 @@ export default {
       });
     }
 
+    // ── POST /api/admin/monotaro-scrape ── parse Monotaro product page (admin)
+    // Monotaro memblokir fetch dari server (Akamai), jadi extension Chrome mengirim
+    // html hasil scrape client-side. Jika tidak ada html, coba fetch langsung.
+    if (path === '/api/admin/monotaro-scrape' && request.method === 'POST') {
+      if (!await isAdmin(request, env)) return json({ error: 'Unauthorized' }, 401);
+      const body = await request.json().catch(() => ({}));
+      const mtUrl = String(body.url || '').trim();
+      if (!mtUrl || !mtUrl.includes('monotaro.id')) return json({ error: 'URL harus monotaro.id' }, 400);
+
+      let html = String(body.html || '');
+      if (!html) {
+        // Try server-side fetch (biasanya diblokir Akamai, tapi coba dulu)
+        try {
+          const r = await fetch(mtUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8',
+            },
+            cf: { cacheTtl: 0 },
+          });
+          html = await r.text();
+        } catch (e) {
+          return json({ error: 'Gagal fetch Monotaro: ' + e.message + '. Gunakan Chrome Extension "ProIndustri Scraper" (scrape dari browser) lalu paste URL lagi.' }, 502);
+        }
+      }
+      if (!html || html.length < 500) {
+        return json({ error: 'Halaman Monotaro diblokir (Akamai). Instal Chrome Extension "ProIndustri Scraper" — buka halaman produk di Chrome, klik ikon extension → Scrape. Data terkirim otomatis ke dashboard.' }, 502);
+      }
+      if (html.includes('Access Denied') || html.includes('x5secdata')) {
+        return json({ error: 'Halaman Monotaro diblokir (Akamai). Instal Chrome Extension "ProIndustri Scraper" — buka halaman produk di Chrome, klik ikon extension → Scrape. Data terkirim otomatis ke dashboard.' }, 502);
+      }
+
+      const m1 = (re) => { const m = html.match(re); return m ? m[1].trim() : ''; };
+
+      // 1) Title — JSON-LD Product > og:title > <title>
+      let title = m1(/"name"\s*:\s*"([^"]{5,250})"/) ||
+        m1(/<meta property="og:title" content="([^"]+)"/) ||
+        m1(/<title>([^<]+)<\/title>/) || '';
+      title = title.replace(/monotaro\.id.*$/i, '').replace(/\s*\|\s*MonotaRO.*$/i, '').trim().slice(0, 200);
+      if (title.length < 5) return json({ error: 'Tidak bisa membaca judul produk. Gunakan Chrome Extension "ProIndustri Scraper".' }, 502);
+
+      // 2) Price — JSON-LD > "price" / pola Rp
+      let price = 0;
+      const priceJson = m1(/"price"\s*:\s*"?([\d.,]+)"?/);
+      if (priceJson) price = Math.round(parseFloat(priceJson.replace(/[.,](?=\d{3})/g, '').replace(',', '.')));
+      if (!price) {
+        const rp = html.match(/Rp\s*([\d.,]+)/i);
+        if (rp) price = Math.round(parseFloat(rp[1].replace(/\./g, '').replace(',', '.')));
+      }
+      if (!price) {
+        const rp2 = html.match(/([\d.,]{4,12})\s*(?:<[^>]*>)*\s*(?:per\s+)?(?:pcs|unit|item|buah)/i);
+        if (rp2) price = Math.round(parseFloat(rp2[1].replace(/\./g, '')));
+      }
+
+      // 3) Images — JSON-LD image > og:image > img src CDN
+      const images = [];
+      const imgRe = /https:\/\/[^"'\\\s<>]+\/(?:images|item|product|img)[^"'\\\s<>]*\.(?:jpg|jpeg|png|webp)/gi;
+      let cm;
+      while ((cm = imgRe.exec(html)) !== null) {
+        const u = cm[0];
+        if (!images.includes(u)) images.push(u);
+        if (images.length >= 8) break;
+      }
+      if (!images.length) {
+        const ogImg = m1(/<meta property="og:image" content="([^"]+)"/);
+        if (ogImg) images.push(ogImg);
+      }
+
+      // 4) Variants: 1 varian dari harga utama (Monotaro umumnya single price)
+      const variants = [];
+      if (price > 0) variants.push({ name: 'Standard', priceIDR: price, stock: 50, min_qty: 1 });
+      const minPrice = price, maxPrice = price;
+
+      // 5) Description
+      let desc = m1(/<meta name="description" content="([^"]+)"/) || '';
+      desc = desc.replace(/monotaro/gi, '').trim().slice(0, 2000);
+
+      return json({
+        title, desc, images: images.slice(0, 8), priceUSD: null,
+        minPrice, maxPrice, variants, category: 'Mesin & Tools', weight: 200,
+      });
+    }
+
     // ── POST /api/admin/ae-import ── create product from preview + fetch images to R2
     if (path === '/api/admin/ae-import' && request.method === 'POST') {
       if (!await isAdmin(request, env)) return json({ error: 'Unauthorized' }, 401);
@@ -1811,7 +1895,7 @@ export default {
       const all = url.searchParams.get('all') === '1';
       const page = parseInt(url.searchParams.get('page')) || 1;
       const limit = Math.min(parseInt(url.searchParams.get('limit')) || 100, 100);
-      const where = (isAdm && all) ? '' : " WHERE status='Published'";
+      const where = (isAdm && all) ? '' : " WHERE (status='Published' OR (status='Scheduled' AND created_at <= datetime('now')))";
       const { results: rows } = await env.DB.prepare('SELECT COUNT(*) AS c FROM articles' + where).all();
       const total = rows[0] ? rows[0].c : 0;
       const pages = Math.max(1, Math.ceil(total / limit));

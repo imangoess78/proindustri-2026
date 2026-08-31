@@ -615,7 +615,7 @@ export async function renderProduct(env, p) {
 export async function renderPost(env, slug) {
   // Seed artikel jika belum ada (biar halaman tidak kosong)
   await ensureArticles(env);
-  const row = await env.DB.prepare("SELECT * FROM articles WHERE slug=? AND status='Published'").bind(slug).first();
+  const row = await env.DB.prepare("SELECT * FROM articles WHERE slug=? AND (status='Published' OR (status='Scheduled' AND created_at <= datetime('now')))").bind(slug).first();
   if (!row) return null;
   // increment views (best-effort)
   try { await env.DB.prepare('UPDATE articles SET views=views+1 WHERE id=?').bind(row.id).run(); } catch (e) {}
@@ -800,7 +800,7 @@ async function ensureArticles(env) {
 // ── Artikel List ──
 export async function renderArticles(env) {
   await ensureArticles(env);
-  const { results } = await env.DB.prepare("SELECT id,slug,title,category,content,image,views,created_at FROM articles WHERE status='Published' ORDER BY created_at DESC LIMIT 50").all();
+  const { results } = await env.DB.prepare("SELECT id,slug,title,category,content,image,views,created_at FROM articles WHERE (status='Published' OR (status='Scheduled' AND created_at <= datetime('now'))) ORDER BY created_at DESC LIMIT 50").all();
 
   let cards;
   if (!results.length) {

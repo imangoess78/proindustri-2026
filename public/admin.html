@@ -272,9 +272,11 @@ tr:hover td{background:rgba(201,137,10,.04)}
     <button class="nav-item" onclick="setTab('customers')" id="nav-customers"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-users"/></svg></span>Pelanggan</button>
     <button class="nav-item" onclick="setTab('komplain')" id="nav-komplain"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-wrench"/></svg></span>Komplain<span class="nav-badge" id="badge-komplain" style="display:none">0</span></button>
     <button class="nav-item" onclick="setTab('qna')" id="nav-qna"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg></span>Tanya Jawab<span class="nav-badge" id="badge-qna" style="display:none">0</span></button>
-    <button class="nav-item" onclick="setTab('aeimport')" id="nav-aeimport"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg></span>Import AE</button>
+    <button class="nav-item" onclick="setTab('aeimport')" id="nav-aeimport"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg></span>Import Produk</button>
     <div class="nav-section">Konten</div>
     <button class="nav-item" onclick="setTab('articles')" id="nav-articles"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg></span>Blog/Artikel</button>
+    <div class="nav-section">Dokumen</div>
+    <button class="nav-item" onclick="setTab('invoice')" id="nav-invoice"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-receipt"/></svg></span>Surat Penawaran</button>
     <div class="nav-section">Laporan</div>
     <button class="nav-item" onclick="setTab('reports')" id="nav-reports"><span class="icon"><svg class="ic" aria-hidden="true"><use href="#i-trending-up"/></svg></span>Laporan</button>
     <div class="nav-section">Pengaturan</div>
@@ -529,9 +531,7 @@ async function fetchAll() {
 }
 
 function startPolling() {
-  fetchAll();
-  clearInterval(pollInterval);
-  pollInterval = setInterval(fetchAll, 15000);
+  fetchAll(); // panggil sekali saat login, tanpa auto-refresh agar tidak mengganggu editing
 }
 
 function updateBadges() {
@@ -545,8 +545,9 @@ function updateBadges() {
 // ── Tabs ──
 const TAB_TITLES = {
   dashboard:'' + IC("layout-dashboard") + ' Dashboard', orders:'' + IC("package") + ' Pesanan', products:'' + IC("shopping-bag") + '️ Produk', categories:'' + IC("folder") + ' Kategori', customers:'' + IC("users") + ' Pelanggan',
-  komplain:'' + IC("wrench") + '️ Komplain', qna:'' + IC("message-circle") + ' Tanya Jawab', aeimport:'' + IC("download") + ' Import AliExpress', articles:'' + IC("file-text") + ' Blog/Artikel', reports:'' + IC("trending-up") + ' Laporan', settings:'' + IC("settings") + ' Pengaturan',
-  payment:'' + IC("credit-card") + ' Pembayaran', coupons:'' + IC("tag") + ' Kupon', users:'' + IC("briefcase") + ' Pengguna'
+  komplain:'' + IC("wrench") + '️ Komplain', qna:'' + IC("message-circle") + ' Tanya Jawab', aeimport:'' + IC("download") + ' Import Produk', articles:'' + IC("file-text") + ' Blog/Artikel',reports:'' + IC("trending-up") + ' Laporan', settings:'' + IC("settings") + ' Pengaturan',
+  payment:'' + IC("credit-card") + ' Pembayaran', coupons:'' + IC("tag") + ' Kupon', users:'' + IC("briefcase") + ' Pengguna',
+  invoice:'' + IC("receipt") + ' Surat Penawaran / Invoice'
 };
 
 function setTab(tab) {
@@ -586,6 +587,7 @@ function renderTab() {
   else if (currentTab === 'aeimport') renderAEImport(c);
   else if (currentTab === 'articles') renderArticles(c);
   else if (currentTab === 'reports') renderReports(c);
+  else if (currentTab === 'invoice') window.INV ? INV.render(c) : (c.innerHTML = '<div class="empty">Fitur tidak tersedia — muat ulang halaman.</div>');
   else if (currentTab === 'settings') renderSettings(c);
 }
 
@@ -2655,18 +2657,33 @@ function deleteArticle(id) {
 
 // ── Import AliExpress ──
 let AE_PREVIEW = null;
+let AE_SOURCE = 'ae';
 function renderAEImport(c){
   const cats = [...new Set(PRODUCTS.map(p=>p.category))].sort();
   const catOpts = cats.map(x=>`<option>${esc(x)}</option>`).join('');
+  const src = AE_SOURCE || 'ae';
   c.innerHTML = `
     <div class="card" style="margin-bottom:16px">
-      <div style="font-size:15px;font-weight:900;margin-bottom:6px">${IC("download")} Import dari AliExpress</div>
+      <div style="font-size:15px;font-weight:900;margin-bottom:6px">${IC("download")} Import Produk</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="d-btn ${src==='ae'?'d-btn-primary':''}" onclick="AE_SOURCE='ae';renderAEImport(document.getElementById('mainContent'))">${IC("globe")} AliExpress</button>
+        <button class="d-btn ${src==='mt'?'d-btn-primary':''}" onclick="AE_SOURCE='mt';renderAEImport(document.getElementById('mainContent'))">${IC("globe")} Monotaro</button>
+      </div>
+      ${src==='ae' ? `
       <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Paste link produk AliExpress → Preview → Publish. Harga otomatis <b>markup 2×</b> (USD→IDR kurs 16.500). Gambar AE otomatis di-download ke R2.</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <input id="ae-url" placeholder="https://www.aliexpress.com/item/100500....html" style="flex:1;min-width:220px;padding:10px 12px;border:2px solid var(--border);border-radius:10px;font-size:13px;outline:none" onkeydown="if(event.key==='Enter')doAEScrape()">
         <button class="d-btn d-btn-primary" onclick="doAEScrape()" id="ae-scrape-btn">${IC("search")} Scrape</button>
       </div>
       <div id="ae-scrape-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+      ` : `
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Paste link produk Monotaro → Preview → Publish. Butuh <b>Chrome Extension "ProIndustri Scraper"</b> (jalankan dari browser Anda) — Monotaro memblokir akses dari server. Instal extension lalu buka halaman produk & klik Scrape, atau paste URL di bawah lalu klik Scrape.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input id="mt-url" placeholder="https://www.monotaro.id/mm/130474001.html" style="flex:1;min-width:220px;padding:10px 12px;border:2px solid var(--border);border-radius:10px;font-size:13px;outline:none" onkeydown="if(event.key==='Enter')doMTScrape()">
+        <button class="d-btn d-btn-primary" onclick="doMTScrape()" id="mt-scrape-btn">${IC("search")} Scrape</button>
+      </div>
+      <div id="mt-scrape-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+      `}
     </div>
     <div id="ae-preview"></div>
   `;
@@ -2766,6 +2783,27 @@ async function doAEScrape(){
     st.textContent = '✅ Preview siap — cek & edit lalu Publish.';
     renderAEPreview();
     toast('Scrape berhasil', 'success');
+  }catch(e){ st.textContent = '❌ ' + e.message; toast(e.message, 'error'); }
+  finally{ btn.disabled=false; btn.innerHTML = IC("search")+' Scrape'; }
+}
+async function doMTScrape(){
+  const url = (document.getElementById('mt-url')?.value||'').trim();
+  if(!url || !url.includes('monotaro.id')){ toast('Paste link Monotaro yang valid', 'error'); return; }
+  const btn = document.getElementById('mt-scrape-btn');
+  const st = document.getElementById('mt-scrape-status');
+  btn.disabled = true; btn.textContent = '⏳ Scrape...';
+  st.textContent = 'Mengambil data dari Monotaro...';
+  try{
+    const r = await api('POST','/api/admin/monotaro-scrape',{url});
+    AE_PREVIEW = {
+      title: r.title||'', desc: r.desc||'', images: r.images||[], priceUSD: r.priceUSD, minPrice: r.minPrice, maxPrice: r.maxPrice, rawHints: r.rawHints||[],
+      variants: r.variants||[], category: r.category||'Mesin & Tools', weight: Number(r.weight)||200,
+      imgSel: new Set(r.images&&r.images.length?[0]:[]),
+      aeUrl: url
+    };
+    st.textContent = '✅ Preview siap — cek & edit lalu Publish.';
+    renderAEPreview();
+    toast('Scrape Monotaro berhasil', 'success');
   }catch(e){ st.textContent = '❌ ' + e.message; toast(e.message, 'error'); }
   finally{ btn.disabled=false; btn.innerHTML = IC("search")+' Scrape'; }
 }
@@ -3585,5 +3623,6 @@ new MutationObserver(() => requestAnimationFrame(fitStatValues))
 .ic{width:1.1em;height:1.1em;vertical-align:-0.15em;display:inline-block;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 .wish-btn .ic,.icon .ic{width:18px;height:18px;vertical-align:middle}
 </style>
+<script src="/assets/invoice.js"></script>
 </body>
 </html>

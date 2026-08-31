@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "ProIndustri Monotaro Scraper",
+  "version": "1.0.0",
+  "description": "Scrape produk Monotaro.id ke ProIndustri (bypass Akamai via browser user)",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://*.monotaro.id/*",
+    "https://proindustri.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://*.monotaro.id/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

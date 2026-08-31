@@ -57,7 +57,7 @@
       </button>
       <a class="brand" href="/">
         <div class="brand-logo">P</div>
-        <div><div class="brand-name">ProIndustri</div><div class="brand-sub">by ProIndustri</div></div>
+        <div><div class="brand-name">ProIndustri</div><div class="brand-sub">by SAHOHA</div></div>
       </a>
       <div class="search-wrap">
         <span class="search-icon">${IC("search")}</span>
@@ -83,7 +83,7 @@
       <div class="sb-head">
         <a class="brand" href="/">
           <div class="brand-logo">P</div>
-          <div><div class="brand-name">ProIndustri</div><div class="brand-sub">by ProIndustri</div></div>
+          <div><div class="brand-name">ProIndustri</div><div class="brand-sub">by SAHOHA</div></div>
         </a>
         <button class="sb-close" type="button" onclick="MP.closeMenu()" aria-label="Tutup menu">${IC("x")}</button>
       </div>
@@ -131,7 +131,7 @@
       <div>
         <a class="brand" href="/" style="margin-bottom:12px">
           <div class="brand-logo">P</div>
-          <div><div class="brand-name" style="color:#fff">ProIndustri</div><div class="brand-sub" style="color:rgba(255,255,255,.6)">by ProIndustri</div></div>
+          <div><div class="brand-name" style="color:#fff">ProIndustri</div><div class="brand-sub" style="color:rgba(255,255,255,.6)">by SAHOHA</div></div>
         </a>
         <p class="f-desc">Distributor mesin, tools, & perlengkapan industri impor China. Melayani bengkel, pabrik, dan UMKM dengan harga grosir & garansi.</p>
         <div class="f-col-title">Grup Toko Online</div>

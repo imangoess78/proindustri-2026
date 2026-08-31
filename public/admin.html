@@ -1469,7 +1469,8 @@ let curProductPage = 1;
 function renderProducts(c) {
   const q = productSearch.toLowerCase();
   const cats = [...new Set(PRODUCTS.map(p => p.category))].sort();
-  const filtered = PRODUCTS.filter(p => !q || (p.name||'').toLowerCase().includes(q) || (p.category||'').toLowerCase().includes(q) || (p.short_name||'').toLowerCase().includes(q));
+  const filtered = PRODUCTS.filter(p => !q || (p.name||'').toLowerCase().includes(q) || (p.category||'').toLowerCase().includes(q) || (p.short_name||'').toLowerCase().includes(q))
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')); // terbaru paling atas
   const total = filtered.length;
   const pages = Math.max(1, Math.ceil(total / PROD_PAGE_SIZE));
   let page = curProductPage;
@@ -1857,7 +1858,7 @@ async function saveProduct() {
   };
   try {
     if (id) { await api('PUT', '/api/products/' + id, payload); toast('Produk diperbarui ' + IC("check-circle-2") + '', 'success'); }
-    else { await api('POST', '/api/products', payload); toast('Produk dibuat ' + IC("check-circle-2") + '', 'success'); }
+    else { await api('POST', '/api/products', payload); curProductPage = 1; toast('Produk dibuat ' + IC("check-circle-2") + '', 'success'); }
     closeModal(); fetchAll();
   } catch (e) { toast('Gagal: ' + e.message, 'error'); }
 }

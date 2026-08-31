@@ -167,6 +167,28 @@ INV.render = function (c) {
   .inv-page .sign .role{font-size:9.5px;color:#555}
   .inv-page .foot-note{text-align:center;font-size:8.5px;color:#999;margin-top:26px;border-top:1px solid #eee;padding-top:6px}
   @media(max-width:1100px){.inv-wrap{grid-template-columns:1fr}}
+  @media(max-width:640px){
+    .inv-row{grid-template-columns:1fr}
+    .inv-item-head,.inv-item{grid-template-columns:1fr 80px 100px 30px;font-size:12px}
+    .inv-item-head span:not(:first-child),.inv-item-head span:first-child{font-size:9px}
+    .inv-item input{font-size:12px;padding:5px 6px}
+    .inv-page{padding:14px;font-size:11px;min-height:auto;max-height:none}
+    .inv-sum{font-size:12px}
+    .inv-btn{flex:1 1 100%;min-width:0}
+    .inv-form{padding:12px}
+    .inv-form h3{font-size:11px}
+    .inv-field input,.inv-field select,.inv-field textarea{font-size:12px;padding:5px 8px}
+    .inv-item-head .inv-item input{width:100%;box-sizing:border-box}
+  }
+  @media(max-width:420px){
+    .inv-item-head,.inv-item{grid-template-columns:1fr 70px 80px 28px;gap:4px}
+    .inv-item input{font-size:11px;padding:4px 5px}
+    .inv-page{padding:10px;font-size:10px}
+    .inv-page .co-name{font-size:15px}
+    .inv-page .doc-title{font-size:13px}
+    .inv-page table.tb th,.inv-page table.tb td{font-size:9px;padding:3px 4px}
+    .inv-page .tot-box{width:100%}
+  }
   </style>
 
   <div class="inv-wrap">

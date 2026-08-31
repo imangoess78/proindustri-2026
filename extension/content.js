@@ -145,9 +145,45 @@
         descriptionUrl = descriptionUrl.replace(/\\\//g,'/').replace(/\\u002F/g,'/').replace(/\\u0026/g,'&').trim();
       }
     }catch{}
-    // 2) Coba DOM #nav-description / iframe (paling lengkap di browser)
+    // 2) ALD PRIORITY: selalu fetch descriptionUrl DULUAN (tiru get_product_description_from_url ALD)
+    // Respon descriptionUrl = HTML deskripsi produk ASLI dari aeproductsourcesite — TANPA heading
+    // "Description", TANPA tombol "Report"/"Share"/chrome UI lainnya. Murni konten seller.
+    if(descriptionUrl){
+      try{
+        const r = await fetch(descriptionUrl, { headers: { 'Accept': 'text/html,*/*' } });
+        if(r.ok){
+          let text = await r.text();
+          if(text && text.length>200){
+            // descriptionUrl kadang berupa .js berisi document.write("...") — ekstrak HTML-nya
+            const dw = text.match(/document\.write\(\s*(["'])([\s\S]*?)\1\s*\)/);
+            if(dw && dw[2]) text = dw[2].replace(/\\"/g,'"').replace(/\\n/g,'\n').replace(/\\\//g,'/');
+            let clean = text.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?<\/style>/gi,'').trim().slice(0,60000);
+            clean = clean.replace(/<div[^>]*brandPlus[^>]*>[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/gi,'').trim();
+            try{
+              const doc = new DOMParser().parseFromString(clean,'text/html');
+              if(doc.body && doc.body.innerHTML) clean = doc.body.innerHTML;
+            }catch{}
+            const valid = (clean.includes('<img') || clean.length>500) && !clean.includes('brandPlus');
+            if(valid){
+              descHtml = clean;
+              const t = (new DOMParser().parseFromString(clean,'text/html').body?.innerText || clean.replace(/<[^>]+>/g,' ')).replace(/\s+/g,' ').trim().slice(0,800);
+              if(t.length>20) desc = t;
+              const re2 = /https:\/\/ae\d*\.alicdn\.com\/[^"'\\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+              let m2;
+              while((m2=re2.exec(clean))!==null){
+                const u = m2[0].replace(/_\d+x\d+\.(jpg|png|webp)/,'.$1').replace(/\.jpg_\w+/,'.jpg');
+                if(!descImages.includes(u)) descImages.push(u);
+              }
+            }
+          }
+        }
+      }catch(e){ console.warn('PI: fetch descriptionUrl (ALD priority) gagal', e); }
+    }
+    // 2b) FALLBACK DOM — hanya jalan kalau fetch descriptionUrl gagal/tidak ada URL.
     // PENTING: AE punya div "description--brandPlus..." (BrandPlus badge) — BUKAN deskripsi produk. Harus di-skip.
     // Deskripsi asli ada di: #nav-description, iframe aeproductsourcesite, atau descriptionUrl terpisah.
+    // NOTE: DOM #nav-description membawa chrome UI (heading "Description", tombol "Report") — di-strip di bawah.
+    if(!descHtml){
     try{
       const isBrandPlus = (el)=> el.className && String(el.className).includes('brandPlus');
       const candidates = [
@@ -213,8 +249,8 @@
         }
       }
     }catch{}
-    // 2b) Jika descriptionUrl ada tapi descHtml kosong/placeholder → fetch LANGSUNG di sini (tidak menunggu popup)
-    // Ini yang paling andal: ALD fetch descriptionUrl => HTML deskripsi produk asli
+    } // /if(!descHtml) — DOM fallback hanya kalau fetch descriptionUrl gagal/tidak ada
+    // 2c) Safety net: kalau masih placeholder, fetch descriptionUrl sekali lagi (guard kedua, tiru ALD)
     const isPlaceholder = (h)=> !h || h.length < 100 || h.includes('brandPlus') || (h.includes('Buy ') && h.includes('at Aliexpress for')) || h.startsWith('<p>') && !h.includes('<img');
     if(descriptionUrl && isPlaceholder(descHtml)){
       try{

@@ -197,6 +197,9 @@ a{text-decoration:none;color:inherit}
 .cat-name{font-size:13px;font-weight:800;color:white;margin-bottom:3px}
 .cat-sub{font-size:11px;color:rgba(255,255,255,0.7)}
 .cat-badge-pill{position:absolute;top:10px;left:10px;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px}
+.cat-card.c-all{border:2px dashed rgba(255,255,255,0.45)}
+.cat-card.c-all .cat-ov{background:linear-gradient(to top,rgba(15,23,42,0.75) 0%,rgba(15,23,42,0.15) 60%,transparent 100%)}
+.cat-card.c-all .cat-name{display:flex;align-items:center;gap:6px}
 .filter-wrap{background:white;border-radius:var(--radius);padding:20px;margin-bottom:24px;box-shadow:var(--shadow);border:1px solid var(--border)}
 .filter-top{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
 .sort-select{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;font-family:var(--font);outline:none;cursor:pointer;color:var(--dark);background:white}
@@ -339,6 +342,11 @@ a{text-decoration:none;color:inherit}
 .pd-desc{background:white;border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);margin-bottom:14px}
 .pd-desc-title{font-size:15px;font-weight:800;color:var(--dark);margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--border)}
 .pd-desc-text{font-size:14px;color:var(--mid);line-height:1.8;white-space:pre-line}
+/* Tabel spesifikasi dalam deskripsi (dari darmasakti/WooCommerce) — tampilkan border agar rapi */
+.pd-desc-text table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px;line-height:1.6}
+.pd-desc-text table th,.pd-desc-text table td{border:1px solid #dde1e6;padding:8px 10px;text-align:left;vertical-align:top}
+.pd-desc-text table th{background:#f4f6f8;font-weight:700;color:var(--dark)}
+.pd-desc-text table tr:nth-child(even) td{background:#fafbfc}
 .maps-ongkir{background:white;border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);margin-bottom:14px}
 .maps-ongkir-title{font-size:15px;font-weight:800;color:var(--dark);margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--border)}
 .maps-btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
@@ -2002,7 +2010,7 @@ let currentUser=JSON.parse(localStorage.getItem('mp_user')||'null');
 let appliedVoucher=null;
 
 const fmt=n=>'Rp'+Math.round(n).toLocaleString('id-ID');
-const catShort=c=>c;
+const catShort=c=>{c=String(c==null?'':c).trim();const i=c.lastIndexOf('>');return i>-1?c.slice(i+1).trim():c;};
 const getDisc=qty=>0;
 function getImg(p){return p.img||CAT_IMGS[CAT_KEY[p.category]||'cat_mesin']||'';}
 function getTQ(){return cart.reduce((s,c)=>s+c.qty,0);}
@@ -2024,16 +2032,51 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 async function renderCatGrid(){
   const el=document.getElementById('catGrid');if(!el)return;
   try{
-    const EMOJI_TO_LUCIDE={'🫱':'hand','💪':'dumbbell','🛡️':'shield','🧩':'puzzle','🥖':'wheat','🤐':'lock','📦':'package','📁':'folder','🏷️':'tag','⭐':'star'};
-const res=await fetch('/api/categories',{cache:'no-store'});
+    const EMOJI_TO_LUCIDE={'🫱':'hand','💪':'dumbbell','🛡️':'shield','🧩':'puzzle','🥖':'wheat','🤐':'lock','📦':'package','📁':'folder','🏷️':'tag','⭐':'star','🗺️':'map-pin','📏':'ruler','⚙️':'settings','🔌':'zap','🏭':'building','🦺':'shield','📐':'ruler'};
+    const res=await fetch('/api/categories',{cache:'no-store'});
     const list=await res.json();
     if(Array.isArray(list)&&list.length){
-      el.innerHTML=list.map((c,i)=>`
-        <a class="cat-card${i===0?' c2':''}" href="/kategori/${encodeURIComponent(c.slug)}">
-          <img src="${c.featured_image||CAT_IMGS[{'mesin-tools':'cat_mesin','elektronik-power-tools':'cat_elektronik','industri-manufaktur':'cat_industri','safety-perlengkapan':'cat_safety','lainnya':'cat_lainnya'}[c.slug]||'cat_mesin']||CAT_IMGS.cat_mesin}" alt="${esc(c.name)}" loading="lazy" onerror="this.src='${CAT_IMGS.cat_mesin}'">
+      // Group by parent: "Parent > Sub" → tampilkan kartu per Parent saja
+      const groups={}, order={};
+      list.forEach((c,i)=>{
+        const hasSub=String(c.name||'').indexOf('>')>-1;
+        const parent=hasSub?c.name.split('>')[0].trim():c.name;
+        if(!groups[parent]){groups[parent]={name:parent,row:null,subs:[]};}
+        if(hasSub){groups[parent].subs.push(c);}
+        else{groups[parent].row=c; order[parent]=Number(c.sort_order)||i;}
+      });
+      const CAT_IMG_MAP={'Mesin & Tools':'cat_mesin','Elektronik & Power Tools':'cat_elektronik','Industri & Manufaktur':'cat_industri','Safety & Perlengkapan':'cat_safety','Lainnya':'cat_lainnya'};
+      const parents=Object.values(groups).sort((a,b)=>(order[a.name]??999)-(order[b.name]??999));
+      // Simple: maks 6 kartu utama (prioritas yang sudah ada featured_image / sort_order), sisanya → tile "Semua Kategori"
+      const MAX_CARDS=6;
+      const main=parents.filter(g=>g.row&&(g.row.featured_image||Number(g.row.sort_order)>0));
+      const rest=parents.filter(g=>!(g.row&&(g.row.featured_image||Number(g.row.sort_order)>0)));
+      const shown=main.concat(rest).slice(0,MAX_CARDS);
+      const hidden=parents.filter(g=>shown.indexOf(g)===-1);
+      let html=shown.map((g,i)=>{
+        const row=g.row;
+        const slug=row?row.slug:(g.subs[0]?g.subs[0].slug:'');
+        if(!slug)return '';
+        const img=(row&&row.featured_image)?row.featured_image:(CAT_IMGS[CAT_IMG_MAP[g.name]]||CAT_IMGS.cat_mesin);
+        const subCount=g.subs.length;
+        const subLabel=subCount>0?subCount+' subkategori':((row&&row.description)?row.description:'');
+        const icon=(row&&row.icon)?row.icon:'📦';
+        return `<a class="cat-card${i===0?' c2':''}" href="/kategori/${encodeURIComponent(slug)}">
+          <img src="${img}" alt="${esc(g.name)}" loading="lazy" onerror="this.src='${CAT_IMGS.cat_mesin}'">
           <div class="cat-ov"></div>
-          <div class="cat-info"><div class="cat-name">${c.icon?IC(EMOJI_TO_LUCIDE[c.icon]||'folder')+' ':''}${esc(c.name)}</div><div class="cat-sub">${esc(c.description||'')}</div></div>
-        </a>`).join('');
+          <div class="cat-info"><div class="cat-name">${IC(EMOJI_TO_LUCIDE[icon]||'folder')+' '}${esc(g.name)}</div><div class="cat-sub">${esc(subLabel)}</div></div>
+        </a>`;
+      }).join('');
+      // Tile "Semua Kategori" jika masih ada kategori/subkategori tersembunyi
+      if(hidden.length){
+        const hiddenSubs=hidden.reduce((n,g)=>n+1+g.subs.length,0);
+        html+=`<a class="cat-card c-all" href="/shop">
+          <img src="${CAT_IMGS.cat_lainnya}" alt="Semua Kategori" loading="lazy" onerror="this.src='${CAT_IMGS.cat_mesin}'">
+          <div class="cat-ov"></div>
+          <div class="cat-info"><div class="cat-name">${IC('layout-dashboard')+' '}Semua Kategori</div><div class="cat-sub">${hiddenSubs}+ kategori & subkategori</div></div>
+        </a>`;
+      }
+      el.innerHTML=html;
       return;
     }
   }catch(e){}
@@ -2197,8 +2240,8 @@ async function openProduct(id){
   const setEl=(id,val,prop='textContent')=>{const el=document.getElementById(id);if(el)el[prop]=val;};
 
   setEl('pdImg',img,'src');
-  setEl('pdCrumb',(p.category||'')+' › '+(p.short_name||p.name).substring(0,40)+'...');
-  setEl('pdCat',p.category||'');
+  setEl('pdCrumb',(catShort(p.category)||'')+' › '+(p.short_name||p.name).substring(0,40)+'...');
+  setEl('pdCat',catShort(p.category)||'');
   setEl('pdName',p.name);
   const rtEl=document.getElementById('pdRating');
   if(rtEl)rtEl.innerHTML=starsHtml(p.id)+'<span class="p-sold">· '+fmtSold(fakeSold(p.id))+' + terjual</span>';

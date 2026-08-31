@@ -8,6 +8,20 @@ const WA_STORE = 'https://wa.me/6281394191904';
 function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+// Tampilkan nama kategori "simple": ambil bagian terakhir setelah " > " (child), fallback nama asli
+function shortCat(c) {
+  const s = String(c ?? '').trim();
+  if (!s) return '';
+  const i = s.lastIndexOf('>');
+  return i > -1 ? s.slice(i + 1).trim() : s;
+}
+// Nama parent dari "Parent > Child" → "Parent" (fallback nama asli)
+function catParent(c) {
+  const s = String(c ?? '').trim();
+  if (!s) return '';
+  const i = s.indexOf('>');
+  return i > -1 ? s.slice(0, i).trim() : s;
+}
 // ── Fake rating & jumlah terjual (deterministik per product id, konsisten server+client) ──
 function _phash(id) {
   const s = String(id);
@@ -273,7 +287,7 @@ export async function renderProduct(env, p) {
         <div class="pd-badges">${badges.map(b => `<span class="pd-badge">${b}</span>`).join('')}</div>
       </div>
       <div>
-        <div class="pd-cat">${esc(p.category || 'Produk')}</div>
+        <div class="pd-cat">${esc(shortCat(p.category) || 'Produk')}</div>
         <h1 class="pd-name">${esc(p.name)}</h1>
         <div class="pd-price" id="pdPrice">${priceLabel}</div>
         <div class="pd-rating" id="pdRating">${starsHtml(p.id)}<span class="p-sold">· ${fmtSold(fakeSold(p.id))}+ terjual</span></div>
@@ -912,7 +926,7 @@ function homeCard(p) {
   const max = Number(p.max_price) || 0;
   const price = min === max ? fmt(min) : `${fmt(min)} – ${fmt(max)}`;
   const name = esc(p.short_name || p.name);
-  const tag = esc(p.category || '');
+  const tag = esc(shortCat(p.category));
   const best = BESTSELLER_IDS.includes(p.id)
     ? `<span class="p-pill" style="left:auto;right:8px;top:8px;background:var(--red);color:white"><svg class="ic" aria-hidden="true"><use href="#i-flame"/></svg> Terlaris</span>`
     : '';
@@ -966,8 +980,27 @@ export async function renderShop(env, searchQuery) {
     variants: (() => { try { return JSON.parse(p.variants || '[]'); } catch (e) { return []; } })(),
   }))).replace(/</g, '\\u003c');
 
-  const catHtml = cats.map(c => `
-    <label class="shop-cat"><input type="checkbox" value="${esc(c)}" onchange="applyShop(true)">${esc(c)}<span class="count">${products.filter(p => p.category === c).length}</span></label>`).join('');
+  // Sidebar: group by parent — parent jadi header, child checkbox diindent (label child saja)
+  const catMap = new Map();
+  cats.forEach(c => {
+    const p = catParent(c);
+    if (!catMap.has(p)) catMap.set(p, []);
+    catMap.get(p).push(c);
+  });
+  const catHtml = [...catMap.entries()].map(([parent, list]) => {
+    const exact = list.filter(c => c === parent);
+    const subs = list.filter(c => c !== parent);
+    const rows = [];
+    if (exact.length) {
+      rows.push(`<label class="shop-cat"><input type="checkbox" value="${esc(parent)}" onchange="applyShop(true)">${esc(parent)}<span class="count">${products.filter(p => p.category === parent).length}</span></label>`);
+    }
+    subs.forEach(c => {
+      rows.push(`<label class="shop-cat shop-cat-sub"><input type="checkbox" value="${esc(c)}" onchange="applyShop(true)">${esc(shortCat(c))}<span class="count">${products.filter(p => p.category === c).length}</span></label>`);
+    });
+    return subs.length
+      ? `<div class="shop-cat-group"><div class="shop-cat-parent">${esc(parent)}</div>${rows.join('')}</div>`
+      : rows.join('');
+  }).join('');
 
   const body = `
   <div class="wrap">
@@ -1038,10 +1071,11 @@ export async function renderShop(env, searchQuery) {
     function fakeSold(id){var h=_phash(id),base=12+(h%190)*3,extra=(h>>>9)%10;return base+(extra===0?400+(h%3000):0);}
     function fmtSold(n){if(n>=1000)return (n/1000).toFixed(1).replace('.',',')+'rb';return String(n);}
     function starsHtml(id){var r=fakeRating(id),filled=Math.round(r),s='',i;for(i=0;i<5;i++)s+=i<filled?'★':'☆';return '<span class="p-stars">'+s+'</span><span class="p-rate">'+r.toFixed(1)+'</span>';}
+    function shortCat(c){c=String(c==null?'':c).trim();const i=c.lastIndexOf('>');return i>-1?c.slice(i+1).trim():c;}
     function cardHtml(p){
       const q = String.fromCharCode(39);
       const price = p.min === p.max ? 'Rp' + Math.round(p.min).toLocaleString('id-ID') : 'Rp' + Math.round(p.min).toLocaleString('id-ID') + ' – Rp' + Math.round(p.max).toLocaleString('id-ID');
-      const tag = (p.cat || '');
+      const tag = shortCat(p.cat || '');
       const best = ['29463366459','19626400134'].includes(p.id) ? '<span class="p-pill" style="left:auto;right:8px;top:8px;background:var(--red);color:white"><svg class="ic" aria-hidden="true"><use href="#i-flame"/></svg> Terlaris</span>' : '';
       const vs = p.variants || [];
       const vFirst = vs.filter(function(v){return Number(v.price)>0}).sort(function(a,b){return Number(a.price)-Number(b.price)})[0] || null;
@@ -1140,7 +1174,7 @@ export async function renderArchive(env, page = 1) {
     return `<div class="arch-group">
       <div class="arch-cat">
         <span class="arch-cat-icon"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg></span>
-        <h2>${esc(c)}</h2>
+        <h2>${esc(shortCat(c))}</h2>
         <span class="arch-count">${items.length} produk</span>
       </div>
       <div class="p-grid">${items.map(homeCard).join('')}</div>
@@ -1191,9 +1225,18 @@ export async function renderCategory(env, slug, page = 1) {
   try { catInfo = await env.DB.prepare('SELECT * FROM categories WHERE slug=? AND active=1').bind(slug).first(); } catch (e) {}
   const name = catInfo ? catInfo.name : categoryBySlug(slug);
   if (!name) return null;
-  const { results } = await env.DB.prepare(
-    'SELECT id,slug,name,short_name,category,img,min_price,max_price,variants FROM products WHERE active=1 AND category=? ORDER BY min_price'
-  ).bind(name).all();
+  const shortName = shortCat(name); // tampilan: subkategori tampil child saja
+  // Subkategori: kategori lain yang namanya "Parent > Sub" (parent view otomatis gabung produknya)
+  let subs = [];
+  try {
+    const { results } = await env.DB.prepare('SELECT slug,name,icon FROM categories WHERE active=1 AND name LIKE ? ORDER BY sort_order, id').bind(name + ' > %').all();
+    subs = results;
+  } catch (e) {}
+  const isParent = subs.length > 0;
+  // Parent: tampilkan produk dari parent + semua subkategori; Sub: exact match
+  const { results } = isParent
+    ? await env.DB.prepare('SELECT id,slug,name,short_name,category,img,min_price,max_price,variants FROM products WHERE active=1 AND (category=? OR category LIKE ?) ORDER BY min_price').bind(name, name + ' > %').all()
+    : await env.DB.prepare('SELECT id,slug,name,short_name,category,img,min_price,max_price,variants FROM products WHERE active=1 AND category=? ORDER BY min_price').bind(name).all();
   const total = results.length;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   if (page < 1) page = 1;
@@ -1203,19 +1246,24 @@ export async function renderCategory(env, slug, page = 1) {
 
   const items = pageProducts.map(homeCard).join('');
   const featImg = catInfo && catInfo.featured_image ? catInfo.featured_image.replace(/^https:\/\/pub-[a-f0-9]+\.r2\.dev\//, '/img/') : imgUrl(results[0] || {});
-  const desc = catInfo && catInfo.description ? catInfo.description : `${total} produk ${name} tersedia di ProIndustri.`;
-  const EMOJI_TO_LUCIDE = { '🫱': 'hand', '💪': 'dumbbell', '🛡️': 'shield', '🧩': 'puzzle', '🥖': 'wheat', '🤐': 'lock', '<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg>': 'package', '📁': 'folder', '🏷️': 'tag', '⭐': 'star', '📂': 'folder' };
+  const desc = catInfo && catInfo.description ? catInfo.description : `${total} produk ${shortName} tersedia di ProIndustri.`;
+  const EMOJI_TO_LUCIDE = { '🫱': 'hand', '💪': 'dumbbell', '🛡️': 'shield', '🧩': 'puzzle', '🥖': 'wheat', '🤐': 'lock', '<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg>': 'package', '📁': 'folder', '🏷️': 'tag', '⭐': 'star', '📂': 'folder', '🗺️': 'map-pin', '📏': 'ruler', '⚙️': 'settings', '🔌': 'zap', '🏭': 'building', '🦺': 'shield', '📐': 'ruler' };
   const rawIcon = catInfo && catInfo.icon ? catInfo.icon : '<svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg>';
   const iconName = EMOJI_TO_LUCIDE[rawIcon] || 'folder';
-  const emptyMsg = total ? '' : `<div class="wl-empty" style="padding:32px"><div class="wl-empty-icon"><svg class="ic" aria-hidden="true"><use href="#i-inbox"/></svg></div><div class="akun-empty-sub" style="font-size:14px;color:var(--muted)">Belum ada produk di kategori <strong>${esc(name)}</strong>.<br>Kategori ini baru dibuat — produk akan tampil di sini begitu ditambahkan.</div></div>`;
+  const emptyMsg = total ? '' : `<div class="wl-empty" style="padding:32px"><div class="wl-empty-icon"><svg class="ic" aria-hidden="true"><use href="#i-inbox"/></svg></div><div class="akun-empty-sub" style="font-size:14px;color:var(--muted)">Belum ada produk di kategori <strong>${esc(shortName)}</strong>.<br>Kategori ini baru dibuat — produk akan tampil di sini begitu ditambahkan.</div></div>`;
   const pager = paginationHtml(page, total, '/kategori/' + slug);
+  // Chips subkategori (hanya di parent view)
+  const subChips = isParent
+    ? `<div class="cat-chips">${subs.map(s => `<a class="cat-chip" href="/kategori/${encodeURIComponent(s.slug)}">${s.icon ? esc(s.icon) + ' ' : ''}${esc(s.name.replace(name + ' > ', ''))}</a>`).join('')}</div>`
+    : '';
   const body = `
   <div class="wrap">
-    ${breadcrumb([{ href: '/shop', label: 'Shop' }, { href: '/kategori/' + slug, label: name }])}
+    ${breadcrumb([{ href: '/shop', label: 'Shop' }, { href: '/kategori/' + slug, label: shortName }])}
     <div class="page-head">
-      <div class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-${iconName}"/></svg> ${esc(name)}</div>
+      <div class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-${iconName}"/></svg> ${esc(shortName)}</div>
       <div class="page-sub">${esc(desc)}</div>
     </div>
+    ${subChips}
     <div class="p-grid">${items}</div>
     ${emptyMsg}
     ${pager}
@@ -1224,5 +1272,5 @@ export async function renderCategory(env, slug, page = 1) {
     </div>
   </div>`;
 
-  return { html: layout({ title: `Jual ${name} Grosir — ${SITE_NAME}`, desc: `Beli ${name} harga grosir di ProIndustri. ${total} varian, original & bergaransi, kirim seluruh Indonesia.`, canonical: ORIGIN + '/kategori/' + slug + (page > 1 ? '?page=' + page : ''), ogImage: featImg, body, bodyClass: 'page-category', script: WISH_SCRIPT + QUICKMODAL_SCRIPT }), script: '' };
+  return { html: layout({ title: `Jual ${shortName} Grosir — ${SITE_NAME}`, desc: `Beli ${shortName} harga grosir di ProIndustri. ${total} varian, original & bergaransi, kirim seluruh Indonesia.`, canonical: ORIGIN + '/kategori/' + slug + (page > 1 ? '?page=' + page : ''), ogImage: featImg, body, bodyClass: 'page-category', script: WISH_SCRIPT + QUICKMODAL_SCRIPT }), script: '' };
 }

@@ -391,6 +391,16 @@ const STATUS_CLASS = {'Menunggu Pembayaran':'s-waiting','Menunggu Konfirmasi':'s
 // tapi sebagian alur lama menyimpannya sebagai string — pj() menangani keduanya.
 const pj = (v, fb) => { if (v == null) return fb; if (typeof v !== 'string') return v; try { return JSON.parse(v); } catch (e) { return fb; } };
 const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// Badge sumber produk: AE (AliExpress) atau DS (Darmasakti) dengan warna sesuai
+const srcBadge = (url, size = 18) => {
+  if (!url) return '';
+  const isDS = url.includes('darmasakti');
+  const label = isDS ? 'DS' : 'AE';
+  const bg = isDS ? '#193150' : '#ff6a00';
+  const s = Math.round(size);
+  const title = isDS ? 'Sumber Darmasakti' : 'Sumber AliExpress';
+  return `<a href="${esc(url)}" target="_blank" rel="noopener" title="${title}" style="display:inline-flex;align-items:center;justify-content:center;width:${s}px;height:${s}px;border-radius:${Math.round(s/3)}px;background:${bg};color:#fff;text-decoration:none;font-size:${Math.round(s/2)}px;font-weight:900;vertical-align:middle;margin-left:4px">${label}</a>`;
+};
 
 function toast(msg, type) {
   const el = document.createElement('div');
@@ -835,7 +845,7 @@ function renderOrderDetail(c, o) {
           <table style="width:100%;font-size:12px"><thead><tr><th>Produk</th><th>Varian</th><th>Qty</th><th>Harga</th><th>Subtotal</th></tr></thead>
           <tbody>${items.map(it => {
             const aeUrl = (PRODUCTS.find(pp=>pp.id===it.productId)||{}).ae_url || it.ae_url || '';
-            const aeLink = aeUrl ? ` <a href="${esc(aeUrl)}" target="_blank" rel="noopener" title="Buka sumber AE" style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;background:#ff6a00;color:#fff;text-decoration:none;font-size:9px;font-weight:900;vertical-align:middle">AE</a>` : '';
+            const aeLink = srcBadge(aeUrl);
             return `<tr>
             <td>${esc(it.productName||it.name||'')}${aeLink}</td><td>${esc(it.variant||it.variantName||'-')}</td>
             <td>${it.qty}</td><td>${fmt(it.price||0)}</td><td>${fmt((it.price||0)*(it.qty||1))}</td>
@@ -1502,7 +1512,7 @@ function renderProducts(c) {
           const img = p.img || '';
           return `<tr>
             <td>${img ? `<img src="${esc(img)}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--border)" onerror="this.style.display='none'">` : '<span style="font-size:22px">' + IC("shopping-bag") + '️</span>'}</td>
-            <td style="max-width:280px"><b style="font-size:12px">${esc((p.short_name||p.name||'').substring(0,80))}</b> ${p.ae_url ? `<a href="${esc(p.ae_url)}" target="_blank" rel="noopener" title="Buka sumber AE" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#ff6a00;color:#fff;text-decoration:none;font-size:11px;font-weight:900;vertical-align:middle;margin-left:4px">AE</a>` : ''}<br><span style="font-size:10px;color:var(--muted);font-family:monospace">${esc(p.id)}</span></td>
+            <td style="max-width:280px"><b style="font-size:12px">${esc((p.short_name||p.name||'').substring(0,80))}</b> ${srcBadge(p.ae_url, 22)}<br><span style="font-size:10px;color:var(--muted);font-family:monospace">${esc(p.id)}</span></td>
             <td><span style="background:var(--gold-light);color:var(--gold);padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">${esc(p.category||'-')}</span></td>
             <td style="font-weight:800;white-space:nowrap">${fmt(p.min_price||0)}<br><span style="font-size:10px;color:var(--muted);font-weight:600">– ${fmt(p.max_price||0)}</span></td>
             <td><b>${variants.length}</b> <span style="font-size:10px;color:var(--muted)">varian · stok ${stock.toLocaleString('id-ID')}</span></td>

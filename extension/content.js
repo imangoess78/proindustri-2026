@@ -18,7 +18,7 @@
     const images = [];
     const ogImg = getMeta(/<meta property="og:image" content="([^"]+)"/);
     if(ogImg) images.push(ogImg);
-    const cdnRe = /https:\/\/ae\d*\.alicdn\.com\/[^"'\\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+    const cdnRe = /https:\/\/ae\d*\.alicdn\.com\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
     let m;
     while((m=cdnRe.exec(html))!==null){
       const u = m[0].replace(/_\d+x\d+\.(jpg|png|webp)/,'.$1').replace(/\.jpg_\w+/,'.jpg');
@@ -114,7 +114,7 @@
       }
       // e) aeproductsourcesite langsung
       if(!descriptionUrl){
-        const mAE = html.match(/https?:\/\/(?:aeproductsourcesite|ae01)\.alicdn\.com\/[^"'\\\s<>]+\.html/);
+        const mAE = html.match(/https?:\/\/(?:aeproductsourcesite|ae01)\.alicdn\.com\/[^"'\s<>]+\.html/);
         if(mAE) descriptionUrl = mAE[0];
       }
       // f) scan bebas: cari domain aeproductsourcesite di SELURUH HTML — paling andal & kebal terhadap escaping \/ maupun unicode
@@ -158,11 +158,63 @@
             var pid = ${JSON.stringify(pid)};
             var ext = '{}';
             try{ ext = JSON.stringify((window._d_c_ && window._d_c_.DCData && window._d_c_.DCData.extParams) || {}); }catch(e){}
-            var done = function(url, descH, specs){
+            var BS = String.fromCharCode(92);
+            var Q = String.fromCharCode(34);
+            var SL = String.fromCharCode(47);
+            var cleanUrl = function(u){
+              try{ return String(u||'').split(BS+SL).join(SL).split(BS+'u002F').join(SL).split(BS+'u0026').join('&'); }catch(e){ return u; }
+            };
+            var norm = function(u){
+              try{ return String(u||'').replace(/(\\.(?:jpg|jpeg|png|webp))_\\d+x\\d+[^/]*$/i,'$1'); }catch(e){ return u; }
+            };
+            var pushImg = function(arr, u){
+              u = cleanUrl(u);
+              if(u.indexOf('alicdn.com')>-1){ u = norm(u); if(arr.indexOf(u)===-1) arr.push(u); }
+            };
+            var collectImgs = function(html, arr){
+              if(!html) return arr;
+              try{
+                var doc = new DOMParser().parseFromString(html,'text/html');
+                doc.querySelectorAll('img').forEach(function(img){
+                  var u = img.getAttribute('src') || img.getAttribute('data-src') || img.getAttribute('data-lazy-src') || img.getAttribute('data-original') || '';
+                  if(u) pushImg(arr, u);
+                });
+              }catch(e){}
+              var re = /https?:\\/\\/ae\\d*\\.alicdn\\.com\\/[^"'\\s<>]+\\.(?:jpg|jpeg|png|webp)/gi;
+              var m; while((m=re.exec(html))!==null) pushImg(arr, m[0]);
+              return arr;
+            };
+            var un = function(t){
+              try{
+                var m = t.match(/document\\.write\\(\\s*(["'])([\\s\\S]*?)\\1\\s*\\)/);
+                if(m && m[2]) t = m[2].replace(/\\\\"/g,Q).replace(/\\\\n/g,String.fromCharCode(10)).replace(/\\\\\\//g,SL);
+              }catch(e){}
+              return t;
+            };
+            var done = function(data){
               var el = document.documentElement;
-              el.setAttribute('data-pi-desc-url', url||'');
-              el.setAttribute('data-pi-desc-html', (descH||'').slice(0,60000));
-              el.setAttribute('data-pi-specs', (specs||'').slice(0,20000));
+              el.setAttribute('data-pi-desc-url', (data.url||'').slice(0,2000));
+              el.setAttribute('data-pi-desc-html', (data.html||'').slice(0,120000));
+              el.setAttribute('data-pi-desc-images', JSON.stringify(data.images||[]));
+              el.setAttribute('data-pi-specs', (data.specs||'').slice(0,20000));
+              el.setAttribute('data-pi-done', '1');
+            };
+            var fetchDesc = function(url, cb){
+              if(!url){ cb({html:'', images:[]}); return; }
+              try{
+                fetch(cleanUrl(url), {headers:{'Accept':'text/html,*/*'}}).then(function(r){ return r.text(); }).then(function(t){
+                  if(!t || t.length<10){ cb({html:'', images:[]}); return; }
+                  t = un(t);
+                  var clean = t.replace(/<script[\\s\\S]*?<\\/script>/gi,'').replace(/<style[\\s\\S]*?<\\/style>/gi,'').trim().slice(0,120000);
+                  try{
+                    var doc = new DOMParser().parseFromString(clean,'text/html');
+                    if(doc.body && doc.body.innerHTML) clean = doc.body.innerHTML;
+                  }catch(e){}
+                  var imgs = [];
+                  collectImgs(clean, imgs);
+                  cb({html:clean, images:imgs.slice(0,40)});
+                }).catch(function(){ cb({html:'', images:[]}); });
+              }catch(e){ cb({html:'', images:[]}); }
             };
             var attempt = function(){
               try{
@@ -177,8 +229,10 @@
                   try{
                     var d = (res && res.data && res.data.result) || {};
                     var dm = d.descriptionModule || {};
-                    var url = dm.descriptionUrl || '';
-                    var descH = dm.description || '';
+                    var url = cleanUrl(dm.descriptionUrl || '');
+                    var descText = dm.description || '';
+                    var imgs = [];
+                    collectImgs(descText, imgs);
                     var specs = '';
                     try{
                       var sm = d.specsModule || {};
@@ -190,8 +244,16 @@
                       }).filter(Boolean).join('');
                       if(items) specs = '<div class="product-specs-list-container"><ul class="product-specs-list">'+items+'</ul></div>';
                     }catch(e){}
-                    done(url, descH, specs);
-                  }catch(e){}
+                    if(url){
+                      fetchDesc(url, function(fd){
+                        var html = (fd.html && (fd.html.indexOf('<img')>-1 || fd.html.length>300)) ? fd.html : descText;
+                        var images = fd.images.length ? fd.images : imgs;
+                        done({url:url, html:html, images:images, specs:specs});
+                      });
+                    } else {
+                      done({url:'', html:descText||'', images:imgs, specs:specs});
+                    }
+                  }catch(e){ done({url:'', html:'', images:[], specs:''}); }
                 }, function(){});
               }catch(e){}
             };
@@ -199,12 +261,14 @@
           })();`;
           (document.head||document.documentElement).appendChild(s);
           setTimeout(()=>{ try{ s.remove(); }catch{} }, 60000);
-          // polling hasil MTOP sampai ~7 detik
+          // polling hasil MTOP sampai ~8 detik (data-pi-done menandakan selesai)
           const t0 = Date.now();
-          while(Date.now()-t0 < 7000){
-            const u = document.documentElement.getAttribute('data-pi-desc-url') || '';
-            if(u){
-              descriptionUrl = u.replace(/\\\//g,'/').replace(/\\u002F/g,'/').replace(/\\u0026/g,'&').trim();
+          while(Date.now()-t0 < 8000){
+            if(document.documentElement.getAttribute('data-pi-done')){
+              const u = document.documentElement.getAttribute('data-pi-desc-url') || '';
+              if(u){
+                descriptionUrl = u.replace(/\\\//g,'/').replace(/\\u002F/g,'/').replace(/\\u0026/g,'&').trim();
+              }
               break;
             }
             await new Promise(r=>setTimeout(r,200));
@@ -213,6 +277,17 @@
           if(rawDesc && !descHtml) descHtml = rawDesc;
           const rawSpecs = document.documentElement.getAttribute('data-pi-specs') || '';
           if(rawSpecs) specsHtmlMtop = rawSpecs;
+          // image deskripsi dari MTOP/page-context fetch descriptionUrl (produk CSR: deskripsi = deretan image)
+          try{
+            const rawImgs = document.documentElement.getAttribute('data-pi-desc-images') || '';
+            if(rawImgs){
+              const arr = JSON.parse(rawImgs);
+              for(const u of arr){
+                // URL sudah di-normalize di injected script (pushImg→norm); pakai apa adanya
+                if(!descImages.includes(u)) descImages.push(u);
+              }
+            }
+          }catch(e){}
         }catch(e){ console.warn('PI: MTOP fallback gagal', e); }
       }
     }
@@ -239,7 +314,7 @@
               descHtml = clean;
               const t = (new DOMParser().parseFromString(clean,'text/html').body?.innerText || clean.replace(/<[^>]+>/g,' ')).replace(/\s+/g,' ').trim().slice(0,800);
               if(t.length>20) desc = t;
-              const re2 = /https:\/\/ae\d*\.alicdn\.com\/[^"'\\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+              const re2 = /https:\/\/ae\d*\.alicdn\.com\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
               let m2;
               while((m2=re2.exec(clean))!==null){
                 const u = m2[0].replace(/_\d+x\d+\.(jpg|png|webp)/,'.$1').replace(/\.jpg_\w+/,'.jpg');
@@ -343,7 +418,7 @@
               descHtml = clean;
               const t = (new DOMParser().parseFromString(clean,'text/html').body?.innerText || clean.replace(/<[^>]+>/g,' ')).replace(/\s+/g,' ').trim().slice(0,800);
               if(t.length>20) desc = t;
-              const re2 = /https:\/\/ae\d*\.alicdn\.com\/[^"'\\\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+              const re2 = /https:\/\/ae\d*\.alicdn\.com\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
               let m2;
               while((m2=re2.exec(clean))!==null){
                 const u = m2[0].replace(/_\d+x\d+\.(jpg|png|webp)/,'.$1').replace(/\.jpg_\w+/,'.jpg');
@@ -362,7 +437,7 @@
       desc = desc || getMeta(/<meta name="description" content="([^"]+)"/) || getMeta(/<meta property="og:description" content="([^"]+)"/) || title || '';
       desc = desc.slice(0,800);
       const scope = html.slice(0,120000);
-      const dRe = /https:\/\/ae\d*\.alicdn\.com\/[^"'\\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+      const dRe = /https:\/\/ae\d*\.alicdn\.com\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
       let idx=0;
       while((m=dRe.exec(scope))!==null){
         const u=m[0].replace(/_\d+x\d+\.(jpg|png|webp)/,'.$1').replace(/\.jpg_\w+/,'.jpg');

@@ -42,9 +42,10 @@
     <div class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg> Artikel & Tips</div>
     <div class="page-sub">Panduan memilih mesin & tools industri, tips untuk bengkel dan pabrik, dan info seputar produk industri.</div>
   </div>
-  <div id="articleList" style="padding-bottom:40px">
+  <div id="articleList" style="padding-bottom:0">
     <div style="text-align:center;padding:50px 0;color:var(--muted)">Memuat artikel...</div>
   </div>
+  <div id="pagination" style="display:none;justify-content:center;align-items:center;gap:8px;padding:8px 0 48px;flex-wrap:wrap"></div>
 </div>
 
 <footer class="footer" id="site-footer"></footer>
@@ -59,16 +60,14 @@ var IC = window.IC;
 (function () {
   const SP = MP;
   const el = document.getElementById('articleList');
+  const pgEl = document.getElementById('pagination');
+  const PER_PAGE = 20;
+  let curPage = 1;
   const fmtDate = d => { try { return new Date(d).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}); } catch(e){ return String(d||'').slice(0,10); } };
   const stripHtml = s => String(s||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
   const trunc = (s,n) => { const t=stripHtml(s); return t.length>n ? t.slice(0,n).trimEnd()+'…' : t; };
 
-  fetch('/api/articles').then(r => r.json()).then(arr => {
-    if (!arr || !arr.length) {
-      el.innerHTML = '<div class="cart-empty" style="padding:60px 0"><div class="cart-empty-icon">' + IC("file-text") + '</div><div class="cart-empty-title">Belum Ada Artikel</div><div class="cart-empty-sub">Artikel & tips seputar produk industri akan segera hadir. Sambil menunggu, yuk lihat koleksi produk kami.</div><a class="btn-red" href="/shop">' + IC("shopping-cart") + ' Lihat Produk</a></div>';
-      return;
-    }
-    el.innerHTML = `<div class="a-grid">${arr.map(a => `
+  const cardHTML = a => `
       <a class="a-card" href="/artikel/${encodeURIComponent(a.slug)}">
         ${a.image ? `<div class="a-thumb"><img src="${a.image.replace(/^https:\/\/pub-[a-f0-9]+\.r2\.dev\//,'/img/')}" alt="${SP.esc(a.title)}" loading="lazy" onerror="this.parentElement.textContent='📝'"></div>` : '<div class="a-thumb">📝</div>'}
         <div class="a-body">
@@ -78,10 +77,61 @@ var IC = window.IC;
           <div class="a-meta">${IC("calendar")} ${fmtDate(a.created_at)} · ${IC("eye")}️ ${Number(a.views || 0)}x dibaca</div>
           <div class="a-read">Baca selengkapnya ${IC("arrow-right")}</div>
         </div>
-      </a>`).join('')}</div>`;
-  }).catch(() => {
-    el.innerHTML = '<div class="cart-empty" style="padding:60px 0"><div class="cart-empty-icon">' + IC("smile") + '</div><div class="cart-empty-title">Gagal Memuat Artikel</div><div class="cart-empty-sub">Coba muat ulang halaman ini, atau hubungi admin via WhatsApp.</div><a class="btn-red" href="https://wa.me/6281394191904" target="_blank" rel="noopener">' + IC("message-circle") + ' Chat WhatsApp</a></div>';
-  });
+      </a>`;
+
+  const emptyHTML = (icon, title, sub, btn) => '<div class="cart-empty" style="padding:60px 0"><div class="cart-empty-icon">' + icon + '</div><div class="cart-empty-title">' + title + '</div><div class="cart-empty-sub">' + sub + '</div>' + (btn||'') + '</div>';
+
+  // Build page-number buttons with ellipsis for many pages
+  function pageNumbers(pages, cur) {
+    const out = new Set([1, pages]);
+    for (let i = Math.max(1, cur - 1); i <= Math.min(pages, cur + 1); i++) out.add(i);
+    const arr = [...out].sort((a, b) => a - b);
+    const res = [];
+    let prev = 0;
+    for (const n of arr) {
+      if (prev && n - prev > 1) res.push('…');
+      res.push(n);
+      prev = n;
+    }
+    return res;
+  }
+
+  function renderPagination(res) {
+    if (!pgEl) return;
+    if (!res || res.pages <= 1) { pgEl.style.display = 'none'; pgEl.innerHTML = ''; return; }
+    pgEl.style.display = 'flex';
+    const p = res.page, pages = res.pages;
+    let html = `<button class="pg-btn" data-goto="${p - 1}" ${p <= 1 ? 'disabled' : ''}>‹</button>`;
+    for (const n of pageNumbers(pages, p)) {
+      if (n === '…') html += '<span class="pg-dots">…</span>';
+      else html += `<button class="pg-btn ${n === p ? 'active' : ''}" data-goto="${n}">${n}</button>`;
+    }
+    html += `<button class="pg-btn" data-goto="${p + 1}" ${p >= pages ? 'disabled' : ''}>›</button>`;
+    pgEl.innerHTML = html;
+    pgEl.querySelectorAll('button[data-goto]').forEach(b => {
+      b.addEventListener('click', () => load(parseInt(b.dataset.goto, 10)));
+    });
+  }
+
+  function load(page) {
+    curPage = page;
+    el.innerHTML = '<div style="text-align:center;padding:50px 0;color:var(--muted)">Memuat artikel...</div>';
+    fetch('/api/articles?page=' + page + '&limit=' + PER_PAGE).then(r => r.json()).then(d => {
+      const arr = d && d.data ? d.data : (Array.isArray(d) ? d : []);
+      if (!arr.length) {
+        el.innerHTML = emptyHTML(IC("file-text"), 'Belum Ada Artikel', 'Artikel & tips seputar produk industri akan segera hadir. Sambil menunggu, yuk lihat koleksi produk kami.', '<a class="btn-red" href="/shop">' + IC("shopping-cart") + ' Lihat Produk</a>');
+        renderPagination(null);
+        return;
+      }
+      el.innerHTML = '<div class="a-grid">' + arr.map(cardHTML).join('') + '</div>';
+      renderPagination(d && d.pages ? d : { page, pages: 1 });
+    }).catch(() => {
+      el.innerHTML = emptyHTML(IC("smile"), 'Gagal Memuat Artikel', 'Coba muat ulang halaman ini, atau hubungi admin via WhatsApp.', '<a class="btn-red" href="https://wa.me/6281394191904" target="_blank" rel="noopener">' + IC("message-circle") + ' Chat WhatsApp</a>');
+      renderPagination(null);
+    });
+  }
+
+  load(1);
 })();
 </script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}</script>

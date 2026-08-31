@@ -219,16 +219,32 @@ export async function renderProduct(env, p) {
   const img = imgUrl(p);
   const fullImg = img ? (img.startsWith('http') ? img : ORIGIN + img) : '';
 
-  // Related products (same category, exclude self)
-  const { results: relatedRows } = await env.DB.prepare(
-    'SELECT id,slug,name,short_name,category,img,min_price,max_price,variants FROM products WHERE active=1 AND category=? AND id<>? ORDER BY min_price LIMIT 4'
-  ).bind(p.category || '', p.id).all();
-  const related = (relatedRows.length >= 2 ? relatedRows : []);
+  // Related products — hierarki 3 tingkat agar selalu relevan:
+  // 1) subkategori sama (exact)  2) parent kategori (LIKE)  3) fallback harga terdekat
+  const cat = p.category || '';
+  const parentCat = cat.includes(' > ') ? cat.split(' > ')[0].trim() : cat;
+  const related = [];
+  const seen = new Set([p.id]);
+  // 1) Subkategori sama persis
+  if (cat) {
+    const { results: sub } = await env.DB.prepare(
+      'SELECT id,slug,name,short_name,category,img,min_price,max_price,variants FROM products WHERE active=1 AND category=? AND id<>? ORDER BY min_price LIMIT 4'
+    ).bind(cat, p.id).all();
+    for (const r of sub) if (!seen.has(r.id)) { seen.add(r.id); related.push(r); }
+  }
+  // 2) Parent kategori (mis. "Alat Survey" utk "Alat Survey > Barometer")
+  if (related.length < 4 && parentCat && parentCat !== cat) {
+    const { results: par } = await env.DB.prepare(
+      'SELECT id,slug,name,short_name,category,img,min_price,max_price,variants FROM products WHERE active=1 AND category LIKE ? AND id<>? ORDER BY min_price LIMIT ?'
+    ).bind(parentCat + '%', p.id, 4 - related.length).all();
+    for (const r of par) if (!seen.has(r.id)) { seen.add(r.id); related.push(r); }
+  }
+  // 3) Fallback: produk lain termurah (jika kategori memang minim)
   if (related.length < 4) {
     const { results: more } = await env.DB.prepare(
       'SELECT id,slug,name,short_name,category,img,min_price,max_price,variants FROM products WHERE active=1 AND id<>? ORDER BY min_price LIMIT ?'
     ).bind(p.id, 4 - related.length).all();
-    for (const m of more) if (!related.find(r => r.id === m.id)) related.push(m);
+    for (const m of more) if (!seen.has(m.id)) { seen.add(m.id); related.push(m); }
   }
 
   // Specs table
@@ -969,7 +985,8 @@ function homeCard(p) {
 // ── Halaman Shop (katalog modern: filter kategori, harga, sort, search) ──
 export async function renderShop(env, searchQuery) {
   const { results } = await env.DB.prepare(
-    'SELECT id,slug,name,short_name,category,img,min_price,max_price,variants FROM products WHERE active=1 ORDER BY category, min_price'
+    // RANDOM() — rotasi urutan produk tiap kunjungan agar bot crawling menyebar ke semua produk
+    'SELECT id,slug,name,short_name,category,img,min_price,max_price,variants FROM products WHERE active=1 ORDER BY RANDOM()'
   ).all();
   const products = results;
   const cats = [...new Set(products.map(p => p.category).filter(Boolean))].sort();

@@ -1805,15 +1805,23 @@ export default {
       return json({ ok: true });
     }
 
-    // ── GET /api/articles ── (public read; admin via ?all=1)
+    // ── GET /api/articles ── (public read; admin via ?all=1; pagination via ?page=N&limit=N)
     if (path === '/api/articles' && request.method === 'GET') {
       const isAdm = await isAdmin(request, env);
       const all = url.searchParams.get('all') === '1';
-      let q = 'SELECT * FROM articles';
-      if (!(isAdm && all)) q += " WHERE status='Published'";
-      q += ' ORDER BY created_at DESC LIMIT 100';
-      const { results } = await env.DB.prepare(q).all();
-      return json(results);
+      const page = parseInt(url.searchParams.get('page')) || 1;
+      const limit = Math.min(parseInt(url.searchParams.get('limit')) || 100, 100);
+      const where = (isAdm && all) ? '' : " WHERE status='Published'";
+      const { results: rows } = await env.DB.prepare('SELECT COUNT(*) AS c FROM articles' + where).all();
+      const total = rows[0] ? rows[0].c : 0;
+      const pages = Math.max(1, Math.ceil(total / limit));
+      const safePage = Math.min(Math.max(1, page), pages);
+      const { results } = await env.DB.prepare(
+        'SELECT * FROM articles' + where + ' ORDER BY created_at DESC LIMIT ? OFFSET ?'
+      ).bind(limit, (safePage - 1) * limit).all();
+      // Legacy call (no page param) → return plain array for backward compat
+      if (!url.searchParams.has('page')) return json(results);
+      return json({ data: results, total, page: safePage, pages, limit });
     }
 
     // ── POST /api/articles ── (admin)

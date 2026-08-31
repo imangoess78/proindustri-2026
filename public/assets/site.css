@@ -455,7 +455,7 @@ button{font-family:var(--font)}
 .shop-count{font-size:13px;color:var(--muted);font-weight:600}
 .shop-count b{color:var(--red)}
 .shop-sort-mobile{display:none;width:auto;min-width:160px}
-.shop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.shop-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 .shop-grid .p-img{height:150px}
 .shop-empty{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--muted);font-size:14px}
 .shop-empty .big{font-size:44px;display:block;margin-bottom:10px}

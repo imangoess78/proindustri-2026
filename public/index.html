@@ -2093,7 +2093,9 @@ function renderProducts(){
   else if(sortVal==='variants_desc')shown.sort((a,b)=>b.variants.length-a.variants.length);
 
   const pc=document.getElementById('productCount');
-  if(pc)pc.textContent='('+shown.length+' produk)';
+  const totalShown=shown.length;
+  if(totalShown>24) shown=shown.slice(0,24);
+  if(pc)pc.textContent= totalShown>24 ? '('+24+' dari '+totalShown+' produk)' : '('+totalShown+' produk)';
 
   if(!shown.length){grid.innerHTML='';if(noRes)noRes.style.display='block';return;}
   if(noRes)noRes.style.display='none';

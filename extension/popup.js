@@ -150,47 +150,40 @@ async function scrapeCurrentTab(){
   const res = await chrome.tabs.sendMessage(tab.id, { type:'PI_SCRAPE_SINGLE' });
   if(!res?.ok) throw new Error(res?.error||'Gagal scrape — buka halaman produk AE dulu');
   let data = res.data;
-  // Tiru 100% ALD: get_product_description_from_url — SELALU fetch jika ada descriptionUrl (ALD: timeout 10, strip <script>, return $body)
-  // ALD: $description .= self::get_product_description_from_url($description_url) — tidak peduli descHtml length
-  // Kita: fetch descriptionUrl jika ada, lalu ALD mode 'item_specifics_and_description' = specsHtml + fetchedBody
+  // ALD: SELALU fetch descriptionUrl jika ada → dapat HTML deskripsi produk asli
   if(data.descriptionUrl){
     try{
       const r = await fetch(data.descriptionUrl, { headers: { 'Accept': 'text/html,*/*' } });
       if(r.ok){
         const body = await r.text();
         if(body && body.length>200){
-          // ALD: $body = preg_replace('/<script\>[\s\S]*?<\/script>/im', '', $request['body']); $description = $body;
-          let clean = body.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?<\/style>/gi,'').trim().slice(0,60000);
+          // descriptionUrl kadang berupa .js berisi document.write("...") — ekstrak HTML-nya
+          const dw = body.match(/document\.write\(\s*(["'])([\s\S]*?)\1\s*\)/);
+          let raw = dw && dw[2] ? dw[2].replace(/\\"/g,'"').replace(/\\n/g,'\n').replace(/\\\//g,'/') : body;
+          let clean = raw.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?<\/style>/gi,'').trim().slice(0,60000);
           clean = clean.replace(/<div[^>]*brandPlus[^>]*>[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/gi,'').trim();
-          // Jika body cuma fragment tanpa <html>, tetap pakai
+          try{
+            const doc = new DOMParser().parseFromString(clean,'text/html');
+            if(doc.body && doc.body.innerHTML) clean = doc.body.innerHTML;
+          }catch{}
           const isValid = (clean.includes('<img') || clean.length>500) && !clean.includes('brandPlus');
           if(isValid){
-            // ALD: $description .= $body  (append), tapi kita sudah punya specsHtml di data.descHtml
-            // Jika data.descHtml sudah ada specs, append; jika kosong/BrandPlus, replace
-            const hasSpecs = data.descHtml && data.descHtml.includes('product-specs-list');
-            if(hasSpecs){
-              data.descHtml = data.descHtml + '\n' + clean;
-            } else if(!data.descHtml || data.descHtml.includes('brandPlus') || data.descHtml.includes('Buy ') || data.descHtml.length<2000){
-              data.descHtml = (hasSpecs ? data.descHtml : '') + clean;
-              if(!hasSpecs && data.descHtml.startsWith(clean)) {
-                // keep specs if any already in descHtml from content.js
-              }
-            } else {
-              // descHtml sudah lengkap tapi tetap append fetched (ALD selalu append)
-              if(!data.descHtml.includes(clean.slice(0,200))) data.descHtml = data.descHtml + '\n' + clean;
+            // Deskripsi ASLI dari AE sebagai konten utama, specs di bawah
+            data.descHtml = clean;
+            if(data.specsHtml && data.specsHtml.length>20){
+              data.descHtml += '\n' + data.specsHtml;
             }
-            // Extract images dari body untuk descImages (ALD: preg_match_all('/src="([\\s\\S]*?)"/im', $description))
+            // Ambil text untuk field desc
+            try{
+              const txt = new DOMParser().parseFromString(clean,'text/html').body?.innerText || '';
+              if(txt.trim().length>20) data.desc = txt.trim().slice(0,800);
+            }catch{}
+            // Extract images
             const re = /https:\/\/ae\d*\.alicdn\.com\/[^"'\\\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
             let m;
-            while((m=re.exec(body))!==null){
-              const u = m[0].replace(/_\d+x\d+\.(jpg|png|webp)/,'.$1').replace(/\.jpg_\w+/,'.jpg');
+            while((m=re.exec(clean))!==null){
+              const u = m[0].replace(/_\d+x\d+\.(jpg|png|webp)/,'.$1').replace(/\.jpg_\w+/,'.jpg').split('?')[0];
               if(!data.descImages.includes(u)) data.descImages.push(u);
-            }
-            // Juga src="..." generik (ALD pakai src="...")
-            const re2 = /src="([^"]+alicdn[^"]+)"/gi;
-            while((m=re2.exec(clean))!==null){
-              const u = m[1].replace(/_\d+x\d+\.(jpg|png|webp)/,'.$1').replace(/\.jpg_\w+/,'.jpg');
-              if(u.includes('alicdn.com') && !data.descImages.includes(u)) data.descImages.push(u);
             }
           }
         }

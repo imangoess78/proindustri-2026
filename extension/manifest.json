@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ProIndustri AE Scraper",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Scrape produk AliExpress → ProIndustri (kurs 18000 + markup 100%, deskripsi asli embed, featured WebP ke R2)",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": [

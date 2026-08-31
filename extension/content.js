@@ -1,11 +1,11 @@
 // ProIndustri AE Scraper — content.js
 // Jalan di aliexpress.com: scrape single product + collect listing URLs + inject floating panel
-(function(){
+(async function(){
   const RATE = 18000, MARKUP = 2;
 
   function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-  function extractProduct(){
+  async function extractProduct(){
     const url = location.href.split('?')[0].split('#')[0];
     const html = document.documentElement.outerHTML;
     const getMeta = (re) => { const m = html.match(re); return m ? m[1] : ''; };
@@ -116,9 +116,33 @@
         const mAE = html.match(/https?:\/\/(?:aeproductsourcesite|ae01)\.alicdn\.com\/[^"'\\\s<>]+\.html/);
         if(mAE) descriptionUrl = mAE[0];
       }
+      // f) scan bebas: cari domain aeproductsourcesite di SELURUH HTML — paling andal & kebal terhadap escaping \/ maupun unicode
+      if(!descriptionUrl){
+        const DOM = 'aeproductsourcesite.alicdn.com';
+        const mi = html.indexOf(DOM);
+        if(mi > -1){
+          // mundur untuk ambil protokol (https:// atau https:\/\/ atau //)
+          let s = Math.max(0, mi-12);
+          const seg = html.slice(s, mi);
+          const pm = seg.match(/(?:https?:)?\\?\/\\?\/$/);
+          const start = pm ? mi - pm[0].length : mi;
+          // maju ambil path sampai tanda kutip/spasi/angle
+          let end = mi + DOM.length;
+          while(end < html.length && !/["'\s<>]/.test(html[end])) end++;
+          descriptionUrl = html.slice(start, end);
+        }
+      }
+      // g) descriptionModule bisa berisi escaped unicode \u002F — cari blok descriptionModule secara longgar
+      if(!descriptionUrl){
+        const mDM = html.match(/"descriptionModule"\s*:\s*\{([\s\S]{0,3000}?)\}/);
+        if(mDM && mDM[1]){
+          const mU = mDM[1].match(/"descriptionUrl"\s*:\s*"([^"]+)"/);
+          if(mU && mU[1]) descriptionUrl = mU[1];
+        }
+      }
       if(descriptionUrl){
         if(descriptionUrl.startsWith('//')) descriptionUrl = 'https:' + descriptionUrl;
-        descriptionUrl = descriptionUrl.replace(/\\\//g,'/').replace(/\\u002F/g,'/').trim();
+        descriptionUrl = descriptionUrl.replace(/\\\//g,'/').replace(/\\u002F/g,'/').replace(/\\u0026/g,'&').trim();
       }
     }catch{}
     // 2) Coba DOM #nav-description / iframe (paling lengkap di browser)
@@ -189,6 +213,40 @@
         }
       }
     }catch{}
+    // 2b) Jika descriptionUrl ada tapi descHtml kosong/placeholder → fetch LANGSUNG di sini (tidak menunggu popup)
+    // Ini yang paling andal: ALD fetch descriptionUrl => HTML deskripsi produk asli
+    const isPlaceholder = (h)=> !h || h.length < 100 || h.includes('brandPlus') || (h.includes('Buy ') && h.includes('at Aliexpress for')) || h.startsWith('<p>') && !h.includes('<img');
+    if(descriptionUrl && isPlaceholder(descHtml)){
+      try{
+        const r = await fetch(descriptionUrl, { headers: { 'Accept': 'text/html,*/*' } });
+        if(r.ok){
+          let text = await r.text();
+          if(text && text.length>200){
+            // descriptionUrl kadang berupa .js berisi document.write("...") — ekstrak HTML-nya
+            const dw = text.match(/document\.write\(\s*(["'])([\s\S]*?)\1\s*\)/);
+            if(dw && dw[2]) text = dw[2].replace(/\\"/g,'"').replace(/\\n/g,'\n').replace(/\\\//g,'/');
+            let clean = text.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<style[\s\S]*?<\/style>/gi,'').trim().slice(0,60000);
+            clean = clean.replace(/<div[^>]*brandPlus[^>]*>[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/gi,'').trim();
+            // Ambil hanya <body> kalau respon berupa full HTML
+            try{
+              const doc = new DOMParser().parseFromString(clean,'text/html');
+              if(doc.body && doc.body.innerHTML){ clean = doc.body.innerHTML; }
+            }catch{}
+            if((clean.includes('<img') || clean.length>500) && !clean.includes('brandPlus')){
+              descHtml = clean;
+              const t = (new DOMParser().parseFromString(clean,'text/html').body?.innerText || clean.replace(/<[^>]+>/g,' ')).replace(/\s+/g,' ').trim().slice(0,800);
+              if(t.length>20) desc = t;
+              const re2 = /https:\/\/ae\d*\.alicdn\.com\/[^"'\\\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+              let m2;
+              while((m2=re2.exec(clean))!==null){
+                const u = m2[0].replace(/_\d+x\d+\.(jpg|png|webp)/,'.$1').replace(/\.jpg_\w+/,'.jpg');
+                if(!descImages.includes(u)) descImages.push(u);
+              }
+            }
+          }
+        }
+      }catch(e){ console.warn('PI: fetch descriptionUrl gagal', e); }
+    }
     // 3) Simpan descriptionUrl untuk di-fetch di popup (seperti ALD: get_product_description_from_url)
     // Jika DOM belum ada descHtml, popup akan fetch descriptionUrl via background
     let _descriptionUrl = descriptionUrl;
@@ -255,7 +313,13 @@
         }
       }
     }catch{}
-    if(specsHtml) descHtml = specsHtml + (descHtml||'');
+    if(specsHtml){
+      if(descHtml && descHtml.length > 50 && !descHtml.includes('brandPlus') && !(descHtml.includes('Buy ') && descHtml.includes('at Aliexpress for'))){
+        descHtml = descHtml + '\n' + specsHtml;  // desc asli dulu, specs di bawah
+      } else {
+        descHtml = specsHtml;  // fallback jika tidak ada desc asli
+      }
+    }
 
     // Category guess from breadcrumb / title
     let category = 'Mesin & Tools';
@@ -263,7 +327,7 @@
     if(catText.includes('electronic')||catText.includes('tool')) category='Elektronik & Power Tools';
     else if(catText.includes('safety')||catText.includes('helmet')||catText.includes('glove')) category='Safety & Perlengkapan';
 
-    return { title, desc, descHtml, descImages, images, featured, variants: previewVariants, priceUSD, aeUrl: location.href, category, descriptionUrl: _descriptionUrl };
+    return { title, desc, descHtml, descImages, images, featured, variants: previewVariants, priceUSD, aeUrl: location.href, category, descriptionUrl: _descriptionUrl, specsHtml };
   }
 
   function collectListingUrls(){
@@ -283,7 +347,7 @@
   // Message handler for popup/background
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse)=>{
     if(msg.type==='PI_SCRAPE_SINGLE'){
-      try{ sendResponse({ ok:true, data: extractProduct() }); }catch(e){ sendResponse({ ok:false, error:e.message }); }
+      extractProduct().then(data=>sendResponse({ ok:true, data })).catch(e=>sendResponse({ ok:false, error:e.message }));
       return true;
     }
     if(msg.type==='PI_COLLECT_LISTING'){
@@ -352,15 +416,16 @@
     btn.style.cssText='position:fixed;bottom:16px;right:16px;z-index:999999;background:#ff6a00;color:#fff;border:none;border-radius:999px;padding:12px 20px;font-weight:900;box-shadow:0 8px 24px rgba(0,0,0,.25);cursor:pointer;font-size:13px';
     btn.onclick=()=>{
       btn.textContent='Menyimpan...';
-      const data = extractProduct();
-      chrome.storage.local.get(['pi_single_queue'], (r)=>{
-        const q = r.pi_single_queue||[];
-        q.push(data);
-        chrome.storage.local.set({ pi_single_queue:q }, ()=>{
-          btn.textContent='Tersimpan ✓ Buka popup';
-          setTimeout(()=>btn.textContent='Scrape → ProIndustri',2000);
+      extractProduct().then(data=>{
+        chrome.storage.local.get(['pi_single_queue'], (r)=>{
+          const q = r.pi_single_queue||[];
+          q.push(data);
+          chrome.storage.local.set({ pi_single_queue:q }, ()=>{
+            btn.textContent='Tersimpan ✓ Buka popup';
+            setTimeout(()=>btn.textContent='Scrape → ProIndustri',2000);
+          });
         });
-      });
+      }).catch(e=>{ btn.textContent='Gagal: '+e.message; setTimeout(()=>btn.textContent='Scrape → ProIndustri',3000); });
     };
     document.body.appendChild(btn);
   }

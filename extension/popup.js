@@ -2,6 +2,19 @@
 const $ = (s)=>document.querySelector(s);
 const RATE_DEFAULT = 18000, MARKUP_DEFAULT = 2;
 
+// Auto-replace branding: AliExpress / Ali Express / aliexpress.com -> ProIndustri / ProIndustri.com
+function replaceBrand(s){
+  if(!s) return s;
+  s = String(s);
+  if(/<[a-z][\s\S]*>/i.test(s)){
+    return s.split(/(<[^>]+>)/g).map(function(seg){
+      if(seg.charAt(0)==='<') return seg; // tag — skip, biar URL/gambar utuh
+      return seg.replace(/aliexpress\.com/gi,'proindustri.com').replace(/\bali[\s]*express\b/gi,'ProIndustri');
+    }).join('');
+  }
+  return s.replace(/aliexpress\.com/gi,'proindustri.com').replace(/\bali[\s]*express\b/gi,'ProIndustri');
+}
+
 function getCfg(cb){
   chrome.storage.local.get({ pi_cfg: { base:'https://proindustri.com', token:'', rate:18000, markup:2 } }, r=>cb(r.pi_cfg));
 }
@@ -190,6 +203,12 @@ async function scrapeCurrentTab(){
       }
     }catch(e){ console.warn('fetch descriptionUrl fail',e); }
   }
+  // Safety: pastikan hasil fetch descriptionUrl (yang overwrite descHtml/desc) juga bersih dari branding AE
+  data.descHtml = replaceBrand(data.descHtml);
+  data.desc = replaceBrand(data.desc);
+  data.title = replaceBrand(data.title);
+  data.category = replaceBrand(data.category);
+  data.specsHtml = replaceBrand(data.specsHtml);
   return data;
 }
 

@@ -5,6 +5,21 @@
 
   function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+  // Auto-replace branding: AliExpress / Ali Express / aliexpress.com -> ProIndustri / ProIndustri.com
+  // Dipakai di SEMUA teks hasil scrape (judul, deskripsi, specs, kategori, nama varian).
+  // Untuk HTML hanya teks yang diganti — atribut (href/src alicdn, dsb) TIDAK disentuh.
+  function replaceBrand(s){
+    if(!s) return s;
+    s = String(s);
+    if(/<[a-z][\s\S]*>/i.test(s)){
+      return s.split(/(<[^>]+>)/g).map(function(seg){
+        if(seg.charAt(0)==='<' ) return seg; // tag — skip, biar URL/gambar utuh
+        return seg.replace(/aliexpress\.com/gi,'proindustri.com').replace(/\bali[\s]*express\b/gi,'ProIndustri');
+      }).join('');
+    }
+    return s.replace(/aliexpress\.com/gi,'proindustri.com').replace(/\bali[\s]*express\b/gi,'ProIndustri');
+  }
+
   async function extractProduct(){
     const url = location.href.split('?')[0].split('#')[0];
     const html = document.documentElement.outerHTML;
@@ -584,7 +599,7 @@
     if(catText.includes('electronic')||catText.includes('tool')) category='Elektronik & Power Tools';
     else if(catText.includes('safety')||catText.includes('helmet')||catText.includes('glove')) category='Safety & Perlengkapan';
 
-    return { title, desc, descHtml, descImages, images, featured, variants: previewVariants, priceUSD, aeUrl: location.href, category, descriptionUrl: _descriptionUrl, specsHtml };
+    return { title: replaceBrand(title), desc: replaceBrand(desc), descHtml: replaceBrand(descHtml), descImages, images, featured, variants: previewVariants.map(v=>({...v, name: replaceBrand(v.name)})), priceUSD, aeUrl: location.href, category: replaceBrand(category), descriptionUrl: _descriptionUrl, specsHtml: replaceBrand(specsHtml) };
   }
 
   function collectListingUrls(){

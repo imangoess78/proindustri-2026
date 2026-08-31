@@ -33,6 +33,20 @@ function slugify(s) {
 }
 function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+// Auto-replace branding: AliExpress / Ali Express / aliexpress.com -> ProIndustri / ProIndustri.com
+// Untuk HTML hanya teks yang diganti — atribut (href/src alicdn, dsb) TIDAK disentuh.
+function replaceBrand(s){
+  if(!s) return s;
+  s = String(s);
+  if(/<[a-z][\s\S]*>/i.test(s)){
+    return s.split(/(<[^>]+>)/g).map(seg => {
+      if(seg.charAt(0)==='<') return seg;
+      return seg.replace(/aliexpress\.com/gi,'proindustri.com').replace(/\bali[\s]*express\b/gi,'ProIndustri');
+    }).join('');
+  }
+  return s.replace(/aliexpress\.com/gi,'proindustri.com').replace(/\bali[\s]*express\b/gi,'ProIndustri');
+}
+
 // ── Customer session (member login/register, token di user_sessions) ──
 async function ensureUserSessions(env) {
   try {
@@ -1588,7 +1602,8 @@ export default {
       const maxPrice = Math.max(...previewVariants.map(v=>v.priceIDR));
 
       return json({
-        title, desc, descHtml, descImages, images: uniqImages, variants: previewVariants,
+        title: replaceBrand(title), desc: replaceBrand(desc), descHtml: replaceBrand(descHtml), descImages, images: uniqImages,
+        variants: previewVariants.map(v => ({ ...v, name: replaceBrand(v.name) })),
         priceUSD, minPrice, maxPrice, rate: RATE, markup: 2,
         aeUrl, rawHints: priceHints.slice(0,5),
       });
@@ -1599,13 +1614,13 @@ export default {
       if (!await isAdmin(request, env)) return json({ error: 'Unauthorized' }, 401);
       const b = await request.json().catch(() => null);
       if (!b || !b.title) return json({ error: 'Missing title' }, 400);
-      const title = String(b.title).slice(0, 200).trim();
+      const title = replaceBrand(String(b.title).slice(0, 200).trim());
       if (!title) return json({ error: 'Title kosong' }, 400);
-      const desc = String(b.descHtml || b.desc || '').slice(0, 20000);
+      const desc = replaceBrand(String(b.descHtml || b.desc || '').slice(0, 20000));
       const aeUrl = String(b.ae_url || b.aeUrl || '').slice(0, 500);
-      const category = String(b.category || 'Mesin & Tools').slice(0, 80);
+      const category = replaceBrand(String(b.category || 'Mesin & Tools').slice(0, 80));
       const variants = Array.isArray(b.variants) ? b.variants.slice(0, 12).map(v => ({
-        name: String(v.name || 'Standard').slice(0, 60),
+        name: replaceBrand(String(v.name || 'Standard').slice(0, 60)),
         price: Math.max(1000, Math.round(Number(v.priceIDR || v.price || 0))),
         stock: Math.max(0, Number(v.stock) || 50),
         min_qty: Math.max(1, Number(v.min_qty) || 1),
@@ -1717,15 +1732,15 @@ export default {
       if (!await isAdmin(request, env)) return json({ error: 'Unauthorized' }, 401);
       const b = await request.json();
       const fields = [], vals = [];
-      if (b.name !== undefined)         { fields.push('name=?');         vals.push(b.name); }
-      if (b.short_name !== undefined)   { fields.push('short_name=?');   vals.push(b.short_name); }
-      if (b.desc !== undefined)         { fields.push('desc=?');         vals.push(b.desc); }
-      if (b.category !== undefined)     { fields.push('category=?');     vals.push(b.category); }
+      if (b.name !== undefined)         { fields.push('name=?');         vals.push(replaceBrand(b.name)); }
+      if (b.short_name !== undefined)   { fields.push('short_name=?');   vals.push(replaceBrand(b.short_name)); }
+      if (b.desc !== undefined)         { fields.push('desc=?');         vals.push(replaceBrand(b.desc)); }
+      if (b.category !== undefined)     { fields.push('category=?');     vals.push(replaceBrand(b.category)); }
       if (b.img_key !== undefined)      { fields.push('img_key=?');      vals.push(b.img_key); }
       if (b.img !== undefined)          { fields.push('img=?');          vals.push(b.img); }
       if (b.min_price !== undefined)    { fields.push('min_price=?');    vals.push(Number(b.min_price)); }
       if (b.max_price !== undefined)    { fields.push('max_price=?');    vals.push(Number(b.max_price)); }
-      if (b.variants !== undefined)     { fields.push('variants=?');     vals.push(JSON.stringify(b.variants)); }
+      if (b.variants !== undefined)     { fields.push('variants=?');     vals.push(JSON.stringify((Array.isArray(b.variants)?b.variants:[]).map(v=>({...v, name: replaceBrand(String(v.name||'Standard'))})))); }
       if (b.specs !== undefined)        { fields.push('specs=?');        vals.push(JSON.stringify(b.specs)); }
       if (b.active !== undefined)       { fields.push('active=?');       vals.push(b.active ? 1 : 0); }
       if (!fields.length) return json({ error: 'Nothing to update' }, 400);

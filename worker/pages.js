@@ -8,6 +8,35 @@ const WA_STORE = 'https://wa.me/6281394191904';
 function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+// ── Fake rating & jumlah terjual (deterministik per product id, konsisten server+client) ──
+function _phash(id) {
+  const s = String(id);
+  let h = 0;
+  for (let i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; }
+  return h;
+}
+function fakeRating(id) {
+  const h = _phash(id);
+  const r = 4.4 + (h % 7) * 0.1; // 4.4 – 5.0
+  return Math.round(r * 10) / 10;
+}
+function fakeSold(id) {
+  const h = _phash(id);
+  const base = 12 + (h % 190) * 3;      // 12 – 579
+  const extra = (h >>> 9) % 10;          // 0-9
+  return base + (extra === 0 ? 400 + (h % 3000) : 0); // kadang jadi ribuan
+}
+function fmtSold(n) {
+  if (n >= 1000) return (n / 1000).toFixed(1).replace('.', ',') + 'rb';
+  return String(n);
+}
+function starsHtml(id) {
+  const r = fakeRating(id);
+  const filled = Math.round(r);
+  let s = '';
+  for (let i = 0; i < 5; i++) s += i < filled ? '★' : '☆';
+  return `<span class="p-stars">${s}</span><span class="p-rate">${r.toFixed(1)}</span>`;
+}
 // Sanitize HTML deskripsi: hanya render tag aman, strip script + event handler
 function sanitizeHtml(s) {
   if (!s) return '';
@@ -247,6 +276,7 @@ export async function renderProduct(env, p) {
         <div class="pd-cat">${esc(p.category || 'Produk')}</div>
         <h1 class="pd-name">${esc(p.name)}</h1>
         <div class="pd-price" id="pdPrice">${priceLabel}</div>
+        <div class="pd-rating" id="pdRating">${starsHtml(p.id)}<span class="p-sold">· ${fmtSold(fakeSold(p.id))}+ terjual</span></div>
         <div class="pd-price-sub">Ready stock · ${sortedVars.length} pilihan varian${minP !== maxP ? ' · mulai ' + fmt(minP) : ''}</div>
 
         ${minPackNote}
@@ -913,6 +943,7 @@ function homeCard(p) {
     </div>
     <div class="p-body">
       <div class="p-name">${name}</div>
+      <div class="p-rating">${starsHtml(p.id)}<span class="p-sold">· ${fmtSold(fakeSold(p.id))}+ terjual</span></div>
       <div class="p-price">${price}</div>
       <div class="p-sub">Garansi ${(p.specs && p.specs['Garansi']) ? p.specs['Garansi'] : 'Resmi'}</div>
       ${vcount ? `<div class="p-vars">${vcount} pilihan varian</div>` : ''}
@@ -1002,6 +1033,11 @@ export async function renderShop(env, searchQuery) {
   const script = `
     const PRODUCTS = ${dataJson};
     const cards = ${JSON.stringify(products.map(p => ({ id: p.id, slug: p.slug, img: imgUrl(p), name: p.short_name || p.name, cat: p.category, min: Number(p.min_price) || 0, max: Number(p.max_price) || 0, variants: (() => { try { return JSON.parse(p.variants || '[]'); } catch (e) { return []; } })() }))).replace(/</g, '\\\\u003c')};
+    function _phash(id){var s=String(id),h=0,i;for(i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))>>>0;}return h;}
+    function fakeRating(id){var h=_phash(id),r=4.4+(h%7)*0.1;return Math.round(r*10)/10;}
+    function fakeSold(id){var h=_phash(id),base=12+(h%190)*3,extra=(h>>>9)%10;return base+(extra===0?400+(h%3000):0);}
+    function fmtSold(n){if(n>=1000)return (n/1000).toFixed(1).replace('.',',')+'rb';return String(n);}
+    function starsHtml(id){var r=fakeRating(id),filled=Math.round(r),s='',i;for(i=0;i<5;i++)s+=i<filled?'★':'☆';return '<span class="p-stars">'+s+'</span><span class="p-rate">'+r.toFixed(1)+'</span>';}
     function cardHtml(p){
       const q = String.fromCharCode(39);
       const price = p.min === p.max ? 'Rp' + Math.round(p.min).toLocaleString('id-ID') : 'Rp' + Math.round(p.min).toLocaleString('id-ID') + ' – Rp' + Math.round(p.max).toLocaleString('id-ID');
@@ -1018,7 +1054,7 @@ export async function renderShop(env, searchQuery) {
         (tag ? '<span class="p-pill">' + tag.replace(/</g,'&lt;') + '</span>' : '') +
         best +
         '<button class="wish-btn" data-id="' + p.id + '" onclick="cardWish(' + q + p.id + q + ',event)">' + (isWished(p.id) ? '<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>' : '<svg class="ic" aria-hidden="true"><use href="#i-heart"/></svg>') + '</button></div>' +
-        '<div class="p-body"><div class="p-name">' + p.name.replace(/</g,'&lt;') + '</div><div class="p-price">' + price + '</div><div class="p-sub">Garansi ' + (p.specs && p.specs['Garansi'] ? p.specs['Garansi'] : 'Resmi') + '</div>' +
+        '<div class="p-body"><div class="p-name">' + p.name.replace(/</g,'&lt;') + '</div><div class="p-rating">' + starsHtml(p.id) + '<span class="p-sold">· ' + fmtSold(fakeSold(p.id)) + '+ terjual</span></div><div class="p-price">' + price + '</div><div class="p-sub">Garansi ' + (p.specs && p.specs['Garansi'] ? p.specs['Garansi'] : 'Resmi') + '</div>' +
         (vcount ? '<div class="p-vars">' + vcount + ' pilihan varian</div>' : '') +
         '<button class="p-btn" ' + d + ' onclick="quickAdd(this,event)">+ Keranjang</button></div></a>';
     }

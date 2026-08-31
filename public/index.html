@@ -1401,7 +1401,7 @@ a{text-decoration:none;color:inherit}
         <div>
           <div class="pd-cat" id="pdCat"></div>
           <div class="pd-name" id="pdName"></div>
-          <div class="pd-rating"><span class="pd-stars">★★★★★</span><span>4.9</span>·<span>1.2rb+ terjual</span></div>
+          <div class="pd-rating" id="pdRating"></div>
           <div class="pd-badges" id="pdBadges"></div>
           <div class="pd-price-box">
             <div class="pd-price-lbl">Harga per Unit</div>
@@ -2064,6 +2064,11 @@ const res=await fetch('/api/categories',{cache:'no-store'});
 }
 
 // ── RENDER PRODUCTS ──
+function _phash(id){var s=String(id),h=0,i;for(i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))>>>0;}return h;}
+function fakeRating(id){var h=_phash(id),r=4.4+(h%7)*0.1;return Math.round(r*10)/10;}
+function fakeSold(id){var h=_phash(id),base=12+(h%190)*3,extra=(h>>>9)%10;return base+(extra===0?400+(h%3000):0);}
+function fmtSold(n){if(n>=1000)return (n/1000).toFixed(1).replace('.',',')+'rb';return String(n);}
+function starsHtml(id){var r=fakeRating(id),filled=Math.round(r),s='',i;for(i=0;i<5;i++)s+=i<filled?'★':'☆';return '<span class="p-stars">'+s+'</span><span class="p-rate">'+r.toFixed(1)+'</span>';}
 function renderProducts(){
   const ss=document.getElementById('sortSelect');
   const pm=document.getElementById('priceMin');
@@ -2109,6 +2114,7 @@ function renderProducts(){
       </div>
       <div class="p-body">
         <div class="p-name">${name}</div>
+        <div class="p-rating">${starsHtml(p.id)}<span class="p-sold">· ${fmtSold(fakeSold(p.id))}+ terjual</span></div>
         ${memberDisc>0?`<div style="font-size:11px;color:#16A34A;font-weight:600">${IC("star")} Harga member (-${memberDisc}%)</div>`:''}
         <div class="p-price">${pr}</div>
         <div class="p-sub">Garansi ${p.specs&&p.specs['Garansi']?p.specs['Garansi']:'Resmi'}</div>
@@ -2149,6 +2155,7 @@ function renderRecentlyViewed(){
       </div>
       <div class="p-body">
         <div class="p-name">${name}</div>
+        <div class="p-rating">${starsHtml(p.id)}<span class="p-sold">· ${fmtSold(fakeSold(p.id))}+ terjual</span></div>
         ${memberDisc>0?`<div style="font-size:11px;color:#16A34A;font-weight:600">${IC("star")} Harga member (-${memberDisc}%)</div>`:''}
         <div class="p-price">${pr}</div>
         <div class="p-sub">Garansi ${p.specs&&p.specs['Garansi']?p.specs['Garansi']:'Resmi'}</div>
@@ -2192,6 +2199,8 @@ async function openProduct(id){
   setEl('pdCrumb',(p.category||'')+' › '+(p.short_name||p.name).substring(0,40)+'...');
   setEl('pdCat',p.category||'');
   setEl('pdName',p.name);
+  const rtEl=document.getElementById('pdRating');
+  if(rtEl)rtEl.innerHTML=starsHtml(p.id)+'<span class="p-sold">· '+fmtSold(fakeSold(p.id))+' + terjual</span>';
 
   const bd=['' + IC("package") + ' Ready Stock','' + IC("truck") + ' Pengiriman Nasional'];
   if(p.specs&&p.specs['Garansi'])bd.unshift('' + IC("check-circle-2") + ' Garansi Resmi');

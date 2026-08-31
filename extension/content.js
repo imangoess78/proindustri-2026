@@ -197,8 +197,48 @@
               el.setAttribute('data-pi-desc-html', (data.html||'').slice(0,120000));
               el.setAttribute('data-pi-desc-images', JSON.stringify(data.images||[]));
               el.setAttribute('data-pi-specs', (data.specs||'').slice(0,20000));
+              el.setAttribute('data-pi-variants', JSON.stringify(data.variants||[]));
               el.setAttribute('data-pi-done', '1');
               try{ el.setAttribute('data-pi-debug', JSON.stringify(data.debug||{})); }catch(e){}
+            };
+            // Ambil daftar SKU/varian dari skuModule MTOP (produk CSR: variants tidak ada di HTML statis,
+            // tapi ada di response mtop.aliexpress.pdp.pc.query -> skuModule.skuPriceList + skuPropList)
+            var parseVariants = function(d){
+              var out = [];
+              try{
+                var sm = (d && d.skuModule) || {};
+                var priceList = sm.skuPriceList || [];
+                // map skuId -> price (untuk kombinasi prop yang harga beda)
+                var priceById = {};
+                var firstPrice = 0;
+                priceList.forEach(function(sp){
+                  var p = parseFloat(String(sp.salePrice || sp.price || '').replace(/[^0-9.]/g,''));
+                  if(!(p>0)) p = 0;
+                  if(sp.skuId) priceById[sp.skuId] = p;
+                  if(!firstPrice && p>0) firstPrice = p;
+                });
+                // skuPropList: prop -> [values] untuk menyusun nama varian rapi
+                var propNames = {};
+                var propList = sm.skuPropList || [];
+                propList.forEach(function(prop){
+                  var pn = prop.propName || prop.name || '';
+                  (prop.values || []).forEach(function(v){
+                    var vid = String(v.valueId || '');
+                    var vn = v.name || v.valueName || '';
+                    if(vid && vn) propNames[vid] = pn ? (pn+' '+vn) : vn;
+                  });
+                });
+                priceList.forEach(function(sp){
+                  var vals = sp.skuVal || {};
+                  var parts = [];
+                  Object.keys(vals).forEach(function(k){ var n = String(vals[k]||''); if(n && parts.indexOf(n)===-1) parts.push(n); });
+                  // prefer nama rapi dari propNames (skip id-numeric)
+                  var name = parts.filter(function(p){ return !/^\d+$/.test(p); }).join(' / ') || parts.join(' / ') || 'Standard';
+                  var p = priceById[sp.skuId] || firstPrice;
+                  if(name && (out.length<30)) out.push({ name: name.slice(0,60), priceUSD: p });
+                });
+              }catch(e){}
+              return out;
             };
             var fetchDesc = function(url, cb){
               if(!url){ cb({html:'', images:[]}); return; }
@@ -252,14 +292,16 @@
                       }).filter(Boolean).join('');
                       if(items) specs = '<div class="product-specs-list-container"><ul class="product-specs-list">'+items+'</ul></div>';
                     }catch(e){}
+                    var variants = parseVariants(d);
+                    dbg.variantCount = variants.length;
                     if(url){
                       fetchDesc(url, function(fd){
                         var html = (fd.html && (fd.html.indexOf('<img')>-1 || fd.html.length>300)) ? fd.html : descText;
                         var images = fd.images.length ? fd.images : imgs;
-                        done({url:url, html:html, images:images, specs:specs, debug:dbg});
+                        done({url:url, html:html, images:images, specs:specs, variants:variants, debug:dbg});
                       });
                     } else {
-                      done({url:'', html:descText||'', images:imgs, specs:specs, debug:dbg});
+                      done({url:'', html:descText||'', images:imgs, specs:specs, variants:variants, debug:dbg});
                     }
                   }catch(e){ done({url:'', html:'', images:[], specs:''}); }
                 }, function(){});
@@ -300,6 +342,25 @@
           try{
             const dbg = document.documentElement.getAttribute('data-pi-debug');
             if(dbg) console.log('PI: MTOP debug', JSON.parse(dbg));
+          }catch(e){}
+          // variants dari skuModule MTOP — pakai kalau HTML statis tidak punya SKU (produk CSR)
+          try{
+            const rv = document.documentElement.getAttribute('data-pi-variants') || '';
+            if(rv){
+              const arr = JSON.parse(rv);
+              if(Array.isArray(arr) && arr.length){
+                const isFallback = previewVariants.length===1 && previewVariants[0].name==='Standard';
+                if(isFallback || arr.length > previewVariants.length){
+                  previewVariants = arr.slice(0,12).map(v=>({
+                    name: String(v.name||'Varian').slice(0,60),
+                    priceUSD: v.priceUSD || priceUSD,
+                    priceIDR: nice(toIDR(v.priceUSD || priceUSD)),
+                    stock: 50, min_qty: 1
+                  }));
+                  console.log('PI: variants dari MTOP skuModule ->', previewVariants.length);
+                }
+              }
+            }
           }catch(e){}
         }catch(e){ console.warn('PI: MTOP fallback gagal', e); }
       }

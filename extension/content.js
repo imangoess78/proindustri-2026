@@ -198,6 +198,7 @@
               el.setAttribute('data-pi-desc-images', JSON.stringify(data.images||[]));
               el.setAttribute('data-pi-specs', (data.specs||'').slice(0,20000));
               el.setAttribute('data-pi-done', '1');
+              try{ el.setAttribute('data-pi-debug', JSON.stringify(data.debug||{})); }catch(e){}
             };
             var fetchDesc = function(url, cb){
               if(!url){ cb({html:'', images:[]}); return; }
@@ -229,6 +230,13 @@
                   try{
                     var d = (res && res.data && res.data.result) || {};
                     var dm = d.descriptionModule || {};
+                    var dbg = {
+                      mtop: !!(window.lib && window.lib.mtop),
+                      hasRes: !!res, keys: Object.keys(d||{}).slice(0,10),
+                      dmKeys: Object.keys(dm).slice(0,10),
+                      hasDescUrl: !!dm.descriptionUrl,
+                      descTextLen: (dm.description||'').length
+                    };
                     var url = cleanUrl(dm.descriptionUrl || '');
                     var descText = dm.description || '';
                     var imgs = [];
@@ -248,10 +256,10 @@
                       fetchDesc(url, function(fd){
                         var html = (fd.html && (fd.html.indexOf('<img')>-1 || fd.html.length>300)) ? fd.html : descText;
                         var images = fd.images.length ? fd.images : imgs;
-                        done({url:url, html:html, images:images, specs:specs});
+                        done({url:url, html:html, images:images, specs:specs, debug:dbg});
                       });
                     } else {
-                      done({url:'', html:descText||'', images:imgs, specs:specs});
+                      done({url:'', html:descText||'', images:imgs, specs:specs, debug:dbg});
                     }
                   }catch(e){ done({url:'', html:'', images:[], specs:''}); }
                 }, function(){});
@@ -287,6 +295,11 @@
                 if(!descImages.includes(u)) descImages.push(u);
               }
             }
+          }catch(e){}
+          // debug: info MTOP response (untuk diagnosa kalau descriptionUrl/descImages kosong)
+          try{
+            const dbg = document.documentElement.getAttribute('data-pi-debug');
+            if(dbg) console.log('PI: MTOP debug', JSON.parse(dbg));
           }catch(e){}
         }catch(e){ console.warn('PI: MTOP fallback gagal', e); }
       }

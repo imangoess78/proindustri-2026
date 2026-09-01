@@ -175,6 +175,14 @@ ${ogImage ? `<meta name="twitter:image" content="${esc(ogImage)}">` : `<meta nam
 <link rel="stylesheet" href="/assets/site.css">
 ${jsonLdHtml}
 <style>${IC_CSS}</style>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-CYG7XJXMPD"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-CYG7XJXMPD');
+</script>
 </head>
 <body class="${bodyClass}">
 <div id="site-nav"></div>

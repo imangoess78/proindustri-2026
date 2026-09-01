@@ -254,6 +254,7 @@ tr:hover td{background:rgba(201,137,10,.04)}
   .topbar-live{display:none}
 }
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">
 </head>
 <body>
 
@@ -340,6 +341,7 @@ tr:hover td{background:rgba(201,137,10,.04)}
 <div class="toast-container" id="toastContainer"></div>
 <div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()"><div class="modal" id="modalContent"></div></div>
 
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
 <script>
 
 // ── Icon helper: returns inline SVG <use> referencing the sprite ──
@@ -1541,7 +1543,6 @@ function renderProducts(c) {
       <button class="action-btn" style="padding:6px 12px" onclick="bulkDeleteProducts()">${IC("trash-2")} Hapus Masal</button>
       <button class="action-btn" style="padding:6px 12px" onclick="bulkSetCategory()">${IC("folder")} Ubah Kategori</button>
       <button class="action-btn" style="padding:6px 12px" onclick="bulkSetActive(true)">${IC("check-circle-2")} Aktifkan</button>
-      <button class="action-btn" style="padding:6px 12px" onclick="bulkSetActive(false)">${IC("x-circle")} Nonaktifkan</button>
       <button class="action-btn" style="padding:6px 12px" onclick="bulkClearSelection()">Batal</button>
     </div>` : ''}
 
@@ -1776,7 +1777,11 @@ function openProductModal(id) {
     <div class="form-row">
       <div><label>Berat (gram)</label><input id="pm-weight" type="number" min="0" value="${esc(weight)}" placeholder="cth: 50"></div>
     </div>
-    <label>Deskripsi</label><textarea id="pm-desc" placeholder="Deskripsi produk...">${esc(p?p.desc:'')}</textarea>
+    <label>Deskripsi</label>
+    <div class="ql-desc-wrap">
+      <div id="pm-desc-editor" style="height:280px"></div>
+    </div>
+    <textarea id="pm-desc" style="display:none">${esc(p?p.desc:'')}</textarea>
     <label>Varian</label>
     <div id="pm-variant-rows">${variants.length ? variants.map((v,i) => varRowHtml(v,i)).join('') : varRowHtml(null,0)}</div>
     <button type="button" class="action-btn" style="padding:8px 14px;margin-top:6px" onclick="addVarRow()">+ Tambah Varian</button>
@@ -1785,6 +1790,39 @@ function openProductModal(id) {
       <button class="btn primary" onclick="saveProduct()">Simpan</button>
     </div>
   `);
+  initDescEditor();
+}
+
+let pmQuill = null;
+function initDescEditor() {
+  const el = document.getElementById('pm-desc-editor');
+  if (!el || typeof Quill === 'undefined') return;
+  if (pmQuill) { try { pmQuill = null; } catch (e) {} }
+  // toolbar: bold, italic, underline, strike, headers, list, link, blockquote, code, image, emoji via link
+  pmQuill = new Quill(el, {
+    theme: 'snow',
+    placeholder: 'Deskripsi produk...',
+    modules: {
+      toolbar: [
+        [{ header: [2, 3, 4, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['blockquote', 'link'],
+        [{ align: [] }],
+        ['clean']
+      ]
+    }
+  });
+  const hidden = document.getElementById('pm-desc');
+  const initial = hidden ? hidden.value : '';
+  if (initial) {
+    try { pmQuill.clipboard.dangerouslyPasteHTML(initial); }
+    catch (e) { pmQuill.setText(initial); }
+  }
+  // sinkronkan ke hidden textarea agar saveProduct tetap bekerja (backward-compatible)
+  pmQuill.on('text-change', () => {
+    if (hidden) hidden.value = pmQuill.root.innerHTML;
+  });
 }
 
 function toggleCatOther(sel) {
@@ -1875,6 +1913,7 @@ async function saveProduct() {
   const id = (document.getElementById('pm-id')||{}).value || null;
   const name = document.getElementById('pm-name').value.trim();
   if (!name) { toast('Nama produk wajib diisi', 'error'); return; }
+  const rUp = n => Math.ceil((Number(n)||0) / 1000) * 1000;
   const catSel = document.getElementById('pm-cat').value;
   const category = catSel === '__other__' ? document.getElementById('pm-cat-other').value.trim() : catSel;
   if (!category) { toast('Kategori wajib diisi', 'error'); return; }
@@ -1883,7 +1922,7 @@ async function saveProduct() {
   document.querySelectorAll('#pm-variant-rows .var-row').forEach(row => {
     const v = {
       name: row.querySelector('.var-name').value.trim(),
-      price: Number(row.querySelector('.var-price').value) || 0,
+      price: rUp(Number(row.querySelector('.var-price').value) || 0),
       stock: Number(row.querySelector('.var-stock').value) || 0,
       min_qty: Number(row.querySelector('.var-minqty').value) || 1
     };
@@ -1899,8 +1938,8 @@ async function saveProduct() {
     category,
     img: document.getElementById('pm-img').value,
     desc: document.getElementById('pm-desc').value,
-    min_price: Number(document.getElementById('pm-min').value) || 0,
-    max_price: Number(document.getElementById('pm-max').value) || 0,
+    min_price: rUp(Number(document.getElementById('pm-min').value) || 0),
+    max_price: rUp(Number(document.getElementById('pm-max').value) || 0),
     variants,
     specs,
     active: id ? (((PRODUCTS.find(x => x.id === id))||{}).active !== false) : true

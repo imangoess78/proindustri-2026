@@ -32,6 +32,8 @@ function slugify(s) {
     .replace(/^-|-$/g, '') || 'artikel-' + Date.now();
 }
 function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Bulatkan harga ke atas ke ribuan (misal 1500300 → 1501000)
+const roundUpK = n => Math.ceil((Number(n)||0) / 1000) * 1000;
 
 // Auto-replace branding: AliExpress / Ali Express / aliexpress.com -> ProIndustri / ProIndustri.com
 // Untuk HTML hanya teks yang diganti — atribut (href/src alicdn, dsb) TIDAK disentuh.
@@ -1804,8 +1806,8 @@ export default {
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`
       ).bind(
         id, b.name || '', b.short_name || '', b.desc || '', b.category || '',
-        b.img_key || '', b.img || '', Number(b.min_price) || 0, Number(b.max_price) || 0,
-        JSON.stringify(b.variants || []), JSON.stringify(b.specs || {}), b.active === undefined ? 1 : (b.active ? 1 : 0)
+        b.img_key || '', b.img || '', roundUpK(b.min_price), roundUpK(b.max_price),
+        JSON.stringify((b.variants || []).map(v => ({ ...v, price: roundUpK(v.price) }))), JSON.stringify(b.specs || {}), b.active === undefined ? 1 : (b.active ? 1 : 0)
       ).run();
       return json({ id });
     }
@@ -1870,9 +1872,9 @@ export default {
       if (b.category !== undefined)     { fields.push('category=?');     vals.push(replaceBrand(b.category)); }
       if (b.img_key !== undefined)      { fields.push('img_key=?');      vals.push(b.img_key); }
       if (b.img !== undefined)          { fields.push('img=?');          vals.push(b.img); }
-      if (b.min_price !== undefined)    { fields.push('min_price=?');    vals.push(Number(b.min_price)); }
-      if (b.max_price !== undefined)    { fields.push('max_price=?');    vals.push(Number(b.max_price)); }
-      if (b.variants !== undefined)     { fields.push('variants=?');     vals.push(JSON.stringify((Array.isArray(b.variants)?b.variants:[]).map(v=>({...v, name: replaceBrand(String(v.name||'Standard'))})))); }
+      if (b.min_price !== undefined)    { fields.push('min_price=?');    vals.push(roundUpK(b.min_price)); }
+      if (b.max_price !== undefined)    { fields.push('max_price=?');    vals.push(roundUpK(b.max_price)); }
+      if (b.variants !== undefined)     { fields.push('variants=?');     vals.push(JSON.stringify((Array.isArray(b.variants)?b.variants:[]).map(v=>({...v, name: replaceBrand(String(v.name||'Standard')), price: roundUpK(v.price)})))); }
       if (b.specs !== undefined)        { fields.push('specs=?');        vals.push(JSON.stringify(b.specs)); }
       if (b.active !== undefined)       { fields.push('active=?');       vals.push(b.active ? 1 : 0); }
       if (!fields.length) return json({ error: 'Nothing to update' }, 400);

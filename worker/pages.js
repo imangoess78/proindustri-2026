@@ -286,14 +286,42 @@ export async function renderProduct(env, p) {
       ${related.map(r => homeCard(r)).join('')}
     </div>` : '';
 
+  const rating = fakeRating(p.id);
+  const sold = fakeSold(p.id);
+  // Bersihkan desc: skip spec junk "Key: No/none", ambil bagian fitur sebenarnya
+  const rawDesc = stripHtml(p.desc || '');
+  const featIdx = rawDesc.search(/(\d[、.．]|Feature)/i);
+  const cleanReviewDesc = featIdx >= 0
+    ? rawDesc.slice(featIdx).replace(/<img[^>]*>/g, '').substring(0, 200)
+    : rawDesc.replace(/^[^a-zA-Z]+/, '').substring(0, 200);
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: p.name,
     image: fullImg ? [fullImg] : undefined,
-    description: stripHtml(p.desc || p.name),
+    description: rawDesc,
     category: p.category,
     brand: { '@type': 'Brand', name: SITE_NAME },
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: rating,
+      reviewCount: Math.max(1, Math.floor(sold / 5)),
+      bestRating: 5,
+      worstRating: 1
+    },
+    review: [{
+      '@type': 'Review',
+      reviewRating: {
+        '@type': 'Rating',
+        ratingValue: rating,
+        bestRating: 5
+      },
+      author: {
+        '@type': 'Organization',
+        name: SITE_NAME
+      },
+      reviewBody: cleanReviewDesc ? cleanReviewDesc + '...' : 'Produk berkualitas tinggi dari ' + SITE_NAME + '...'
+    }],
     offers: {
       '@type': 'AggregateOffer',
       priceCurrency: 'IDR',

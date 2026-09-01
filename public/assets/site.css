@@ -385,9 +385,9 @@ button{font-family:var(--font)}
   .topbar-links{flex-wrap:wrap;justify-content:center;gap:10px}
   .topbar-right{flex-wrap:wrap;justify-content:center}
   .navbar{padding:0 14px}
-  .navbar-inner{height:56px;gap:8px}
+  .navbar-inner{height:auto;flex-wrap:wrap;gap:6px;padding:8px 0 4px}
   .nav-toggle{display:flex}
-  .search-wrap{display:none}
+  .search-wrap{display:block;order:10;flex:1 0 100%;max-width:100%;margin:2px 0 8px}
   .nav-links{display:none}
   .nav-right{margin-left:auto;gap:6px}
   .cart-label{display:none}

@@ -132,7 +132,7 @@ fetch('/icon-sprite.html').then(function(r){return r.text()}).then(function(t){
 }).catch(function(){});`;
 const IC_CSS = '.ic{width:1.1em;height:1.1em;vertical-align:-0.15em;display:inline-block;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}.wish-btn .ic,.icon .ic{width:18px;height:18px;vertical-align:middle}';
 
-function layout({ title, desc, canonical, ogImage, jsonLd, body, bodyClass = '', script = '' }) {
+function layout({ title, desc, canonical, ogImage, jsonLd, body, bodyClass = '', script = '', ogType = 'website', articleTimes = null }) {
   const descText = truncate(desc || TAGLINE, 158);
   // Support array of JSON-LD objects (Article + FAQPage + BreadcrumbList)
   let jsonLdHtml = '';
@@ -140,6 +140,10 @@ function layout({ title, desc, canonical, ogImage, jsonLd, body, bodyClass = '',
     const arr = Array.isArray(jsonLd) ? jsonLd : [jsonLd];
     jsonLdHtml = arr.map(j => `<script type="application/ld+json">${JSON.stringify(j)}</script>`).join('\n');
   }
+  const articleMeta = articleTimes
+    ? `<meta property="article:published_time" content="${articleTimes.published}">
+<meta property="article:modified_time" content="${articleTimes.modified}">`
+    : '';
   return `<!DOCTYPE html>
 <html lang="id">
 <head>
@@ -148,11 +152,12 @@ function layout({ title, desc, canonical, ogImage, jsonLd, body, bodyClass = '',
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(descText)}">
 <link rel="canonical" href="${esc(canonical || ORIGIN + '/')}">
-<meta property="og:type" content="website">
+<meta property="og:type" content="${ogType}">
 <meta property="og:site_name" content="${SITE_NAME}">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(descText)}">
 <meta property="og:url" content="${esc(canonical || ORIGIN + '/')}">
+${articleMeta}
 ${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">` : `<meta property="og:image" content="${ORIGIN}/assets/og-image.jpg">
@@ -632,6 +637,15 @@ export async function renderPost(env, slug) {
   const img = (row.image || '').replace(/^https:\/\/pub-[a-f0-9]+\.r2\.dev\//, '/img/');
   const fullImg = img ? (img.startsWith('http') ? img : ORIGIN + img) : '';
 
+  // ── Normalisasi tanggal ke ISO 8601 (YYYY-MM-DD HH:MM:SS → YYYY-MM-DDTHH:MM:SS+07:00) ──
+  const toIso = (s) => {
+    if (!s) return '';
+    const m = String(s).trim().match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/);
+    return m ? `${m[1]}T${m[2]}+07:00` : String(s).trim();
+  };
+  const isoPub = toIso(row.created_at);
+  const isoMod = toIso(row.updated_at || row.created_at);
+
   // ── Extract FAQ from content (H3 + following P) for FAQPage schema ──
   const faqPairs = [];
   try {
@@ -649,8 +663,8 @@ export async function renderPost(env, slug) {
     '@type': 'Article',
     headline: title,
     image: fullImg ? [fullImg] : undefined,
-    datePublished: row.created_at,
-    dateModified: row.updated_at || row.created_at,
+    datePublished: isoPub,
+    dateModified: isoMod,
     author: { '@type': 'Organization', name: SITE_NAME, url: ORIGIN },
     publisher: { '@type': 'Organization', name: SITE_NAME, logo: { '@type': 'ImageObject', url: ORIGIN + '/assets/logo.png' } },
     description: truncate(stripHtml(row.content || ''), 155),
@@ -734,7 +748,7 @@ export async function renderPost(env, slug) {
   function shareTW() { window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(document.title + ' ' + location.href), '_blank'); }
   function copyLink() { navigator.clipboard.writeText(location.href).then(function(){ var b=document.querySelector('.share-copy'); if(b){ var t=b.innerHTML; b.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-check-circle-2"/></svg> Tersalin!'; setTimeout(function(){ b.innerHTML=t; }, 2000); } }).catch(function(){ prompt('Salin link:', location.href); }); }`;
 
-  return { html: layout({ title: `${title} — ${SITE_NAME}`, desc: truncate(stripHtml(row.content || ''), 155), canonical: ORIGIN + '/artikel/' + slug, ogImage: fullImg, jsonLd: jsonLdArr, body, bodyClass: 'page-post', script }), script };
+  return { html: layout({ title: `${title} — ${SITE_NAME}`, desc: truncate(stripHtml(row.content || ''), 155), canonical: ORIGIN + '/artikel/' + slug, ogImage: fullImg, jsonLd: jsonLdArr, body, bodyClass: 'page-post', script, ogType: 'article', articleTimes: { published: isoPub, modified: isoMod } }), script };
 }
 
 // ── Seed artikel default (hanya jika tabel kosong) ──

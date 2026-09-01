@@ -105,6 +105,8 @@ tr:hover td{background:rgba(201,137,10,.04)}
 .action-btn:hover{background:var(--gold-light);border-color:var(--gold);color:var(--gold)}
 .action-btn.wa{background:#F0FDF4;border-color:#22c55e;color:#16a34a}
 .action-btn.wa:hover{background:#22c55e;color:white}
+.row-selected{background:var(--gold-light)!important}
+.row-selected td:first-child{border-left:3px solid var(--gold)}
 .action-btn.del{background:var(--red-light);border-color:var(--red);color:var(--red)}
 .action-btn.del:hover{background:var(--red);color:white}
 .action-btn.primary{background:var(--grad-btn);border:none;color:white}
@@ -364,6 +366,9 @@ let CATEGORIES = [];
 let orderFilter = 'Semua';
 let orderMatch = '';
 let productSearch = '', customerSearch = '', articleSearch = '';
+let prodCatFilter = '', prodSrcFilter = '', prodSort = 'terbaru';
+let prodSelected = {};   // checkbox bulk edit: id → true
+let prodPageIds = [];    // id produk di halaman saat ini (untuk select-all)
 let detailOrderId = null;
 let detailSig = '';
 let debounceTimer = null;
@@ -393,15 +398,14 @@ const STATUS_CLASS = {'Menunggu Pembayaran':'s-waiting','Menunggu Konfirmasi':'s
 // tapi sebagian alur lama menyimpannya sebagai string — pj() menangani keduanya.
 const pj = (v, fb) => { if (v == null) return fb; if (typeof v !== 'string') return v; try { return JSON.parse(v); } catch (e) { return fb; } };
 const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-// Badge sumber produk: AE (AliExpress) atau DS (Darmasakti) dengan warna sesuai
+// Badge sumber produk: DS (Darmasakti), AE (AliExpress) atau Manual
 const srcBadge = (url, size = 18) => {
-  if (!url) return '';
+  if (!url) return '<span style="background:#eef;color:#66a;padding:1px 6px;border-radius:99px;font-size:10px;font-weight:700;margin-left:4px;white-space:nowrap">Manual</span>';
   const isDS = url.includes('darmasakti');
   const label = isDS ? 'DS' : 'AE';
-  const bg = isDS ? '#193150' : '#ff6a00';
-  const s = Math.round(size);
-  const title = isDS ? 'Sumber Darmasakti' : 'Sumber AliExpress';
-  return `<a href="${esc(url)}" target="_blank" rel="noopener" title="${title}" style="display:inline-flex;align-items:center;justify-content:center;width:${s}px;height:${s}px;border-radius:${Math.round(s/3)}px;background:${bg};color:#fff;text-decoration:none;font-size:${Math.round(s/2)}px;font-weight:900;vertical-align:middle;margin-left:4px">${label}</a>`;
+  const bg = isDS ? '#e8f5e9' : '#fff3e0';
+  const fg = isDS ? '#2e7d32' : '#e65100';
+  return `<a href="${esc(url)}" target="_blank" rel="noopener" style="background:${bg};color:${fg};padding:1px 6px;border-radius:99px;font-size:10px;font-weight:700;text-decoration:none;margin-left:4px;white-space:nowrap" title="${esc(url)}">${label}</a>`;
 };
 
 function toast(msg, type) {
@@ -1469,8 +1473,14 @@ let curProductPage = 1;
 function renderProducts(c) {
   const q = productSearch.toLowerCase();
   const cats = [...new Set(PRODUCTS.map(p => p.category))].sort();
-  const filtered = PRODUCTS.filter(p => !q || (p.name||'').toLowerCase().includes(q) || (p.category||'').toLowerCase().includes(q) || (p.short_name||'').toLowerCase().includes(q))
-    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')); // terbaru paling atas
+  const srcOf = p => !(p.ae_url) ? 'manual' : (p.ae_url.includes('darmasakti') ? 'ds' : 'ae');
+  let filtered = PRODUCTS.filter(p => !q || (p.name||'').toLowerCase().includes(q) || (p.category||'').toLowerCase().includes(q) || (p.short_name||'').toLowerCase().includes(q));
+  if (prodCatFilter) filtered = filtered.filter(p => (p.category||'') === prodCatFilter);
+  if (prodSrcFilter) filtered = filtered.filter(p => srcOf(p) === prodSrcFilter);
+  if (prodSort === 'terbaru') filtered.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  else if (prodSort === 'termurah') filtered.sort((a, b) => (a.min_price||0) - (b.min_price||0));
+  else if (prodSort === 'termahal') filtered.sort((a, b) => (b.min_price||0) - (a.min_price||0));
+  else if (prodSort === 'nama') filtered.sort((a, b) => (a.name||'').localeCompare(b.name||''));
   const total = filtered.length;
   const pages = Math.max(1, Math.ceil(total / PROD_PAGE_SIZE));
   let page = curProductPage;
@@ -1478,6 +1488,7 @@ function renderProducts(c) {
   if (page > pages) page = pages;
   const start = (page - 1) * PROD_PAGE_SIZE;
   const pageItems = filtered.slice(start, start + PROD_PAGE_SIZE);
+  prodPageIds = pageItems.map(p => p.id);
   function prodPagerHtml(){
     if (pages <= 1) return '';
     const L = '<svg class="ic" aria-hidden="true"><use href="#i-arrow-left"/></svg>';
@@ -1504,23 +1515,61 @@ function renderProducts(c) {
       <button class="action-btn primary" style="padding:8px 16px" onclick="openProductModal()">+ Produk Baru</button>
     </div>
 
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+      <select class="search-input" style="width:auto;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px" onchange="prodCatFilter=this.value;curProductPage=1;renderProducts(document.getElementById('mainContent'))">
+        <option value="">🏷️ Semua Kategori</option>
+        ${cats.map(c => `<option value="${esc(c)}"${c === prodCatFilter ? ' selected' : ''}>${esc(c)}</option>`).join('')}
+      </select>
+      <select class="search-input" style="width:auto;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px" onchange="prodSrcFilter=this.value;curProductPage=1;renderProducts(document.getElementById('mainContent'))">
+        <option value="">📦 Semua Sumber</option>
+        <option value="ds"${prodSrcFilter==='ds' ? ' selected' : ''}>Darmasakti (DS)</option>
+        <option value="ae"${prodSrcFilter==='ae' ? ' selected' : ''}>AliExpress (AE)</option>
+        <option value="manual"${prodSrcFilter==='manual' ? ' selected' : ''}>Manual</option>
+      </select>
+      <select class="search-input" style="width:auto;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px" onchange="prodSort=this.value;curProductPage=1;renderProducts(document.getElementById('mainContent'))">
+        <option value="terbaru"${prodSort==='terbaru' ? ' selected' : ''}>🕒 Terbaru</option>
+        <option value="termurah"${prodSort==='termurah' ? ' selected' : ''}>💰 Harga Terendah</option>
+        <option value="termahal"${prodSort==='termahal' ? ' selected' : ''}>💎 Harga Tertinggi</option>
+        <option value="nama"${prodSort==='nama' ? ' selected' : ''}>🔤 Nama A-Z</option>
+      </select>
+      ${Object.keys(prodSelected).length ? `<span style="font-size:12px;font-weight:700;color:var(--gold);margin-left:4px">${Object.keys(prodSelected).length} dipilih</span>` : ''}
+    </div>
+
+    ${Object.keys(prodSelected).length ? `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;padding:10px 14px;background:var(--gold-light);border:1px solid rgba(37,99,235,.25);border-radius:10px">
+      <span style="font-size:12px;font-weight:800;color:var(--gold)">Bulk Edit (${Object.keys(prodSelected).length} produk):</span>
+      <button class="action-btn" style="padding:6px 12px" onclick="bulkDeleteProducts()">${IC("trash-2")} Hapus Masal</button>
+      <button class="action-btn" style="padding:6px 12px" onclick="bulkSetCategory()">${IC("folder")} Ubah Kategori</button>
+      <button class="action-btn" style="padding:6px 12px" onclick="bulkSetActive(true)">${IC("check-circle-2")} Aktifkan</button>
+      <button class="action-btn" style="padding:6px 12px" onclick="bulkSetActive(false)">${IC("x-circle")} Nonaktifkan</button>
+      <button class="action-btn" style="padding:6px 12px" onclick="bulkClearSelection()">Batal</button>
+    </div>` : ''}
+
     <div class="table-wrap">
       <div class="table-head"><div class="table-title">${total} produk (halaman ${page}/${pages})</div></div>
       ${total === 0 ? '<div class="empty"><div class="empty-icon">' + IC("shopping-bag") + '️</div><div class="empty-text">Tidak ada produk ditemukan</div></div>' : `
       <table>
-        <thead><tr><th>Gambar</th><th>Nama Produk</th><th>Kategori</th><th>Harga</th><th>Varian</th><th>Aksi</th></tr></thead>
-        <tbody>${pageItems.map(p => {
+        <thead><tr><th style="width:30px"><input type="checkbox" onchange="
+          const checked=this.checked;
+          prodPageIds.forEach(id=>{if(checked) prodSelected[id]=true; else delete prodSelected[id]});
+          renderProducts(document.getElementById('mainContent'))
+        "></th><th>#</th><th>Gambar</th><th>Nama Produk</th><th>Kategori</th><th>Harga</th><th>Varian</th><th>Aksi</th></tr></thead>
+        <tbody>${pageItems.map((p, i) => {
+          const rowNum = start + i + 1;
           const variants = p.variants || [];
           const stock = variants.reduce((s,v)=>s+(v.stock||0),0);
           const img = p.img || '';
-          return `<tr>
+          const checked = prodSelected[p.id] ? ' checked' : '';
+          return `<tr class="${checked ? 'row-selected' : ''}">
+            <td><input type="checkbox"${checked} onchange="if(this.checked) prodSelected['${esc(p.id)}']=true; else delete prodSelected['${esc(p.id)}']; renderProducts(document.getElementById('mainContent'))"></td>
+            <td style="font-size:11px;color:var(--muted);font-weight:600;text-align:center">${rowNum}</td>
             <td>${img ? `<img src="${esc(img)}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--border)" onerror="this.style.display='none'">` : '<span style="font-size:22px">' + IC("shopping-bag") + '️</span>'}</td>
-            <td style="max-width:280px"><b style="font-size:12px">${esc((p.short_name||p.name||'').substring(0,80))}</b> ${srcBadge(p.ae_url, 22)}<br><span style="font-size:10px;color:var(--muted);font-family:monospace">${esc(p.id)}</span></td>
+            <td style="max-width:250px"><b style="font-size:12px">${esc((p.short_name||p.name||'').substring(0,80))}</b> ${srcBadge(p.ae_url, 22)}<br><span style="font-size:10px;color:var(--muted);font-family:monospace">${esc(p.id)}</span></td>
             <td><span style="background:var(--gold-light);color:var(--gold);padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">${esc(p.category||'-')}</span></td>
             <td style="font-weight:800;white-space:nowrap">${fmt(p.min_price||0)}<br><span style="font-size:10px;color:var(--muted);font-weight:600">– ${fmt(p.max_price||0)}</span></td>
             <td><b>${variants.length}</b> <span style="font-size:10px;color:var(--muted)">varian · stok ${stock.toLocaleString('id-ID')}</span></td>
             <td><div class="action-btns">
-              <button class="action-btn" onclick="openProductDetail('${esc(p.id)}')">${IC("clipboard-list")}</button>
+              <button class="action-btn" title="Lihat produk live" onclick="window.open('/produk/'+encodeURIComponent('${esc(p.slug||p.id)}'), '_blank')">${IC("eye")}</button>
               <button class="action-btn" onclick="openProductModal('${esc(p.id)}')">${IC("pencil")}</button>
               <button class="action-btn del" onclick="deleteProduct('${esc(p.id)}')">${IC("trash-2")}</button>
             </div></td>
@@ -1868,6 +1917,83 @@ function deleteProduct(id) {
   api('DELETE', '/api/products/' + id)
     .then(() => { PRODUCTS = PRODUCTS.filter(p => p.id !== id); renderTab(); toast('Produk dihapus', 'success'); })
     .catch(e => toast('Gagal hapus: ' + e.message, 'error'));
+}
+
+// ── Bulk edit produk (checklist) ──
+function bulkIds() { return Object.keys(prodSelected); }
+
+function bulkClearSelection() {
+  prodSelected = {};
+  renderTab();
+}
+
+function bulkDeleteProducts() {
+  const ids = bulkIds();
+  if (!ids.length) return;
+  if (!confirm(`Hapus ${ids.length} produk yang dipilih? TIDAK BISA di-undo.`)) return;
+  let done = 0, failed = 0;
+  Promise.all(ids.map(id => api('DELETE', '/api/products/' + id)
+    .then(() => { done++; PRODUCTS = PRODUCTS.filter(p => p.id !== id); })
+    .catch(() => failed++)))
+    .then(() => {
+      prodSelected = {};
+      renderTab();
+      toast(`Selesai: ${done} dihapus${failed ? ', ' + failed + ' gagal' : ''}`, failed ? 'error' : 'success');
+    });
+}
+
+function bulkSetActive(active) {
+  const ids = bulkIds();
+  if (!ids.length) return;
+  let done = 0, failed = 0;
+  Promise.all(ids.map(id => api('PUT', '/api/products/' + id, { active })
+    .then(() => { done++; })
+    .catch(() => failed++)))
+    .then(() => {
+      const label = active ? 'diaktifkan' : 'dinonaktifkan';
+      toast(`Selesai: ${done} produk ${label}${failed ? ', ' + failed + ' gagal' : ''}`, failed ? 'error' : 'success');
+      if (!failed) { prodSelected = {}; fetchAll().then(() => renderTab()); }
+    });
+}
+
+function bulkSetCategory() {
+  const ids = bulkIds();
+  if (!ids.length) return;
+  const cats = [...new Set(PRODUCTS.map(p => p.category).filter(Boolean))].sort();
+  const catOpts = cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('')
+    + '<option value="__other__">Lainnya (ketik manual)...</option>';
+  openModal(`
+    <button class="modal-close" onclick="closeModal()">${IC("x")}</button>
+    <h2>${IC("folder")} Ubah Kategori ${ids.length} Produk</h2>
+    <label>Kategori baru</label>
+    <select id="bk-cat" onchange="if(this.value==='__other__'){document.getElementById('bk-cat-other').style.display='block'}else{document.getElementById('bk-cat-other').style.display='none'}">
+      <option value="">— Pilih Kategori —</option>
+      ${catOpts}
+    </select>
+    <input id="bk-cat-other" placeholder="Ketik nama kategori baru..." style="display:none;margin-top:8px">
+    <div class="btn-row">
+      <button class="btn" onclick="closeModal()">Batal</button>
+      <button class="btn primary" onclick="bulkSetCategoryDo()">Simpan</button>
+    </div>
+  `);
+}
+
+function bulkSetCategoryDo() {
+  const sel = document.getElementById('bk-cat');
+  const other = document.getElementById('bk-cat-other');
+  let cat = sel.value;
+  if (cat === '__other__') cat = other.value.trim();
+  if (!cat) { toast('Pilih / ketik kategori dulu', 'error'); return; }
+  const ids = bulkIds();
+  closeModal();
+  let done = 0, failed = 0;
+  Promise.all(ids.map(id => api('PUT', '/api/products/' + id, { category: cat })
+    .then(() => { done++; })
+    .catch(() => failed++)))
+    .then(() => {
+      toast(`Selesai: ${done} produk pindah ke "${cat}"${failed ? ', ' + failed + ' gagal' : ''}`, failed ? 'error' : 'success');
+      if (!failed) { prodSelected = {}; fetchAll().then(() => renderTab()); }
+    });
 }
 
 // ── Bersihkan Branding AliExpress dari semua produk (server-side scan + replace) ──

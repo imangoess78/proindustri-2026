@@ -79,12 +79,12 @@ function truncate(s, n) {
   const t = stripHtml(s);
   return t.length > n ? t.slice(0, n).trimEnd() + '…' : t;
 }
-// SEO title tag: maksimal 60 karakter termasuk brand (ScreamingFrog: >60 chars & >561px)
+// SEO title tag: ≤60 chars termasuk brand (ScreamingFrog: >60 chars & >561px)
 function seoTitle(name) {
   const suffix = ` — ${SITE_NAME}`;
   const clean = stripHtml(name || '');
   if (clean.length + suffix.length <= 60) return clean + suffix;
-  return truncate(clean, 60 - suffix.length) + suffix;
+  return truncate(clean, 60 - suffix.length - 1) + suffix;
 }
 // SEO meta description: generate unik jika desc template AliExpress
 function seoDesc(p) {
@@ -994,7 +994,7 @@ function renderQA(){
   }
   var el=document.getElementById('qaModal');
   el.innerHTML='<div class="qa-head">'+
-    '<div class="qa-thumb">'+(p.img?'<img src="'+p.img+'" alt="" width="100" height="100" onerror="this.style.display=\\'none\\'">':'<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg>')+'</div>'+\n    '<div class="qa-name">'+escQA(p.name)+'</div>'+\n    '<button class="qa-close-btn" onclick="closeQA()">✕</button></div>'+\n    '<div class="qa-lbl">Pilih Varian</div>'+vsHtml+
+    '<div class="qa-thumb">'+(p.img?'<img src="'+p.img+'" alt="'+escQA(p.name)+'" width="100" height="100" onerror="this.style.display=\\'none\\'">':'<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg>')+'</div>'+\n    '<div class="qa-name">'+escQA(p.name)+'</div>'+\n    '<button class="qa-close-btn" onclick="closeQA()">✕</button></div>'+\n    '<div class="qa-lbl">Pilih Varian</div>'+vsHtml+
     '<div class="qa-qty-row"><span style="font-size:12px;font-weight:700;color:var(--mid)">Jumlah:</span>'+
     '<button class="cqb" type="button" onclick="qaCh(-1)">−</button>'+
     '<input type="number" id="qaQty" value="'+qaQ+'" min="'+(p.minpack||1)+'" step="1" inputmode="numeric" oninput="qaSet()" style="width:72px;text-align:center;font-weight:900;font-size:16px;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;background:white;color:var(--dark);font-family:var(--font)">'+

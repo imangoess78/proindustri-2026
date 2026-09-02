@@ -806,6 +806,14 @@ export async function renderPost(env, slug) {
     }
   } catch (e) {}
 
+  // ── Sanitasi konten artikel (strip <title>, <head>, rewrite broken links) ──
+  const content = rewriteContentLinks((row.content || '<p>Konten belum tersedia.</p>')
+    .replace(/<article\s+itemscope\s+itemtype="https:\/\/schema\.org\/Product">/gi, '<article>')
+    .replace(/<title[^>]*>.*?<\/title>/gi, '')
+    .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
+    .replace(/<\/?html[^>]*>/gi, '')
+    .replace(/<\/?body[^>]*>/gi, ''));
+
   const body = `
   <div class="wrap">
     ${breadcrumb([{ href: '/artikel', label: 'Artikel' }, { href: '/artikel/' + slug, label: title.substring(0, 40) }])}
@@ -838,13 +846,6 @@ export async function renderPost(env, slug) {
   function shareTW() { window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(document.title + ' ' + location.href), '_blank'); }
   function copyLink() { navigator.clipboard.writeText(location.href).then(function(){ var b=document.querySelector('.share-copy'); if(b){ var t=b.innerHTML; b.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-check-circle-2"/></svg> Tersalin!'; setTimeout(function(){ b.innerHTML=t; }, 2000); } }).catch(function(){ prompt('Salin link:', location.href); }); }`;
 
-  const content = rewriteContentLinks((row.content || '<p>Konten belum tersedia.</p>')
-    .replace(/<article\s+itemscope\s+itemtype="https:\/\/schema\.org\/Product">/gi, '<article>')
-    // Strip <title> dan seluruh <head> dari konten artikel (TiaraVib import kadang include full HTML head)
-    .replace(/<title[^>]*>.*?<\/title>/gi, '')
-    .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
-    .replace(/<\/?html[^>]*>/gi, '')
-    .replace(/<\/?body[^>]*>/gi, ''));
   return { html: layout({ title: `${title} — ${SITE_NAME}`, desc: truncate(stripHtml(row.content || ''), 150), canonical: ORIGIN + '/artikel/' + slug, ogImage: fullImg, jsonLd: jsonLdArr, body, bodyClass: 'page-post', script, ogType: 'article', articleTimes: { published: isoPub, modified: isoMod } }), script };
 }
 

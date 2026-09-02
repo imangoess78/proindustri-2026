@@ -936,6 +936,7 @@ export async function renderArticles(env) {
       <h1 class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg> Artikel & Tips</h1>
       <div class="page-sub">Panduan memilih mesin & tools industri, tips untuk bengkel dan pabrik, dan info seputar produk industri.</div>
     </div>
+    <h2 class="sec-title" style="margin:20px 0 12px">Artikel Terbaru${results.length ? ' — ' + results.length + ' tulisan' : ''}</h2>
     ${cards}
     <div style="margin-top:32px;padding-top:20px;border-top:1px solid var(--border);text-align:center;font-size:13px;color:var(--muted)">
       <a href="/" style="margin:0 12px">← Beranda</a>
@@ -1457,15 +1458,15 @@ export async function renderSitemap(env) {
     </div>
     <div class="sm-grid">
       <div class="sm-col">
-        <div class="sm-col-title"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg> Halaman Utama</div>
+        <h2 class="sm-col-title"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg> Halaman Utama</h2>
         <div class="sm-list">${mainList}</div>
       </div>
       <div class="sm-col">
-        <div class="sm-col-title"><svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg> Kategori (${cats.length})</div>
+        <h2 class="sm-col-title"><svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg> Kategori (${cats.length})</h2>
         <div class="sm-list">${catList}</div>
       </div>
       <div class="sm-col sm-col-wide">
-        <div class="sm-col-title"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg> Artikel & Tips (${arts.length})</div>
+        <h2 class="sm-col-title"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg> Artikel & Tips (${arts.length})</h2>
         <div class="sm-list sm-list-2col">${artList}</div>
       </div>
     </div>
@@ -1475,7 +1476,7 @@ export async function renderSitemap(env) {
   </div>
   <style>
   .sm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px;margin-top:8px}
-  .sm-col-title{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;color:var(--ink,#0F1B2D);padding:10px 14px;border-left:3px solid var(--red,#E63946);background:linear-gradient(90deg,rgba(230,57,70,.06),transparent);margin-bottom:6px}
+  .sm-col-title{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;color:var(--ink,#0F1B2D);padding:10px 14px;border-left:3px solid var(--red,#E63946);background:linear-gradient(90deg,rgba(230,57,70,.06),transparent);margin:0 0 6px 0}
   .sm-list{display:flex;flex-direction:column}
   .sm-list-2col{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));column-gap:20px}
   .sm-link{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;color:#33415C;text-decoration:none;font-size:14px;line-height:1.35}

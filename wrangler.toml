@@ -14,6 +14,7 @@ not_found_handling = "none"
 # Worker harus jalan duluan utk SEMUA request (termasuk file statis) supaya
 # security headers + no-cache diterapkan ke halaman statis juga (/, /artikel, site.js, dll)
 run_worker_first = true
+binding = "ASSETS"
 
 # D1 database
 [[d1_databases]]

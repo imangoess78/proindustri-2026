@@ -1547,3 +1547,23 @@ export async function renderSitemap(env) {
 
   return { html: layout({ title: `Sitemap — ${SITE_NAME}`, desc: 'Peta halaman ProIndustri: semua kategori produk, artikel & tips, dan halaman utama dalam satu tempat.', canonical: ORIGIN + '/sitemap', body, bodyClass: 'page-sitemap' }), script: '' };
 }
+
+// ── Fallback ringan saat DB error (D1 quota habis dll) — tetap layout penuh biar SEO & UX aman ──
+export function renderFallback(title, msg, canonicalPath) {
+  const body = `
+  <section class="main-wrap" style="min-height:55vh;display:flex;align-items:center;justify-content:center">
+    <div style="text-align:center;max-width:520px;padding:2rem 1rem">
+      <div style="font-size:52px;margin-bottom:0.5rem">🛠️</div>
+      <h1 style="font-size:24px;margin:0 0 0.75rem;color:#0F1B2D">${esc(title)}</h1>
+      <p style="color:#5A6474;font-size:15px;line-height:1.6;margin:0 0 1.5rem">${esc(msg)}</p>
+      <a href="/" class="btn-red" style="display:inline-block;padding:12px 28px;text-decoration:none">Kembali ke Beranda</a>
+    </div>
+  </section>`;
+  return layout({
+    title: `${title} — ${SITE_NAME}`,
+    desc: `${title} — ${TAGLINE}`,
+    canonical: ORIGIN + canonicalPath,
+    body,
+    bodyClass: 'page-fallback',
+  });
+}

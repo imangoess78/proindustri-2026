@@ -42,7 +42,7 @@ function htmlPage(body, status = 200, extra = {}) {
 
 import { PRODUCTS_SEED } from './products_seed.js';
 import { CITIES, RATES, COURIER_NAMES } from './shipping_seed.js';
-import { renderProduct, renderPost, renderArticles, renderShop, renderArchive, renderCategory, renderSitemap, LEGACY_PRODUKT } from './pages.js';
+import { renderProduct, renderPost, renderArticles, renderShop, renderArchive, renderCategory, renderSitemap, renderFallback, LEGACY_PRODUKT } from './pages.js';
 
 function slugify(s) {
   return String(s || '').toLowerCase().trim()
@@ -501,8 +501,8 @@ export default {
         const page = await renderShop(env, q);
         return htmlPage(page.html);
       } catch (e) {
-        // DB error → serve fallback ringan (200, bukan 500) biar SEO aman
-        return new Response('<html><head><meta charset="utf-8"><title>Shop - Proindustri</title></head><body style="font-family:sans-serif;text-align:center;padding:4rem"><h1>Proindustri</h1><p>Layanan sedang memuat ulang, silakan kembali sebentar lagi.</p><p><a href="/">Kembali ke Beranda</a></p></body></html>', { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
+        // DB error → serve fallback layout penuh (200, bukan 500) biar SEO & UX aman
+        return new Response(renderFallback('Katalog Produk', 'Katalog sedang dimuat ulang, silakan kembali sebentar lagi.', '/shop'), { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
       }
     }
     if (path === '/produk') {
@@ -511,7 +511,7 @@ export default {
         const page = await renderArchive(env, parseInt(url.searchParams.get('page') || '1', 10) || 1);
         return htmlPage(page.html);
       } catch (e) {
-        return new Response('<html><head><meta charset="utf-8"><title>Semua Produk - Proindustri</title></head><body style="font-family:sans-serif;text-align:center;padding:4rem"><h1>Proindustri</h1><p>Katalog sedang memuat ulang, silakan kembali sebentar lagi.</p><p><a href="/">Kembali ke Beranda</a></p></body></html>', { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
+        return new Response(renderFallback('Semua Produk', 'Katalog sedang dimuat ulang, silakan kembali sebentar lagi.', '/produk'), { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
       }
     }
     // ── Redirect URL lama /product/* → /produk/* (dulu pakai prefix "product") ──
@@ -594,7 +594,7 @@ export default {
         const page = await renderArticles(env);
         return htmlPage(page.html);
       } catch (e) {
-        return new Response('<html><head><meta charset="utf-8"><title>Artikel - Proindustri</title></head><body style="font-family:sans-serif;text-align:center;padding:4rem"><h1>Proindustri</h1><p>Artikel sedang memuat ulang, silakan kembali sebentar lagi.</p><p><a href="/">Kembali ke Beranda</a></p></body></html>', { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
+        return new Response(renderFallback('Artikel', 'Artikel sedang dimuat ulang, silakan kembali sebentar lagi.', '/artikel'), { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
       }
     }
 
@@ -604,7 +604,7 @@ export default {
         const page = await renderSitemap(env);
         return htmlPage(page.html);
       } catch (e) {
-        return new Response('<html><head><meta charset="utf-8"><title>Sitemap - Proindustri</title></head><body style="font-family:sans-serif;text-align:center;padding:4rem"><h1>Proindustri</h1><p>Sitemap sedang memuat ulang, silakan kembali sebentar lagi.</p><p><a href="/">Kembali ke Beranda</a></p></body></html>', { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
+        return new Response(renderFallback('Sitemap', 'Peta situs sedang dimuat ulang, silakan kembali sebentar lagi.', '/sitemap'), { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
       }
     }
 

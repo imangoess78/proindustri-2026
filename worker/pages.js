@@ -685,7 +685,15 @@ export async function renderProduct(env, p) {
 export async function renderPost(env, slug) {
   // Seed artikel jika belum ada (biar halaman tidak kosong)
   await ensureArticles(env);
-  const row = await env.DB.prepare("SELECT * FROM articles WHERE slug=? AND (status='Published' OR (status='Scheduled' AND created_at <= datetime('now')))").bind(slug).first();
+  let row = await env.DB.prepare("SELECT * FROM articles WHERE slug=? AND (status='Published' OR (status='Scheduled' AND created_at <= datetime('now')))").bind(slug).first();
+  // Fallback: kalau belum ada di DB (seed belum jalan), render dari DEFAULT_ARTICLES
+  if (!row) {
+    const def = DEFAULT_ARTICLES.find(a => a.slug === slug);
+    if (def) {
+      const nowIso = new Date().toISOString();
+      row = { id: 'art-' + slug, slug, title: def.title, category: def.category, content: def.content, image: '', status: 'Published', views: 0, created_at: nowIso, updated_at: nowIso };
+    }
+  }
   if (!row) return null;
   // increment views (best-effort)
   try { await env.DB.prepare('UPDATE articles SET views=views+1 WHERE id=?').bind(row.id).run(); } catch (e) {}
@@ -812,10 +820,9 @@ export async function renderPost(env, slug) {
       </div>
       ${img ? `<div class="post-thumb"><img src="${esc(img)}" alt="${esc(truncate(title, 90))}" width="700" height="400" onerror="this.style.display='none'"></div>` : ''}
       <div class="post-body">
-        <div class="post-content">${(row.content || '<p>Konten belum tersedia.</p>').replace(/<article\s+itemscope\s+itemtype="https:\/\/schema\.org\/Product">/gi, '<article>')}</div>
-        ${relatedHtml}
-        <div class="post-share">
-          <span class="post-share-label"><svg class="ic" aria-hidden="true"><use href="#i-share-2"/></svg> Bagikan:</span>
+        <div class="post-content">${content}</div>
+                ${relatedHtml}
+                <div class="post-share">
           <button class="share-btn share-wa" onclick="shareWA()"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg> WhatsApp</button>
           <button class="share-btn share-fb" onclick="shareFB()"><svg class="ic" aria-hidden="true"><use href="#i-facebook"/></svg> Facebook</button>
           <button class="share-btn share-tw" onclick="shareTW()"><svg class="ic" aria-hidden="true"><use href="#i-twitter"/></svg> X / Twitter</button>
@@ -831,7 +838,53 @@ export async function renderPost(env, slug) {
   function shareTW() { window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(document.title + ' ' + location.href), '_blank'); }
   function copyLink() { navigator.clipboard.writeText(location.href).then(function(){ var b=document.querySelector('.share-copy'); if(b){ var t=b.innerHTML; b.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-check-circle-2"/></svg> Tersalin!'; setTimeout(function(){ b.innerHTML=t; }, 2000); } }).catch(function(){ prompt('Salin link:', location.href); }); }`;
 
+  const content = rewriteContentLinks((row.content || '<p>Konten belum tersedia.</p>')
+    .replace(/<article\s+itemscope\s+itemtype="https:\/\/schema\.org\/Product">/gi, '<article>')
+    // Strip <title> dan seluruh <head> dari konten artikel (TiaraVib import kadang include full HTML head)
+    .replace(/<title[^>]*>.*?<\/title>/gi, '')
+    .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
+    .replace(/<\/?html[^>]*>/gi, '')
+    .replace(/<\/?body[^>]*>/gi, ''));
   return { html: layout({ title: `${title} — ${SITE_NAME}`, desc: truncate(stripHtml(row.content || ''), 150), canonical: ORIGIN + '/artikel/' + slug, ogImage: fullImg, jsonLd: jsonLdArr, body, bodyClass: 'page-post', script, ogType: 'article', articleTimes: { published: isoPub, modified: isoMod } }), script };
+}
+
+// ── Rewrite link lama/broken di konten artikel ke produk real / kategori valid ──
+// Sumber: audit ke-4 (404 internal). Kelas A: slug generik editorial tanpa produk real.
+// Kelas B: link lama "/product/jual-*" yang produknya sekarang punya slug baru.
+const LEGACY_PRODUKT = {
+  // Kelas A: slug generik (tanpa produk real) → halaman kategori terdekat
+  'compressor-angin-24l-1hp': '/kategori/mesin-tools',
+  'total-station': '/kategori/alat-survey',
+  'jangka-sorong-digital': '/kategori/alat-ukur',
+  'mesin-las-listrik-mma-200a-inverter': '/kategori/elektronik-power-tools',
+  'mikrometer-digital': '/kategori/alat-ukur',
+  'mesin-gerinda-tangan-4-850w': '/kategori/mesin-tools',
+  'mesin-bor-tangan-industri-800w': '/kategori/mesin-tools',
+  'mesin-bor-impact-18v-cordless': '/kategori/mesin-tools',
+  'safety-helmet-industri-proyek-earplug-set': '/kategori/safety-perlengkapan',
+  'sarung-tangan-las-kulit-welding-gloves': '/kategori/safety-perlengkapan',
+  // Kelas B: "/product/jual-*" & slug lama → slug produk real saat ini
+  'jual-imex-lar-32-auto-level': '/produk/imex-lar-32-magnification-auto-level',
+  'jual-alpha-geo-r1-robotic-total-station': '/produk/alpha-geo-r1-robotic-total-station',
+  'jual-sanwa-rd701-digital-multimeter': '/produk/sanwa-rd701-digital-multimeter-multitester',
+  'jual-lutron-lx-108-digital-lux-meter-max-20000': '/produk/lutron-lx-108-digital-lux-meter-max-20000',
+  'jual-uni-t-ut352-sound-level-meter': '/produk/uni-t-ut352-sound-level-meter',
+  'jual-kyoritsu-2009r-digital-clamp-meter': '/produk/kyoritsu-2009r-digital-clamp-meter',
+  'jual-fluke-62-max-dual-laser-infrared-thermometer': '/produk/fluke-62-max-dual-laser-infrared-thermometer',
+  'jual-cem-dt-172-temperature-humidity-hygrometer-data-logger': '/produk/cem-dt-172-temperature-humidity-hygrometer-data-logger',
+  'jual-mileseey-mc998-coating-thickness-gauge': '/produk/mileseey-mc998-coating-thickness-gauge',
+  'jual-alpha-geo-agl-32-digital-auto-level': '/produk/alpha-geo-agl-32-digital-auto-level',
+};
+function rewriteContentLinks(html) {
+  if (!html) return html;
+  // 1. Normalisasi prefix: /product/... → /produk/...
+  let out = html.replace(/href="\/product\//gi, 'href="/produk/');
+  // 2. Ganti slug yang masuk daftar legacy (cocok akhiran path, jangan kena query/hash)
+  out = out.replace(/href="\/produk\/([^"#?]+)"/gi, (m, slug) => {
+    const target = LEGACY_PRODUKT[slug] || LEGACY_PRODUKT[slug.replace(/^jual-/, '')];
+    return target ? `href="${target}"` : m;
+  });
+  return out;
 }
 
 // ── Seed artikel default (hanya jika tabel kosong) ──
@@ -889,8 +942,7 @@ const DEFAULT_ARTICLES = [
 
 async function ensureArticles(env) {
   try {
-    const row = await env.DB.prepare('SELECT COUNT(*) AS c FROM articles').first();
-    if (row && row.c > 0) return;
+    // INSERT OR IGNORE idempotent: seed artikel default yang belum ada (tanpa ganggu yang sudah ada)
     const now = new Date().toISOString();
     for (const a of DEFAULT_ARTICLES) {
       await env.DB.prepare(
@@ -940,10 +992,10 @@ export async function renderArticles(env) {
     ${cards}
     <div style="margin-top:32px;padding-top:20px;border-top:1px solid var(--border);text-align:center;font-size:13px;color:var(--muted)">
       <a href="/" style="margin:0 12px">← Beranda</a>
-      <a href="/kategori/power-tools" style="margin:0 12px">Power Tools</a>
-      <a href="/kategori/mesin-industri" style="margin:0 12px">Mesin Industri</a>
-      <a href="/kategori/alat-bengkel" style="margin:0 12px">Alat Bengkel</a>
-      <a href="/kategori/equipment" style="margin:0 12px">Equipment</a>
+      <a href="/kategori/mesin-tools" style="margin:0 12px">Mesin & Tools</a>
+      <a href="/kategori/elektronik-power-tools" style="margin:0 12px">Elektronik & Power Tools</a>
+      <a href="/kategori/industri-manufaktur" style="margin:0 12px">Industri & Manufaktur</a>
+      <a href="/kategori/alat-ukur" style="margin:0 12px">Alat Ukur</a>
     </div>
   </div>`;
 

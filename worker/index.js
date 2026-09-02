@@ -505,10 +505,23 @@ export default {
       const page = await renderArchive(env, parseInt(url.searchParams.get('page') || '1', 10) || 1);
       return htmlPage(page.html);
     }
+    // ── Redirect URL lama /product/* → /produk/* (dulu pakai prefix "product") ──
+    if (path.startsWith('/product/')) {
+      const key = decodeURIComponent(path.slice('/product/'.length));
+      const clean = key.replace(/^jual-/, ''); // slug lama "jual-xxx" → "xxx"
+      return new Response(null, {
+        status: 301,
+        headers: withSec({ Location: '/produk/' + clean, 'Cache-Control': 'public, max-age=86400' }),
+      });
+    }
     if (path.startsWith('/produk/')) {
       const key = decodeURIComponent(path.slice('/produk/'.length));
       await ensureProducts(env);
-      const prod = await findProduct(env, key);
+      let prod = await findProduct(env, key);
+      // URL lama /produk/jual-* → coba tanpa prefix "jual-"
+      if (!prod && key.startsWith('jual-')) {
+        prod = await findProduct(env, key.slice(5));
+      }
       if (!prod) return new Response('Produk tidak ditemukan', { status: 404, headers: withSec({ 'Content-Type': 'text/plain; charset=utf-8' }) });
       // URL lama pakai id angka -> redirect 301 ke slug baru (SEO friendly)
       if (key !== prod.slug) {

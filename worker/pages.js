@@ -57,7 +57,13 @@ function sanitizeHtml(s) {
   return String(s)
     .replace(/on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
     .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
-    .replace(/javascript\s*:/gi, 'blocked:');
+    .replace(/javascript\s*:/gi, 'blocked:')
+    .replace(/<h1\b/gi, '<h2')
+    .replace(/<\/h1>/gi, '</h2>')
+    // Tambah alt fallback untuk img tanpa alt di desc
+    .replace(/<img\b(?!.*\balt\s*=)([^>]*)>/gi, '<img$1 alt="Produk" loading="lazy">')
+    // Ganti gambar alicdn (sudah mati 404) dengan placeholder lokal
+    .replace(/<img\b[^>]*\bsrc\s*=\s*["']https?:\/\/(?:ae\d+\.alicdn\.com|aliexpress-media\.com)[^"']*["'][^>]*>/gi, '<img src="/assets/img-placeholder.svg" alt="Foto produk" loading="lazy" width="400" height="300">');
 }
 function fmt(n) {
   return 'Rp' + Math.round(Number(n) || 0).toLocaleString('id-ID');
@@ -72,6 +78,22 @@ function stripHtml(s) {
 function truncate(s, n) {
   const t = stripHtml(s);
   return t.length > n ? t.slice(0, n).trimEnd() + '…' : t;
+}
+// SEO title tag: maksimal 60 karakter termasuk brand (ScreamingFrog: >60 chars & >561px)
+function seoTitle(name) {
+  const suffix = ` — ${SITE_NAME}`;
+  const clean = stripHtml(name || '');
+  if (clean.length + suffix.length <= 60) return clean + suffix;
+  return truncate(clean, 60 - suffix.length) + suffix;
+}
+// SEO meta description: generate unik jika desc template AliExpress
+function seoDesc(p) {
+  const d = (p.desc || '').trim();
+  if (!d || d.length < 20 || /smarter shopping/i.test(d) || /better living/i.test(d)) {
+    const cat = (p.category || '').split(' > ').pop() || 'Produk';
+    return truncate(`Beli ${p.name} di ProIndustri. Harga grosir, original bergaransi, ${cat}. Kirim seluruh Indonesia.`, 150);
+  }
+  return truncate(d, 150);
 }
 function fmtDate(d) {
   try {
@@ -339,13 +361,13 @@ export async function renderProduct(env, p) {
     <div class="pd-main">
       <div class="pd-gallery">
         <div class="pd-img-box">
-          ${img ? `<img src="${esc(img)}" alt="${esc(p.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` + `<div style="display:none;align-items:center;justify-content:center;height:100%;font-size:72px"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg></div>` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:72px"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg></div>'}
+          ${img ? `<img src="${esc(img)}" alt="${esc(truncate(p.name, 90))}" width="700" height="700" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` + `<div style="display:none;align-items:center;justify-content:center;height:100%;font-size:72px"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg></div>` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:72px"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg></div>'}
         </div>
         <div class="pd-badges">${badges.map(b => `<span class="pd-badge">${b}</span>`).join('')}</div>
       </div>
       <div>
         <div class="pd-cat">${esc(shortCat(p.category) || 'Produk')}</div>
-        <h1 class="pd-name">${esc(p.name)}</h1>
+        <h1 class="pd-name" title="${esc(p.name)}">${esc(truncate(p.name, 70))}</h1>
         <div class="pd-price" id="pdPrice">${priceLabel}</div>
         <div class="pd-rating" id="pdRating">${starsHtml(p.id)}<span class="p-sold">· ${fmtSold(fakeSold(p.id))}+ terjual</span></div>
         <div class="pd-price-sub">Ready stock · ${sortedVars.length} pilihan varian${minP !== maxP ? ' · mulai ' + fmt(minP) : ''}</div>
@@ -376,24 +398,24 @@ export async function renderProduct(env, p) {
     </div>
 
     <div class="pd-panel">
-      <div class="pd-panel-title"><svg class="ic" aria-hidden="true"><use href="#i-clipboard-list"/></svg> Spesifikasi Produk</div>
+      <h2 class="pd-panel-title"><svg class="ic" aria-hidden="true"><use href="#i-clipboard-list"/></svg> Spesifikasi Produk</h2>
       <table class="pd-specs-table">${specRows}</table>
     </div>
 
     <div class="pd-panel">
-      <div class="pd-panel-title"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg> Deskripsi Produk</div>
+      <h2 class="pd-panel-title"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg> Deskripsi Produk</h2>
       <div class="pd-desc">${sanitizeHtml(p.desc) || 'Tidak ada deskripsi.'}</div>
     </div>
 
     <div class="pd-panel">
-      <div class="pd-panel-title"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg> Review Pembeli</div>
+      <h2 class="pd-panel-title"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg> Review Pembeli</h2>
       <div id="reviewBox">
         <div style="font-size:13px;color:var(--muted);padding:8px 0"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg> Memuat review...</div>
       </div>
     </div>
 
     <div class="pd-panel">
-      <div class="pd-panel-title"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg> Diskusi Produk (${qnaList.length})</div>
+      <h2 class="pd-panel-title"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg> Diskusi Produk (${qnaList.length})</h2>
       <div id="qnaBox">
         ${qnaList.length === 0 ? '<div style="font-size:13px;color:var(--muted);padding:8px 0">Belum ada pertanyaan. Jadi yang pertama bertanya tentang produk ini!</div>' :
           qnaList.map(q => `
@@ -416,7 +438,7 @@ export async function renderProduct(env, p) {
     </div>
 
     <div class="pd-panel">
-      <div class="pd-panel-title"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg> Butuh Bantuan?</div>
+      <h2 class="pd-panel-title"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg> Butuh Bantuan?</h2>
       <p style="font-size:13px;color:var(--mid);line-height:1.7;margin-bottom:14px">Punya pertanyaan soal produk ini, ukuran, atau pesan partai besar? Tim kami siap bantu via WhatsApp.</p>
       <a class="btn-red" href="${WA_STORE}?text=${encodeURIComponent('Halo, saya mau tanya produk: ' + p.name)}" target="_blank" rel="noopener"><svg class="ic" aria-hidden="true"><use href="#i-message-circle"/></svg> Chat WhatsApp</a>
     </div>
@@ -649,7 +671,7 @@ export async function renderProduct(env, p) {
   }
   ${QUICKMODAL_SCRIPT}`;
 
-  return { html: layout({ title: `${p.name} — ${SITE_NAME}`, desc: truncate(p.desc || p.name, 155), canonical: ORIGIN + '/produk/' + (p.slug || p.id), ogImage: fullImg, jsonLd, body, bodyClass: 'page-product', script }), script };
+  return { html: layout({ title: seoTitle(p.name), desc: seoDesc(p), canonical: ORIGIN + '/produk/' + (p.slug || p.id), ogImage: fullImg, jsonLd, body, bodyClass: 'page-product', script }), script };
 }
 
 // ── Single Post ──
@@ -761,7 +783,7 @@ export async function renderPost(env, slug) {
         <div class="a-grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))">${rels.map(r => {
           const ri = (r.image || '').replace(/^https:\/\/pub-[a-f0-9]+\.r2\.dev\//, '/img/');
           return `<a class="a-card" href="/artikel/${esc(r.slug)}">
-            ${ri ? `<div class="a-thumb"><img src="${esc(ri)}" alt="${esc(r.title)}" loading="lazy" onerror="this.style.display='none'"></div>` : `<div class="a-thumb"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg></div>`}
+            ${ri ? `<div class="a-thumb"><img src="${esc(ri)}" alt="${esc(truncate(r.title, 90))}" width="400" height="300" loading="lazy" onerror="this.style.display='none'"></div>` : `<div class="a-thumb"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg></div>`}
             <div class="a-body"><div class="a-tag">${esc(r.category || 'Blog')}</div><div class="a-title" style="font-size:14px">${esc(r.title)}</div></div>
           </a>`;
         }).join('')}</div>
@@ -781,7 +803,7 @@ export async function renderPost(env, slug) {
           <span><svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg> ${Number(row.views || 0) + 1}x dibaca</span>
         </div>
       </div>
-      ${img ? `<div class="post-thumb"><img src="${esc(img)}" alt="${esc(title)}" onerror="this.style.display='none'"></div>` : ''}
+      ${img ? `<div class="post-thumb"><img src="${esc(img)}" alt="${esc(truncate(title, 90))}" width="700" height="400" onerror="this.style.display='none'"></div>` : ''}
       <div class="post-body">
         <div class="post-content">${(row.content || '<p>Konten belum tersedia.</p>').replace(/<article\s+itemscope\s+itemtype="https:\/\/schema\.org\/Product">/gi, '<article>')}</div>
         ${relatedHtml}
@@ -802,7 +824,7 @@ export async function renderPost(env, slug) {
   function shareTW() { window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(document.title + ' ' + location.href), '_blank'); }
   function copyLink() { navigator.clipboard.writeText(location.href).then(function(){ var b=document.querySelector('.share-copy'); if(b){ var t=b.innerHTML; b.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-check-circle-2"/></svg> Tersalin!'; setTimeout(function(){ b.innerHTML=t; }, 2000); } }).catch(function(){ prompt('Salin link:', location.href); }); }`;
 
-  return { html: layout({ title: `${title} — ${SITE_NAME}`, desc: truncate(stripHtml(row.content || ''), 155), canonical: ORIGIN + '/artikel/' + slug, ogImage: fullImg, jsonLd: jsonLdArr, body, bodyClass: 'page-post', script, ogType: 'article', articleTimes: { published: isoPub, modified: isoMod } }), script };
+  return { html: layout({ title: `${title} — ${SITE_NAME}`, desc: truncate(stripHtml(row.content || ''), 150), canonical: ORIGIN + '/artikel/' + slug, ogImage: fullImg, jsonLd: jsonLdArr, body, bodyClass: 'page-post', script, ogType: 'article', articleTimes: { published: isoPub, modified: isoMod } }), script };
 }
 
 // ── Seed artikel default (hanya jika tabel kosong) ──
@@ -890,7 +912,7 @@ export async function renderArticles(env) {
     cards = `<div class="a-grid">${results.map(a => {
       const img = (a.image || '').replace(/^https:\/\/pub-[a-f0-9]+\.r2\.dev\//, '/img/');
       return `<a class="a-card" href="/artikel/${esc(a.slug)}">
-        ${img ? `<div class="a-thumb"><img src="${esc(img)}" alt="${esc(a.title)}" loading="lazy" onerror="this.style.display='none'"></div>` : `<div class="a-thumb"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg></div>`}
+        ${img ? `<div class="a-thumb"><img src="${esc(img)}" alt="${esc(truncate(a.title, 90))}" width="400" height="300" loading="lazy" onerror="this.style.display='none'"></div>` : `<div class="a-thumb"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg></div>`}
         <div class="a-body">
           <div class="a-tag">${esc(a.category || 'Blog')}</div>
           <div class="a-title">${esc(a.title)}</div>
@@ -904,13 +926,20 @@ export async function renderArticles(env) {
   const body = `
   <div class="wrap">
     <div class="page-head">
-      <div class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg> Artikel & Tips</div>
+      <h1 class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg> Artikel & Tips</h1>
       <div class="page-sub">Panduan memilih mesin & tools industri, tips untuk bengkel dan pabrik, dan info seputar produk industri.</div>
     </div>
     ${cards}
+    <div style="margin-top:32px;padding-top:20px;border-top:1px solid var(--border);text-align:center;font-size:13px;color:var(--muted)">
+      <a href="/" style="margin:0 12px">← Beranda</a>
+      <a href="/kategori/power-tools" style="margin:0 12px">Power Tools</a>
+      <a href="/kategori/mesin-industri" style="margin:0 12px">Mesin Industri</a>
+      <a href="/kategori/alat-bengkel" style="margin:0 12px">Alat Bengkel</a>
+      <a href="/kategori/equipment" style="margin:0 12px">Equipment</a>
+    </div>
   </div>`;
 
-  return { html: layout({ title: `Artikel & Tips — ${SITE_NAME}`, desc: 'Panduan memilih mesin & tools industri, tips untuk bengkel dan pabrik, dan info seputar produk industri dari ProIndustri.', canonical: ORIGIN + '/artikel', body, bodyClass: 'page-artikel', script: '' }), script: '' };
+  return { html: layout({ title: `Artikel & Tips Industri — ${SITE_NAME}`, desc: 'Panduan memilih mesin & tools industri, tips untuk bengkel dan pabrik, dan info seputar produk industri dari ProIndustri.', canonical: ORIGIN + '/artikel', body, bodyClass: 'page-artikel', script: '' }), script: '' };
 }
 
 // Mask nama untuk tampilan publik: "Agus" → "Ag***"
@@ -965,10 +994,7 @@ function renderQA(){
   }
   var el=document.getElementById('qaModal');
   el.innerHTML='<div class="qa-head">'+
-    '<div class="qa-thumb">'+(p.img?'<img src="'+p.img+'" alt="" onerror="this.style.display=\\'none\\'">':'<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg>')+'</div>'+
-    '<div class="qa-name">'+escQA(p.name)+'</div>'+
-    '<button class="qa-close-btn" onclick="closeQA()">✕</button></div>'+
-    '<div class="qa-lbl">Pilih Varian</div>'+vsHtml+
+    '<div class="qa-thumb">'+(p.img?'<img src="'+p.img+'" alt="" width="100" height="100" onerror="this.style.display=\\'none\\'">':'<svg class="ic" aria-hidden="true"><use href="#i-package"/></svg>')+'</div>'+\n    '<div class="qa-name">'+escQA(p.name)+'</div>'+\n    '<button class="qa-close-btn" onclick="closeQA()">✕</button></div>'+\n    '<div class="qa-lbl">Pilih Varian</div>'+vsHtml+
     '<div class="qa-qty-row"><span style="font-size:12px;font-weight:700;color:var(--mid)">Jumlah:</span>'+
     '<button class="cqb" type="button" onclick="qaCh(-1)">−</button>'+
     '<input type="number" id="qaQty" value="'+qaQ+'" min="'+(p.minpack||1)+'" step="1" inputmode="numeric" oninput="qaSet()" style="width:72px;text-align:center;font-weight:900;font-size:16px;padding:6px 8px;border:1.5px solid var(--border);border-radius:8px;background:white;color:var(--dark);font-family:var(--font)">'+
@@ -1032,7 +1058,7 @@ function homeCard(p) {
   } catch (e) {}
   const minPack = 1;
   const imgHtml = img
-    ? `<div class="p-img"><img src="${esc(img)}" alt="${name}" loading="lazy" onerror="this.style.display='none'"></div>`
+    ? `<div class="p-img"><img src="${esc(img)}" alt="${name}" width="700" height="700" loading="lazy" onerror="this.style.display='none'"></div>`
     : `<div class="p-img" style="display:flex;align-items:center;justify-content:center;font-size:42px"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg></div>`;
   let variantsJson = '[]';
   try {
@@ -1174,7 +1200,7 @@ export async function renderShop(env, searchQuery) {
       const vFirst = vs.filter(function(v){return Number(v.price)>0}).sort(function(a,b){return Number(a.price)-Number(b.price)})[0] || null;
       const vcount = vs.length;
       const onerr = 'onerror="this.parentElement.innerHTML=' + q + '&#128230;' + q + '"';
-      const img = p.img ? '<div class="p-img"><img src="' + p.img + '" alt="' + p.name.replace(/"/g,'&quot;') + '" loading="lazy" ' + onerr + '></div>' : '<div class="p-img" style="display:flex;align-items:center;justify-content:center;font-size:42px">&#128230;</div>';
+      const img = p.img ? '<div class="p-img"><img src="' + p.img + '" alt="' + p.name.replace(/"/g,'&quot;').substring(0,90) + '" width="700" height="700" loading="lazy" ' + onerr + '></div>' : '<div class="p-img" style="display:flex;align-items:center;justify-content:center;font-size:42px">&#128230;</div>';
       const d = 'data-id="' + p.id + '" data-slug="' + encodeURIComponent(p.slug) + '" data-name="' + p.name.replace(/"/g,'&quot;') + '" data-img="' + p.img + '" data-minpack="1" data-variants=' + q + JSON.stringify(vs.filter(function(v){return Number(v.price)>0}).map(function(v){return {name:String(v.name||''),price:Number(v.price)}})).replace(/'/g,'&#39;') + q;
       return '<a class="p-card" href="/produk/' + encodeURIComponent(p.slug) + '">' +
         '<div class="p-img" style="position:relative">' + img +
@@ -1279,7 +1305,7 @@ export async function renderArchive(env, page = 1) {
   <div class="wrap">
     ${breadcrumb([{ href: '/produk', label: 'Semua Produk' }])}
     <div class="page-head">
-      <div class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg> Arsip Produk</div>
+      <h1 class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg> Arsip Produk</h1>
       <div class="page-sub">Seluruh ${total} produk ProIndustri dikelompokkan berdasarkan kategori. Klik produk untuk melihat detail, ukuran, dan harga.</div>
     </div>
     ${groups}
@@ -1353,7 +1379,7 @@ export async function renderCategory(env, slug, page = 1) {
   <div class="wrap">
     ${breadcrumb([{ href: '/shop', label: 'Shop' }, { href: '/kategori/' + slug, label: shortName }])}
     <div class="page-head">
-      <div class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-${iconName}"/></svg> ${esc(shortName)}</div>
+      <h1 class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-${iconName}"/></svg> ${esc(shortName)}</h1>
       <div class="page-sub">${esc(desc)}</div>
     </div>
     ${subChips}
@@ -1365,7 +1391,7 @@ export async function renderCategory(env, slug, page = 1) {
     </div>
   </div>`;
 
-  return { html: layout({ title: `Jual ${shortName} Grosir — ${SITE_NAME}`, desc: `Beli ${shortName} harga grosir di ProIndustri. ${total} varian, original & bergaransi, kirim seluruh Indonesia.`, canonical: ORIGIN + '/kategori/' + slug + (page > 1 ? '?page=' + page : ''), ogImage: featImg, body, bodyClass: 'page-category', script: WISH_SCRIPT + QUICKMODAL_SCRIPT }), script: '' };
+  return { html: layout({ title: seoTitle(`Jual ${shortName} Grosir${page > 1 ? ' — Halaman ' + page : ''}`), desc: `Beli ${shortName} harga grosir di ProIndustri. ${total} varian, original & bergaransi, kirim seluruh Indonesia.`, canonical: ORIGIN + '/kategori/' + slug + (page > 1 ? '?page=' + page : ''), ogImage: featImg, body, bodyClass: 'page-category', script: WISH_SCRIPT + QUICKMODAL_SCRIPT }), script: '' };
 }
 
 // ── Halaman Sitemap (HTML, user-friendly) — semua halaman, kategori, dan artikel ──
@@ -1418,7 +1444,7 @@ export async function renderSitemap(env) {
   <div class="wrap">
     ${breadcrumb([{ href: '/sitemap', label: 'Sitemap' }])}
     <div class="page-head">
-      <div class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-map-pin"/></svg> Sitemap</div>
+      <h1 class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-map-pin"/></svg> Sitemap</h1>
       <div class="page-sub">Peta seluruh halaman ProIndustri — navigasi cepat ke kategori, produk, dan artikel.</div>
     </div>
     <div class="sm-grid">

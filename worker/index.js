@@ -4,6 +4,18 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
+// Security headers (ScreamingFrog: missing CSP/HSTS/Referrer-Policy/X-Content-Type-Options/X-Frame-Options)
+const SEC = {
+  'Content-Security-Policy': "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; connect-src 'self' https:; frame-ancestors 'self'",
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'SAMEORIGIN',
+};
+function withSec(headers = {}) {
+  return { ...headers, ...SEC };
+}
+
 // Rewrite URL gambar R2 publik -> route lokal /img/ (anti blokir domain eksternal di jaringan pengguna)
 const IMG_RE = /https:\/\/pub-[a-f0-9]+\.r2\.dev\/products\//g;
 function rewriteImg(v) {
@@ -16,7 +28,15 @@ function rewriteImg(v) {
 function json(data, status = 200) {
   return new Response(JSON.stringify(rewriteImg(data)), {
     status,
-    headers: { 'Content-Type': 'application/json', ...CORS },
+    headers: withSec({ 'Content-Type': 'application/json', ...CORS }),
+  });
+}
+
+// HTML page helper (SSR pages) — selalu dengan security headers
+function htmlPage(body, status = 200, extra = {}) {
+  return new Response(body, {
+    status,
+    headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store', ...extra }),
   });
 }
 
@@ -455,20 +475,21 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    if (request.method === 'OPTIONS') return new Response(null, { headers: CORS });
+    if (request.method === 'OPTIONS') return new Response(null, { headers: withSec(CORS) });
 
     // ── GET /img/* — serve gambar produk dari R2 binding (domain sendiri, cache permanen) ──
     if (path.startsWith('/img/')) {
       const key = path.slice(1).replace(/^img\//, ''); // "products/img_001.jpeg"
-      if (!key || key.split('/').length < 2) return new Response('Not Found', { status: 404 });
+      if (!key || key.split('/').length < 2) return new Response('Not Found', { status: 404, headers: withSec() });
       const obj = await env.IMAGES.get(key);
-      if (!obj) return new Response('Not Found', { status: 404 });
+      if (!obj) return new Response('Not Found', { status: 404, headers: withSec() });
       const headers = new Headers();
       obj.writeHttpMetadata(headers);
       headers.set('etag', obj.httpEtag);
       headers.set('Cache-Control', 'public, max-age=31536000, immutable');
       headers.set('Content-Type', obj.httpMetadata?.contentType || 'image/jpeg');
       headers.set('Access-Control-Allow-Origin', '*');
+      for (const [k, v] of Object.entries(SEC)) headers.set(k, v);
       return new Response(obj.body, { headers });
     }
 
@@ -477,51 +498,51 @@ export default {
       await ensureProducts(env);
       const q = url.searchParams.get('q') || '';
       const page = await renderShop(env, q);
-      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store' } });
+      return htmlPage(page.html);
     }
     if (path === '/produk') {
       await ensureProducts(env);
       const page = await renderArchive(env, parseInt(url.searchParams.get('page') || '1', 10) || 1);
-      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store' } });
+      return htmlPage(page.html);
     }
     if (path.startsWith('/produk/')) {
       const key = decodeURIComponent(path.slice('/produk/'.length));
       await ensureProducts(env);
       const prod = await findProduct(env, key);
-      if (!prod) return new Response('Produk tidak ditemukan', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+      if (!prod) return new Response('Produk tidak ditemukan', { status: 404, headers: withSec({ 'Content-Type': 'text/plain; charset=utf-8' }) });
       // URL lama pakai id angka -> redirect 301 ke slug baru (SEO friendly)
       if (key !== prod.slug) {
         return new Response(null, {
           status: 301,
-          headers: { Location: '/produk/' + prod.slug, 'Cache-Control': 'public, max-age=86400' },
+          headers: withSec({ Location: '/produk/' + prod.slug, 'Cache-Control': 'public, max-age=86400' }),
         });
       }
       const page = await renderProduct(env, prod);
-      if (!page) return new Response('Produk tidak ditemukan', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store' } });
+      if (!page) return new Response('Produk tidak ditemukan', { status: 404, headers: withSec({ 'Content-Type': 'text/plain; charset=utf-8' }) });
+      return htmlPage(page.html);
     }
     if (path.startsWith('/kategori/')) {
       const slug = decodeURIComponent(path.slice('/kategori/'.length));
       await ensureProducts(env);
       const page = await renderCategory(env, slug, parseInt(url.searchParams.get('page') || '1', 10) || 1);
-      if (!page) return new Response('Kategori tidak ditemukan', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store' } });
+      if (!page) return new Response('Kategori tidak ditemukan', { status: 404, headers: withSec({ 'Content-Type': 'text/plain; charset=utf-8' }) });
+      return htmlPage(page.html);
     }
     if (path.startsWith('/artikel/')) {
       const slug = decodeURIComponent(path.slice('/artikel/'.length));
       const page = await renderPost(env, slug);
-      if (!page) return new Response('Artikel tidak ditemukan', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store' } });
+      if (!page) return new Response('Artikel tidak ditemukan', { status: 404, headers: withSec({ 'Content-Type': 'text/plain; charset=utf-8' }) });
+      return htmlPage(page.html);
     }
     if (path === '/artikel') {
       const page = await renderArticles(env);
-      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store' } });
+      return htmlPage(page.html);
     }
 
     // ── Halaman Sitemap (HTML, user-friendly) ──
     if (path === '/sitemap') {
       const page = await renderSitemap(env);
-      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store' } });
+      return htmlPage(page.html);
     }
 
     // ── Sitemap XML (dinamis: produk, kategori, artikel) ──
@@ -548,16 +569,21 @@ export default {
         for (const a of arts.results || []) urls.push({ loc: '/artikel/' + a.slug, prio: '0.7', freq: 'monthly', lastmod: a.created_at ? a.created_at.slice(0, 10) : undefined });
       } catch (e) { /* sitemap tetap jalan walau DB error */ }
       const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(u => `  <url><loc>${ORIGIN}${u.loc}</loc>${u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : ''}<changefreq>${u.freq}</changefreq><priority>${u.prio}</priority></url>`).join('\n')}\n</urlset>`;
-      return new Response(xml, { headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600' } });
+      return new Response(xml, { headers: withSec({ 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }) });
     }
 
     // ── robots.txt (override asset) ──
     if (path === '/robots.txt') {
       const robots = `User-agent: *\nAllow: /\n\nDisallow: /api/\nDisallow: /admin\nDisallow: /cart\nDisallow: /checkout\nDisallow: /akun\n\nSitemap: https://proindustri.com/sitemap.xml\n`;
-      return new Response(robots, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600' } });
+      return new Response(robots, { headers: withSec({ 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }) });
     }
 
-    if (!path.startsWith('/api/')) return env.ASSETS.fetch(request);
+    if (!path.startsWith('/api/')) {
+      const resp = await env.ASSETS.fetch(request);
+      const h = new Headers(resp.headers);
+      for (const [k, v] of Object.entries(SEC)) if (!h.has(k)) h.set(k, v);
+      return new Response(resp.body, { status: resp.status, statusText: resp.statusText, headers: h });
+    }
 
     // ── POST /api/admin/login ──
     if (path === '/api/admin/login' && request.method === 'POST') {

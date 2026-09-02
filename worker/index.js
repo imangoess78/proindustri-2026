@@ -582,6 +582,9 @@ export default {
       const resp = await env.ASSETS.fetch(request);
       const h = new Headers(resp.headers);
       for (const [k, v] of Object.entries(SEC)) if (!h.has(k)) h.set(k, v);
+      // Force no-cache untuk static assets biar tidak stale di CF Edge
+      h.set('Cache-Control', 'public, no-cache, must-revalidate');
+      h.set('CDN-Cache-Control', 'no-store');
       return new Response(resp.body, { status: resp.status, statusText: resp.statusText, headers: h });
     }
 

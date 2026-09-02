@@ -722,6 +722,32 @@ export async function renderPost(env, slug) {
     });
   }
 
+  // ── Product schema (hanya jika konten punya prod-embed: nama + harga) ──
+  try {
+    const nm = (row.content || '').match(/class="prod-embed-name">([^<]+)</);
+    const pr = (row.content || '').match(/class="prod-embed-price">Rp([0-9.]+)/);
+    if (nm && pr) {
+      const prodName = stripHtml(nm[1]).trim();
+      const price = parseInt(String(pr[1]).replace(/\./g, ''), 10);
+      if (prodName && price > 0) {
+        jsonLdArr.push({
+          '@context': 'https://schema.org',
+          '@type': 'Product',
+          name: prodName,
+          image: fullImg ? [fullImg] : undefined,
+          description: truncate(stripHtml(row.content || ''), 200),
+          offers: {
+            '@type': 'Offer',
+            priceCurrency: 'IDR',
+            price: price,
+            availability: 'https://schema.org/InStock',
+            url: ORIGIN + '/artikel/' + slug
+          }
+        });
+      }
+    }
+  } catch (e) {}
+
   // ── Related articles (same category or latest) ──
   let relatedHtml = '';
   try {
@@ -757,7 +783,7 @@ export async function renderPost(env, slug) {
       </div>
       ${img ? `<div class="post-thumb"><img src="${esc(img)}" alt="${esc(title)}" onerror="this.style.display='none'"></div>` : ''}
       <div class="post-body">
-        <div class="post-content">${row.content || '<p>Konten belum tersedia.</p>'}</div>
+        <div class="post-content">${(row.content || '<p>Konten belum tersedia.</p>').replace(/<article\s+itemscope\s+itemtype="https:\/\/schema\.org\/Product">/gi, '<article>')}</div>
         ${relatedHtml}
         <div class="post-share">
           <span class="post-share-label"><svg class="ic" aria-hidden="true"><use href="#i-share-2"/></svg> Bagikan:</span>
@@ -1340,4 +1366,91 @@ export async function renderCategory(env, slug, page = 1) {
   </div>`;
 
   return { html: layout({ title: `Jual ${shortName} Grosir — ${SITE_NAME}`, desc: `Beli ${shortName} harga grosir di ProIndustri. ${total} varian, original & bergaransi, kirim seluruh Indonesia.`, canonical: ORIGIN + '/kategori/' + slug + (page > 1 ? '?page=' + page : ''), ogImage: featImg, body, bodyClass: 'page-category', script: WISH_SCRIPT + QUICKMODAL_SCRIPT }), script: '' };
+}
+
+// ── Halaman Sitemap (HTML, user-friendly) — semua halaman, kategori, dan artikel ──
+export async function renderSitemap(env) {
+  await ensureArticles(env);
+  const mainPages = [
+    { href: '/', label: 'Beranda' },
+    { href: '/shop', label: 'Shop Semua Produk' },
+    { href: '/produk', label: 'Arsip Produk' },
+    { href: '/artikel', label: 'Artikel & Tips' },
+    { href: '/tentang-kami', label: 'Tentang Kami' },
+    { href: '/kontak', label: 'Kontak' },
+    { href: '/faq', label: 'FAQ' },
+  ];
+
+  // Kategori (parent + sub) dengan jumlah produk
+  let cats = [];
+  let catCounts = {};
+  try {
+    const c = await env.DB.prepare('SELECT slug,name FROM categories WHERE active=1 ORDER BY sort_order, id').all();
+    cats = c.results || [];
+    const pc = await env.DB.prepare('SELECT category, COUNT(*) AS n FROM products WHERE active=1 GROUP BY category').all();
+    for (const r of (pc.results || [])) {
+      const key = String(r.category || '').trim();
+      if (key) catCounts[key] = Number(r.n || 0);
+    }
+  } catch (e) {}
+
+  // Artikel published
+  let arts = [];
+  try {
+    const a = await env.DB.prepare("SELECT slug,title FROM articles WHERE (status='Published' OR (status='Scheduled' AND created_at <= datetime('now'))) ORDER BY created_at DESC").all();
+    arts = a.results || [];
+  } catch (e) {}
+
+  const mainList = mainPages.map(p =>
+    `<a class="sm-link" href="${p.href}"><svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg> ${esc(p.label)}</a>`
+  ).join('');
+
+  const catList = cats.map(c => {
+    const n = catCounts[c.name] || 0;
+    return `<a class="sm-link" href="/kategori/${esc(c.slug)}"><svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg> ${esc(shortCat(c.name))}${n ? ` <span class="sm-count">${n} produk</span>` : ''}</a>`;
+  }).join('') || `<div class="sm-empty">Belum ada kategori.</div>`;
+
+  const artList = arts.map(a =>
+    `<a class="sm-link" href="/artikel/${esc(a.slug)}"><svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg> ${esc(a.title)}</a>`
+  ).join('') || `<div class="sm-empty">Belum ada artikel.</div>`;
+
+  const body = `
+  <div class="wrap">
+    ${breadcrumb([{ href: '/sitemap', label: 'Sitemap' }])}
+    <div class="page-head">
+      <div class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-map-pin"/></svg> Sitemap</div>
+      <div class="page-sub">Peta seluruh halaman ProIndustri — navigasi cepat ke kategori, produk, dan artikel.</div>
+    </div>
+    <div class="sm-grid">
+      <div class="sm-col">
+        <div class="sm-col-title"><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg> Halaman Utama</div>
+        <div class="sm-list">${mainList}</div>
+      </div>
+      <div class="sm-col">
+        <div class="sm-col-title"><svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg> Kategori (${cats.length})</div>
+        <div class="sm-list">${catList}</div>
+      </div>
+      <div class="sm-col sm-col-wide">
+        <div class="sm-col-title"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg> Artikel & Tips (${arts.length})</div>
+        <div class="sm-list sm-list-2col">${artList}</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin:28px 0 8px">
+      <a class="btn-red" style="text-decoration:none;display:inline-block" href="/produk"><svg class="ic" aria-hidden="true"><use href="#i-package"/></svg> Lihat Semua Produk</a>
+    </div>
+  </div>
+  <style>
+  .sm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px;margin-top:8px}
+  .sm-col-title{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;color:var(--ink,#0F1B2D);padding:10px 14px;border-left:3px solid var(--red,#E63946);background:linear-gradient(90deg,rgba(230,57,70,.06),transparent);margin-bottom:6px}
+  .sm-list{display:flex;flex-direction:column}
+  .sm-list-2col{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));column-gap:20px}
+  .sm-link{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;color:#33415C;text-decoration:none;font-size:14px;line-height:1.35}
+  .sm-link .ic{width:14px;height:14px;color:#E63946;flex:none}
+  .sm-link:hover{background:#F8F9FA;color:#E63946}
+  .sm-count{font-size:11px;color:#8892A6;background:#F1F3F5;border-radius:99px;padding:1px 8px;margin-left:4px;white-space:nowrap}
+  .sm-empty{color:var(--muted,#8892A6);font-size:14px;padding:12px 14px}
+  .sm-col-wide{grid-column:1/-1}
+  </style>`;
+
+  return { html: layout({ title: `Sitemap — ${SITE_NAME}`, desc: 'Peta halaman ProIndustri: semua kategori produk, artikel & tips, dan halaman utama dalam satu tempat.', canonical: ORIGIN + '/sitemap', body, bodyClass: 'page-sitemap' }), script: '' };
 }

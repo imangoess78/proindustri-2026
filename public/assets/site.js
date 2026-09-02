@@ -116,11 +116,9 @@
   <div class="cat-nav">
     <div class="cat-nav-inner">
       <a class="cat-nav-item" href="/shop">Semua Produk</a>
+      <a class="cat-nav-item" href="/kategori/alat-ukur">Alat Ukur</a>
       <a class="cat-nav-item" href="/kategori/mesin-tools">Mesin & Tools</a>
-      <a class="cat-nav-item" href="/kategori/elektronik-power-tools">Elektronik & Power Tools</a>
-      <a class="cat-nav-item" href="/kategori/industri-manufaktur">Industri & Manufaktur</a>
-      <a class="cat-nav-item" href="/kategori/safety-perlengkapan">Safety & Perlengkapan</a>
-      <a class="cat-nav-item" href="/kategori/lainnya">Lainnya</a>
+      <a class="cat-nav-item" href="/kategori/alat-survey">Alat Survey</a>
     </div>
   </div>`;
 
@@ -163,6 +161,7 @@
           <li><a href="/tentang-kami">Tentang Kami</a></li>
           <li><a href="/kontak">Kontak</a></li>
           <li><a href="/faq">FAQ</a></li>
+          <li><a href="/sitemap">${IC("map-pin")} Sitemap</a></li>
           <li><a href="/cart">${IC("shopping-cart")} Keranjang</a></li>
           <li><a href="/checkout">Checkout</a></li>
           <li><a href="https://shopee.co.id/proindustri" target="_blank" rel="noopener">Toko Shopee</a></li>

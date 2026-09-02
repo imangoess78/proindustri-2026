@@ -22,7 +22,7 @@ function json(data, status = 200) {
 
 import { PRODUCTS_SEED } from './products_seed.js';
 import { CITIES, RATES, COURIER_NAMES } from './shipping_seed.js';
-import { renderProduct, renderPost, renderArticles, renderShop, renderArchive, renderCategory } from './pages.js';
+import { renderProduct, renderPost, renderArticles, renderShop, renderArchive, renderCategory, renderSitemap } from './pages.js';
 
 function slugify(s) {
   return String(s || '').toLowerCase().trim()
@@ -518,6 +518,12 @@ export default {
       return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store' } });
     }
 
+    // ── Halaman Sitemap (HTML, user-friendly) ──
+    if (path === '/sitemap') {
+      const page = await renderSitemap(env);
+      return new Response(page.html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store' } });
+    }
+
     // ── Sitemap XML (dinamis: produk, kategori, artikel) ──
     if (path === '/sitemap.xml') {
       const ORIGIN = 'https://proindustri.com';
@@ -530,6 +536,7 @@ export default {
         { loc: '/tentang-kami', prio: '0.5', freq: 'monthly' },
         { loc: '/kontak', prio: '0.5', freq: 'monthly' },
         { loc: '/faq', prio: '0.5', freq: 'monthly' },
+        { loc: '/sitemap', prio: '0.6', freq: 'monthly' },
       ];
       try {
         await ensureProducts(env);

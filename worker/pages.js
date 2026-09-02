@@ -62,6 +62,11 @@ function sanitizeHtml(s) {
     .replace(/<\/h1>/gi, '</h2>')
     // Tambah alt fallback untuk img tanpa alt di desc
     .replace(/<img\b(?!.*\balt\s*=)([^>]*)>/gi, '<img$1 alt="Produk" loading="lazy">')
+    // Isi alt kosong dengan teks default
+    .replace(/<img\b([^>]*?\balt\s*=\s*)""([^>]*)>/gi, '<img$1"Produk"$2>')
+    .replace(/<img\b([^>]*?\balt\s*=\s*)''([^>]*)>/gi, '<img$1"Produk"$2>')
+    // Tambah width/height untuk img tanpa kedua attribute ukuran
+    .replace(/<img\b(?!.*?(?:width|height)\s*=)([^>]*?)>/gi, '<img$1 width="400" height="300" loading="lazy">')
     // Ganti gambar alicdn (sudah mati 404) dengan placeholder lokal
     .replace(/<img\b[^>]*\bsrc\s*=\s*["']https?:\/\/(?:ae\d+\.alicdn\.com|aliexpress-media\.com)[^"']*["'][^>]*>/gi, '<img src="/assets/img-placeholder.svg" alt="Foto produk" loading="lazy" width="400" height="300">');
 }
@@ -79,17 +84,19 @@ function truncate(s, n) {
   const t = stripHtml(s);
   return t.length > n ? t.slice(0, n).trimEnd() + '…' : t;
 }
-// SEO title tag: ≤60 chars termasuk brand (ScreamingFrog: >60 chars & >561px)
+// SEO title tag: ≤56 chars termasuk brand (ScreamingFrog: >60 chars & >561px)
 function seoTitle(name) {
   const suffix = ` — ${SITE_NAME}`;
   const clean = stripHtml(name || '');
-  if (clean.length + suffix.length <= 60) return clean + suffix;
-  return truncate(clean, 60 - suffix.length - 1) + suffix;
+  if (clean.length + suffix.length <= 56) return clean + suffix;
+  return truncate(clean, 56 - suffix.length - 1) + suffix;
 }
 // SEO meta description: generate unik jika desc template AliExpress
 function seoDesc(p) {
   const d = (p.desc || '').trim();
-  if (!d || d.length < 20 || /smarter shopping/i.test(d) || /better living/i.test(d)) {
+  const stripped = stripHtml(d);
+  // Jika desc kosong, template AliExpress, atau hasil strip terlalu pendek (<40) → generate unik dari nama produk
+  if (!d || d.length < 20 || stripped.length < 40 || /smarter shopping/i.test(d) || /better living/i.test(d)) {
     const cat = (p.category || '').split(' > ').pop() || 'Produk';
     return truncate(`Beli ${p.name} di ProIndustri. Harga grosir, original bergaransi, ${cat}. Kirim seluruh Indonesia.`, 150);
   }
@@ -367,7 +374,7 @@ export async function renderProduct(env, p) {
       </div>
       <div>
         <div class="pd-cat">${esc(shortCat(p.category) || 'Produk')}</div>
-        <h1 class="pd-name" title="${esc(p.name)}">${esc(truncate(p.name, 70))}</h1>
+        <h1 class="pd-name" title="${esc(p.name)}">${esc(truncate(p.name, 68))}</h1>
         <div class="pd-price" id="pdPrice">${priceLabel}</div>
         <div class="pd-rating" id="pdRating">${starsHtml(p.id)}<span class="p-sold">· ${fmtSold(fakeSold(p.id))}+ terjual</span></div>
         <div class="pd-price-sub">Ready stock · ${sortedVars.length} pilihan varian${minP !== maxP ? ' · mulai ' + fmt(minP) : ''}</div>
@@ -1137,11 +1144,11 @@ export async function renderShop(env, searchQuery) {
     <div class="shop-layout">
       <aside class="shop-side" id="shopSide">
         <div class="shop-side-group">
-          <div class="shop-side-title"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg> Cari Produk</div>
+          <h2 class="shop-side-title"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg> Cari Produk</h2>
           <input class="shop-search" id="shopSearch" placeholder="Cari nama / ukuran..." oninput="applyShop(true)">
         </div>
         <div class="shop-side-group">
-          <div class="shop-side-title"><svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg> Kategori</div>
+          <h2 class="shop-side-title"><svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg> Kategori</h2>
           ${catHtml}
         </div>
         <div class="shop-side-group">
@@ -1379,10 +1386,11 @@ export async function renderCategory(env, slug, page = 1) {
   <div class="wrap">
     ${breadcrumb([{ href: '/shop', label: 'Shop' }, { href: '/kategori/' + slug, label: shortName }])}
     <div class="page-head">
-      <h1 class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-${iconName}"/></svg> ${esc(shortName)}</h1>
-      <div class="page-sub">${esc(desc)}</div>
+      <h1 class="page-title"><svg class="ic" aria-hidden="true"><use href="#i-${iconName}"/></svg> ${esc(shortName)}${page > 1 ? ' — Halaman ' + page : ''}</h1>
+      <div class="page-sub">${esc(desc)}${page > 1 ? ' (halaman ' + page + ' dari ' + pages + ')' : ''}</div>
     </div>
     ${subChips}
+    <h2 class="sec-title" style="margin:20px 0 12px">Produk ${esc(shortName)}${total ? ' — ' + total + ' varian' : ''}</h2>
     <div class="p-grid">${items}</div>
     ${emptyMsg}
     ${pager}
@@ -1391,7 +1399,7 @@ export async function renderCategory(env, slug, page = 1) {
     </div>
   </div>`;
 
-  return { html: layout({ title: seoTitle(`Jual ${shortName} Grosir${page > 1 ? ' — Halaman ' + page : ''}`), desc: `Beli ${shortName} harga grosir di ProIndustri. ${total} varian, original & bergaransi, kirim seluruh Indonesia.`, canonical: ORIGIN + '/kategori/' + slug + (page > 1 ? '?page=' + page : ''), ogImage: featImg, body, bodyClass: 'page-category', script: WISH_SCRIPT + QUICKMODAL_SCRIPT }), script: '' };
+  return { html: layout({ title: seoTitle(`Jual ${shortName} Grosir${page > 1 ? ' — Halaman ' + page : ''}`), desc: `Beli ${shortName} harga grosir di ProIndustri. ${total} varian, original & bergaransi, kirim seluruh Indonesia${page > 1 ? ' — Halaman ' + page + ' dari ' + pages : ''}.`, canonical: ORIGIN + '/kategori/' + slug + (page > 1 ? '?page=' + page : ''), ogImage: featImg, body, bodyClass: 'page-category', script: WISH_SCRIPT + QUICKMODAL_SCRIPT }), script: '' };
 }
 
 // ── Halaman Sitemap (HTML, user-friendly) — semua halaman, kategori, dan artikel ──

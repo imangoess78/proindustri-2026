@@ -1786,13 +1786,35 @@ export default {
       return json({ ok: true, id, slug: finalSlug, img, min_price, max_price, ae_url: aeUrl });
     }
 
-    // ── GET /api/products ── (public — seed otomatis jika kosong)
+    // ── GET /api/products ── (public — seed otomatis jika kosong; supports ?slim=1 & ?limit=N)
     if (path === '/api/products' && request.method === 'GET') {
       await ensureProducts(env);
-      const { results } = await env.DB.prepare(
-        'SELECT * FROM products WHERE active=1 ORDER BY category, name'
-      ).all();
-      return json(results.map(p => ({ ...p, variants: JSON.parse(p.variants || '[]'), specs: JSON.parse(p.specs || '{}') })));
+      let sql = 'SELECT * FROM products WHERE active=1 ORDER BY category, name';
+      const limit = parseInt(url.searchParams.get('limit'), 10);
+      if (limit > 0) sql += ' LIMIT ' + limit;
+      const { results } = await env.DB.prepare(sql).all();
+      const slim = url.searchParams.get('slim') === '1';
+      let data = results.map(p => {
+        const obj = { ...p, variants: JSON.parse(p.variants || '[]'), specs: JSON.parse(p.specs || '{}') };
+        if (slim) {
+          delete obj.desc;
+          delete obj.ae_url;
+          delete obj.img_key;
+          delete obj.created_at;
+          delete obj.updated_at;
+        }
+        return obj;
+      });
+      return json(data);
+    }
+
+    // ── GET /api/products/:key ── (public — full detail untuk quick-view modal, by slug or id)
+    if (path.startsWith('/api/products/') && request.method === 'GET') {
+      const key = decodeURIComponent(path.slice('/api/products/'.length));
+      await ensureProducts(env);
+      const prod = await findProduct(env, key);
+      if (!prod) return json({ error: 'Not found' }, 404);
+      return json(prod);
     }
 
     // ── GET /api/shipping/cities ── daftar provinsi + kota (untuk dropdown checkout)

@@ -1462,6 +1462,77 @@ export async function renderCategory(env, slug, page = 1) {
 }
 
 // ── Halaman Sitemap (HTML, user-friendly) — semua halaman, kategori, dan artikel ──
+const LP_PAGES = [
+  { slug: '2-wire-thermocouple', title: '2 wire thermocouple' },
+  { slug: '3d-laser-measuring-tool', title: '3d laser measuring tool' },
+  { slug: 'agen-bosch-jakarta', title: 'agen bosch jakarta' },
+  { slug: 'alat-pengukur-kandungan-air', title: 'alat pengukur kandungan air' },
+  { slug: 'alat-ukur-digital-laser', title: 'alat ukur digital laser' },
+  { slug: 'amprobe-at-3500', title: 'amprobe at 3500' },
+  { slug: 'az-instrument-indonesia', title: 'az instrument indonesia' },
+  { slug: 'baker-skf', title: 'baker skf' },
+  { slug: 'bearing-skf-jakarta', title: 'bearing skf jakarta' },
+  { slug: 'bosch-balikpapan', title: 'bosch balikpapan' },
+  { slug: 'bosch-batam', title: 'bosch batam' },
+  { slug: 'bosch-jogja', title: 'bosch jogja' },
+  { slug: 'bosch-laser', title: 'bosch laser' },
+  { slug: 'bosch-palembang', title: 'bosch palembang' },
+  { slug: 'bosch-surabaya', title: 'bosch surabaya' },
+  { slug: 'cara-kerja-spectrum-analyzer', title: 'cara kerja spectrum analyzer' },
+  { slug: 'dealer-sumitomo', title: 'dealer sumitomo' },
+  { slug: 'dharma-precision-tools', title: 'dharma precision tools' },
+  { slug: 'distributor-alat-ukur', title: 'distributor alat ukur' },
+  { slug: 'distributor-bearing-skf', title: 'distributor bearing skf' },
+  { slug: 'distributor-bosch-jakarta', title: 'distributor bosch jakarta' },
+  { slug: 'distributor-bosch', title: 'distributor bosch' },
+  { slug: 'distributor-ht-motorola-di-glodok', title: 'distributor ht motorola di glodok' },
+  { slug: 'distributor-ht-motorola', title: 'distributor ht motorola' },
+  { slug: 'distributor-kyoritsu', title: 'distributor kyoritsu' },
+  { slug: 'fluke-flow-meter', title: 'fluke flow meter' },
+  { slug: 'fluke-ground-tester', title: 'fluke ground tester' },
+  { slug: 'garmin-gpsmap-585', title: 'garmin gpsmap 585' },
+  { slug: 'gps-585-garmin', title: 'gps 585 garmin' },
+  { slug: 'hanna-instrument-indonesia', title: 'hanna instrument indonesia' },
+  { slug: 'htc-2-thermometer', title: 'htc 2 thermometer' },
+  { slug: 'icom-7400', title: 'icom 7400' },
+  { slug: 'icom-store', title: 'icom store' },
+  { slug: 'joinwit', title: 'joinwit' },
+  { slug: 'jual-alat-laboratorium-jakarta', title: 'jual alat laboratorium jakarta' },
+  { slug: 'jual-beli-alat-survey-bekas', title: 'jual beli alat survey bekas' },
+  { slug: 'jual-total-station', title: 'jual total station' },
+  { slug: 'krisbow-thermometer-infrared', title: 'krisbow thermometer infrared' },
+  { slug: 'kyoritsu', title: 'kyoritsu' },
+  { slug: 'lutron-btm-4208sd', title: 'lutron btm 4208sd' },
+  { slug: 'mitutoyo-cmm', title: 'mitutoyo cmm' },
+  { slug: 'mitutoyo-indonesia', title: 'mitutoyo indonesia' },
+  { slug: 'pressure-sensor-transmitter', title: 'pressure sensor transmitter' },
+  { slug: 'pt-babad-primasentosa', title: 'pt babad primasentosa' },
+  { slug: 'pt-macrocitra-ardanasejati-rightsign', title: 'pt macrocitra ardanasejati rightsign' },
+  { slug: 'pt-mitsutoyo-indonesia', title: 'pt mitsutoyo indonesia' },
+  { slug: 'pt-mitutoyo-indonesia', title: 'pt mitutoyo indonesia' },
+  { slug: 'riken-keiki-fi-8000', title: 'riken keiki fi 8000' },
+  { slug: 'ruide-total-station', title: 'ruide total station' },
+  { slug: 'sanwa-digital-multimeter-cd800a', title: 'sanwa digital multimeter cd800a' },
+  { slug: 'service-bosch', title: 'service bosch' },
+  { slug: 'single-beam-echo-sounder', title: 'single beam echo sounder' },
+  { slug: 'skf-bearing-indonesia', title: 'skf bearing indonesia' },
+  { slug: 'skf-bearing', title: 'skf bearing' },
+  { slug: 'sndway', title: 'sndway' },
+  { slug: 'survey-dan-pemetaan', title: 'survey dan pemetaan' },
+  { slug: 'thermometer-krisbow', title: 'thermometer krisbow' },
+  { slug: 'toko-alat-lab', title: 'toko alat lab' },
+  { slug: 'toko-bosch-terdekat', title: 'toko bosch terdekat' },
+  { slug: 'toko-lab', title: 'toko lab' },
+  { slug: 'toko-laboratorium', title: 'toko laboratorium' },
+  { slug: 'toko-peralatan-laboratorium', title: 'toko peralatan laboratorium' },
+  { slug: 'toko-sanwa', title: 'toko sanwa' },
+  { slug: 'topcon-indonesia', title: 'topcon indonesia' },
+  { slug: 'xnnx-honeywell-analytics-xnx-gas-detector-calibration-machine', title: 'xnnx honeywell analytics xnx gas detector calibration machine' },
+  { slug: 'xnx-xnx-honeywell-analysis', title: 'xnx xnx honeywell analysis' },
+  { slug: 'xnx-xnx-honeywell-detector', title: 'xnx xnx honeywell detector' },
+  { slug: 'yokogawa-temperature-transmitter', title: 'yokogawa temperature transmitter' }
+];
+
 export async function renderSitemap(env) {
   await ensureArticles(env);
   const mainPages = [
@@ -1526,6 +1597,10 @@ export async function renderSitemap(env) {
       <div class="sm-col sm-col-wide">
         <h2 class="sm-col-title"><svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg> Artikel & Tips (${arts.length})</h2>
         <div class="sm-list sm-list-2col">${artList}</div>
+      </div>
+      <div class="sm-col sm-col-wide">
+        <h2 class="sm-col-title"><svg class="ic" aria-hidden="true"><use href="#i-tag"/></svg> Landing Pages — Jual Produk Unggulan (${LP_PAGES.length})</h2>
+        <div class="sm-list sm-list-2col">${LP_PAGES.map(p => `<a class="sm-link" href="/${esc(p.slug)}"><svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg> ${esc(p.title)}</a>`).join('')}</div>
       </div>
     </div>
     <div style="text-align:center;margin:28px 0 8px">

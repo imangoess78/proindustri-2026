@@ -809,7 +809,7 @@ export async function renderPost(env, slug) {
   // ── Sanitasi konten artikel (strip <title>, <head>, rewrite broken links) ──
   const content = rewriteContentLinks((row.content || '<p>Konten belum tersedia.</p>')
     .replace(/<article\s+itemscope\s+itemtype="https:\/\/schema\.org\/Product">/gi, '<article>')
-    .replace(/<title[^>]*>.*?<\/title>/gi, '')
+    .replace(/<title[^>]*>[\s\S]*?<\/title>/gi, '')
     .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
     .replace(/<\/?html[^>]*>/gi, '')
     .replace(/<\/?body[^>]*>/gi, ''));
@@ -852,7 +852,7 @@ export async function renderPost(env, slug) {
 // ── Rewrite link lama/broken di konten artikel ke produk real / kategori valid ──
 // Sumber: audit ke-4 (404 internal). Kelas A: slug generik editorial tanpa produk real.
 // Kelas B: link lama "/product/jual-*" yang produknya sekarang punya slug baru.
-const LEGACY_PRODUKT = {
+export const LEGACY_PRODUKT = {
   // Kelas A: slug generik (tanpa produk real) → halaman kategori terdekat
   'compressor-angin-24l-1hp': '/kategori/mesin-tools',
   'total-station': '/kategori/alat-survey',
@@ -880,7 +880,12 @@ function rewriteContentLinks(html) {
   if (!html) return html;
   // 1. Normalisasi prefix: /product/... → /produk/...
   let out = html.replace(/href="\/product\//gi, 'href="/produk/');
-  // 2. Ganti slug yang masuk daftar legacy (cocok akhiran path, jangan kena query/hash)
+  // 2. Link salah prefix: /artikel/jual-* (slug produk) → /produk/ (tanpa jual-)
+  out = out.replace(/href="\/artikel\/jual-([^"#?]+)"/gi, (m, slug) => {
+    const target = LEGACY_PRODUKT['jual-' + slug] || LEGACY_PRODUKT[slug] || ('/produk/' + slug);
+    return `href="${target}"`;
+  });
+  // 3. Ganti slug yang masuk daftar legacy (cocok akhiran path, jangan kena query/hash)
   out = out.replace(/href="\/produk\/([^"#?]+)"/gi, (m, slug) => {
     const target = LEGACY_PRODUKT[slug] || LEGACY_PRODUKT[slug.replace(/^jual-/, '')];
     return target ? `href="${target}"` : m;

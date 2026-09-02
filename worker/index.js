@@ -36,13 +36,13 @@ function json(data, status = 200) {
 function htmlPage(body, status = 200, extra = {}) {
   return new Response(body, {
     status,
-    headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'CDN-Cache-Control': 'no-store', ...extra }),
+    headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300, s-maxage=3600', ...extra }),
   });
 }
 
 import { PRODUCTS_SEED } from './products_seed.js';
 import { CITIES, RATES, COURIER_NAMES } from './shipping_seed.js';
-import { renderProduct, renderPost, renderArticles, renderShop, renderArchive, renderCategory, renderSitemap } from './pages.js';
+import { renderProduct, renderPost, renderArticles, renderShop, renderArchive, renderCategory, renderSitemap, LEGACY_PRODUKT } from './pages.js';
 
 function slugify(s) {
   return String(s || '').toLowerCase().trim()
@@ -495,15 +495,24 @@ export default {
 
     // ── Halaman publik: single product, single post, artikel list, cart, checkout, tentang kami, faq ──
     if (path === '/shop') {
-      await ensureProducts(env);
-      const q = url.searchParams.get('q') || '';
-      const page = await renderShop(env, q);
-      return htmlPage(page.html);
+      try {
+        await ensureProducts(env);
+        const q = url.searchParams.get('q') || '';
+        const page = await renderShop(env, q);
+        return htmlPage(page.html);
+      } catch (e) {
+        // DB error → serve fallback ringan (200, bukan 500) biar SEO aman
+        return new Response('<html><head><meta charset="utf-8"><title>Shop - Proindustri</title></head><body style="font-family:sans-serif;text-align:center;padding:4rem"><h1>Proindustri</h1><p>Layanan sedang memuat ulang, silakan kembali sebentar lagi.</p><p><a href="/">Kembali ke Beranda</a></p></body></html>', { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
+      }
     }
     if (path === '/produk') {
-      await ensureProducts(env);
-      const page = await renderArchive(env, parseInt(url.searchParams.get('page') || '1', 10) || 1);
-      return htmlPage(page.html);
+      try {
+        await ensureProducts(env);
+        const page = await renderArchive(env, parseInt(url.searchParams.get('page') || '1', 10) || 1);
+        return htmlPage(page.html);
+      } catch (e) {
+        return new Response('<html><head><meta charset="utf-8"><title>Semua Produk - Proindustri</title></head><body style="font-family:sans-serif;text-align:center;padding:4rem"><h1>Proindustri</h1><p>Katalog sedang memuat ulang, silakan kembali sebentar lagi.</p><p><a href="/">Kembali ke Beranda</a></p></body></html>', { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
+      }
     }
     // ── Redirect URL lama /product/* → /produk/* (dulu pakai prefix "product") ──
     if (path.startsWith('/product/')) {
@@ -516,13 +525,29 @@ export default {
     }
     if (path.startsWith('/produk/')) {
       const key = decodeURIComponent(path.slice('/produk/'.length));
-      await ensureProducts(env);
-      let prod = await findProduct(env, key);
-      // URL lama /produk/jual-* → coba tanpa prefix "jual-"
-      if (!prod && key.startsWith('jual-')) {
-        prod = await findProduct(env, key.slice(5));
+      let prod = null;
+      try {
+        await ensureProducts(env);
+        prod = await findProduct(env, key);
+        if (!prod && key.startsWith('jual-')) {
+          prod = await findProduct(env, key.slice(5));
+        }
+      } catch (e) { /* DB error → treat as not found, fallback redirect */ }
+      if (!prod) {
+        // Fallback: slug lama/generik di konten artikel → redirect ke halaman legacy map
+        const legacy = LEGACY_PRODUKT[key] || LEGACY_PRODUKT[key.replace(/^jual-/, '')];
+        if (legacy) {
+          return new Response(null, {
+            status: 301,
+            headers: withSec({ Location: legacy, 'Cache-Control': 'public, max-age=86400' }),
+          });
+        }
+        // Fallback generic: produk tidak ditemukan → redirect ke shop dengan keyword
+        return new Response(null, {
+          status: 301,
+          headers: withSec({ Location: '/shop?q=' + encodeURIComponent(key.replace(/-/g, ' ')), 'Cache-Control': 'public, max-age=86400' }),
+        });
       }
-      if (!prod) return new Response('Produk tidak ditemukan', { status: 404, headers: withSec({ 'Content-Type': 'text/plain; charset=utf-8' }) });
       // URL lama pakai id angka -> redirect 301 ke slug baru (SEO friendly)
       if (key !== prod.slug) {
         return new Response(null, {
@@ -530,32 +555,57 @@ export default {
           headers: withSec({ Location: '/produk/' + prod.slug, 'Cache-Control': 'public, max-age=86400' }),
         });
       }
-      const page = await renderProduct(env, prod);
+      let page = null;
+      try { page = await renderProduct(env, prod); } catch (e) {}
       if (!page) return new Response('Produk tidak ditemukan', { status: 404, headers: withSec({ 'Content-Type': 'text/plain; charset=utf-8' }) });
       return htmlPage(page.html);
     }
     if (path.startsWith('/kategori/')) {
       const slug = decodeURIComponent(path.slice('/kategori/'.length));
-      await ensureProducts(env);
-      const page = await renderCategory(env, slug, parseInt(url.searchParams.get('page') || '1', 10) || 1);
-      if (!page) return new Response('Kategori tidak ditemukan', { status: 404, headers: withSec({ 'Content-Type': 'text/plain; charset=utf-8' }) });
+      let page = null;
+      try {
+        await ensureProducts(env);
+        page = await renderCategory(env, slug, parseInt(url.searchParams.get('page') || '1', 10) || 1);
+      } catch (e) { /* DB error → treat as not found, fallback redirect */ }
+      if (!page) {
+        // Fallback: kategori tidak ditemukan → redirect ke shop
+        return new Response(null, {
+          status: 301,
+          headers: withSec({ Location: '/shop', 'Cache-Control': 'public, max-age=86400' }),
+        });
+      }
       return htmlPage(page.html);
     }
     if (path.startsWith('/artikel/')) {
       const slug = decodeURIComponent(path.slice('/artikel/'.length));
-      const page = await renderPost(env, slug);
-      if (!page) return new Response('Artikel tidak ditemukan', { status: 404, headers: withSec({ 'Content-Type': 'text/plain; charset=utf-8' }) });
+      let page = null;
+      try { page = await renderPost(env, slug); } catch (e) { /* DB error → treat as not found, fallback redirect */ }
+      if (!page) {
+        // Fallback: artikel tidak ditemukan → redirect ke daftar artikel
+        return new Response(null, {
+          status: 301,
+          headers: withSec({ Location: '/artikel', 'Cache-Control': 'public, max-age=86400' }),
+        });
+      }
       return htmlPage(page.html);
     }
     if (path === '/artikel') {
-      const page = await renderArticles(env);
-      return htmlPage(page.html);
+      try {
+        const page = await renderArticles(env);
+        return htmlPage(page.html);
+      } catch (e) {
+        return new Response('<html><head><meta charset="utf-8"><title>Artikel - Proindustri</title></head><body style="font-family:sans-serif;text-align:center;padding:4rem"><h1>Proindustri</h1><p>Artikel sedang memuat ulang, silakan kembali sebentar lagi.</p><p><a href="/">Kembali ke Beranda</a></p></body></html>', { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
+      }
     }
 
     // ── Halaman Sitemap (HTML, user-friendly) ──
     if (path === '/sitemap') {
-      const page = await renderSitemap(env);
-      return htmlPage(page.html);
+      try {
+        const page = await renderSitemap(env);
+        return htmlPage(page.html);
+      } catch (e) {
+        return new Response('<html><head><meta charset="utf-8"><title>Sitemap - Proindustri</title></head><body style="font-family:sans-serif;text-align:center;padding:4rem"><h1>Proindustri</h1><p>Sitemap sedang memuat ulang, silakan kembali sebentar lagi.</p><p><a href="/">Kembali ke Beranda</a></p></body></html>', { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
+      }
     }
 
     // ── Sitemap XML (dinamis: produk, kategori, artikel) ──

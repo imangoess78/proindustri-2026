@@ -739,6 +739,19 @@ export default {
       return new Response(robots, { headers: withSec({ 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }) });
     }
 
+    // ── Redirect LP typo lama → artikel cluster Honeywell XNX (konsolidasi authority, hilangkan thin page) ──
+    const TYPO_LP_REDIRECTS = {
+      '/xnnx-honeywell-analytics-xnx-gas-detector-calibration-machine': '/artikel/xnx-honeywell-gas-detector-calibration',
+      '/xnx-xnx-honeywell-analysis': '/artikel/honeywell-xnx-gas-detector',
+      '/xnx-xnx-honeywell-detector': '/artikel/honeywell-xnx-gas-detector',
+    };
+    if (TYPO_LP_REDIRECTS[path]) {
+      return new Response(null, {
+        status: 301,
+        headers: withSec({ Location: TYPO_LP_REDIRECTS[path], 'Cache-Control': 'public, max-age=86400' }),
+      });
+    }
+
     if (!path.startsWith('/api/')) {
       const resp = await env.ASSETS.fetch(request);
       const h = new Headers(resp.headers);

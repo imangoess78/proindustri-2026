@@ -206,7 +206,7 @@ ${ogImage ? `<meta name="twitter:image" content="${esc(ogImage)}">` : `<meta nam
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/site.css">
+<link rel="stylesheet" href="/assets/site.css?v=20260903a">
 ${jsonLdHtml}
 <style>${IC_CSS}</style>
 <!-- Google tag (gtag.js) -->
@@ -1158,6 +1158,7 @@ export async function renderShop(env, searchQuery) {
   ).all();
   const products = results;
   const cats = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
+  const catLinksHtml = cats.map(c => `<a href="/kategori/${categorySlug(c)}" class="sc-link">${esc(shortCat(c))}</a>`).join('');
 
   const dataJson = JSON.stringify(products.map(p => ({
     id: p.id, slug: p.slug, name: p.short_name || p.name, category: p.category,
@@ -1199,6 +1200,11 @@ export async function renderShop(env, searchQuery) {
         <div class="shop-stat"><b>100+</b><span>Ukuran</span></div>
         <div class="shop-stat"><b>Grosir</b><span>Harga Pabrik</span></div>
       </div>
+    </div>
+    <div class="shop-cats-bar" aria-label="Kategori produk">
+      <span class="sc-label">Kategori:</span>
+      ${catLinksHtml}
+      <a href="/produk" class="sc-link sc-all">Semua Produk →</a>
     </div>
     <div class="shop-layout">
       <aside class="shop-side" id="shopSide">
@@ -1621,6 +1627,259 @@ export async function renderSitemap(env) {
   </style>`;
 
   return { html: layout({ title: `Sitemap — ${SITE_NAME}`, desc: 'Peta halaman ProIndustri: semua kategori produk, artikel & tips, dan halaman utama dalam satu tempat.', canonical: ORIGIN + '/sitemap', body, bodyClass: 'page-sitemap' }), script: '' };
+}
+
+// ── Bing image search: ambil gambar produk sesuai keyword (untuk LP /cari/) ──
+const BING_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
+async function fetchBingImages(kw) {
+  try {
+    const cacheKey = 'https://proindustri.com/.bingimg/' + encodeURIComponent(kw);
+    try {
+      const hit = await caches.default.match(cacheKey);
+      if (hit) {
+        const arr = await hit.json();
+        if (Array.isArray(arr) && arr.length) return arr.slice(0, 6);
+      }
+    } catch (e) { /* cache miss/unavailable → fetch langsung */ }
+    const url = 'https://www.bing.com/images/search?q=' + encodeURIComponent(kw + ' produk') + '&form=HDRSC2&first=1';
+    const res = await fetch(url, {
+      headers: { 'User-Agent': BING_UA, 'Accept-Language': 'id,en;q=0.8' },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!res.ok) return [];
+    const rawHtml = await res.text();
+    const html = rawHtml.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/\u0026/g, '&');
+    const imgs = [];
+    const re = /"turl":"(https?:\/\/[^"]+)"/g;
+    let m;
+    while ((m = re.exec(html)) !== null && imgs.length < 6) {
+      let u = m[1].replace(/\\\//g, '/');
+      if (!/^https?:\/\//.test(u) || imgs.includes(u)) continue;
+      // Pakai CDN thumbnail Bing + minta ukuran lebih besar (biar HD di LP)
+      if (u.includes('mm.bing.net/th?id=')) u += (u.includes('&') ? '&' : '') + 'w=640&h=480&c=7&rs=1';
+      imgs.push(u);
+    }
+    if (imgs.length) {
+      console.log('BING imgs found:', imgs.length, imgs[0]);
+      try {
+        await caches.default.put(cacheKey, new Response(JSON.stringify(imgs), {
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400, s-maxage=86400' },
+        }));
+      } catch (e) { /* cache gagal → tidak fatal */ }
+    }
+    return imgs;
+  } catch (e) {
+    console.log('BING error:', e && e.message ? e.message : String(e));
+    return [];
+  }
+}
+
+// ── Halaman Cari /cari/<keyword> — LP sales letter untuk keyword yang tidak ada di DB ──
+export async function renderCari(env, rawKeyword) {
+  // Keyword dari URL pakai dash → normalisasi ke spasi untuk query DB, slug untuk canonical
+  let kw = String(rawKeyword || '').trim().replace(/-+/g, ' ');
+  if (!kw) return { redirect: '/shop' };
+  const kwQ = kw.trim();
+
+  // Cek DB: produk cocok → redirect ke /shop?q=
+  try {
+    const like = `%${kwQ}%`;
+    const row = await env.DB.prepare(
+      "SELECT slug FROM products WHERE active=1 AND (name LIKE ? OR short_name LIKE ? OR category LIKE ?) LIMIT 1"
+    ).bind(like, like, like).first();
+    if (row && row.slug) {
+      return { redirect: '/shop?q=' + encodeURIComponent(kwQ) };
+    }
+  } catch (e) { /* DB error → tetap lanjut LP */ }
+
+  // Slug untuk canonical (normalisasi: lowercase, spasi → dash)
+  const slug = kwQ.toLowerCase()
+    .replace(/&/g, 'dan')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  const canonical = ORIGIN + '/cari/' + slug;
+  const waText = `Halo ProIndustri \u{1F44B}%0ASaya tertarik dengan: *${esc(kw)}*%0A%0AMohon informasinya.`;
+  const waUrl = `${WA_STORE}?text=${waText}`;
+  const h = esc(kw);
+  const hCap = esc(kw.charAt(0).toUpperCase() + kw.slice(1));
+
+  // Ambil gambar dari Bing Image search (sesuai keyword) untuk memperkaya LP
+  let imgs = [];
+  try { imgs = await fetchBingImages(kw); } catch (e) { /* gagal -> LP tetap jalan tanpa gambar */ }
+  const galleryHtml = imgs.length
+    ? `<div class="lp-cari-gallery">${imgs.map(u => `<img src="${u}" alt="${h}" loading="lazy" referrerpolicy="no-referrer">`).join('')}</div>`
+    : '';
+
+  // FAQ items
+  const faqItems = [
+    { q: `Apa itu ${h}?`, a: `${hCap} adalah salah satu produk industri yang kami sediakan di ProIndustri. Kami menjual ${h} dengan kualitas terbaik dan harga bersaing untuk kebutuhan bisnis dan industri Anda.` },
+    { q: `Berapa harga ${h}?`, a: `Harga ${h} bervariasi tergantung spesifikasi, merek, dan kuantitas. Tim sales kami siap memberikan penawaran harga terbaik untuk ${h} yang Anda butuhkan. Hubungi kami via WhatsApp sekarang.` },
+    { q: `Apakah ${h} yang dijual original?`, a: `Ya, semua produk ${h} yang kami jual adalah produk original dengan garansi resmi. Kami hanya menjual dari distributor dan supplier terpercaya.` },
+    { q: `Bagaimana cara membeli ${h}?`, a: `Cara membeli ${h} sangat mudah: hubungi kami via WhatsApp, sampaikan spesifikasi yang Anda butuhkan, dan tim kami akan memproses pesanan dengan cepat. Kami melayani pengiriman ke seluruh Indonesia.` },
+    { q: `Apakah ${h} bisa dikirim ke luar Jawa?`, a: `Tentu! Kami melayani pengiriman ${h} ke seluruh Indonesia, termasuk Papua, Kalimantan, Sulawesi, Sumatra, dan kepulauan lainnya. Biaya kirim sesuai tarif ekspedisi.` },
+    { q: `Ada diskon untuk pembelian ${h} dalam jumlah banyak?`, a: `Ya, untuk pembelian ${h} dalam jumlah grosir atau partai besar, kami memberikan harga khusus dan diskon menarik. Hubungi tim sales kami untuk negosiasi harga.` },
+  ];
+
+  const faqLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqItems.map(f => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a }
+    }))
+  };
+
+  const breadcrumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Beranda', item: ORIGIN + '/' },
+      { '@type': 'ListItem', position: 2, name: `Jual ${h}`, item: canonical }
+    ]
+  };
+
+  const faqHtml = faqItems.map((f, i) => `
+    <div class="faq-item">
+      <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">${f.q}</div>
+      <div class="faq-a">${f.a}</div>
+    </div>`).join('');
+
+  const body = `
+  <style>
+  .page-cari .lp-cari-wrap{max-width:820px;margin:0 auto;padding:32px 20px 60px}
+  .page-cari .lp-cari-hero{text-align:center;padding:48px 20px;background:linear-gradient(135deg,#0F1B2D 0%,#1a2a44 100%);border-radius:16px;color:#fff;margin-bottom:32px}
+  .page-cari .lp-cari-hero h1{font-size:30px;font-weight:900;margin:0 0 12px;color:#fff;line-height:1.3}
+  .page-cari .lp-cari-hero p{font-size:15px;color:#b0c4de;line-height:1.6;margin:0 0 28px;max-width:600px}
+  .page-cari .btn-wa-hero{display:inline-flex;align-items:center;gap:10px;background:#25D366;color:#fff;padding:14px 36px;border-radius:50px;font-size:16px;font-weight:700;text-decoration:none;transition:all .2s}
+  .page-cari .btn-wa-hero:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(37,211,102,.4)}
+  .page-cari .lp-cari-trustbar{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:40px}
+  .page-cari .trust-mini{display:flex;align-items:center;gap:8px;background:#f0fdf4;color:#16A34A;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600}
+  .page-cari .trust-mini svg{width:18px;height:18px}
+  .page-cari .lp-cari-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 auto 36px;max-width:760px}
+  .page-cari .lp-cari-gallery img{width:100%;height:150px;object-fit:cover;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.08);background:#eef1f5;border:1px solid #e8ecf0}
+  @media(max-width:600px){.page-cari .lp-cari-gallery{grid-template-columns:repeat(2,1fr)}.page-cari .lp-cari-gallery img{height:110px}}
+  .page-cari .lp-cari-section{background:#fff;border-radius:12px;padding:28px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .page-cari .lp-cari-section h2{font-size:20px;font-weight:800;color:#0F1B2D;margin:0 0 16px}
+  .page-cari .lp-cari-section p,.page-cari .lp-cari-section li{font-size:14px;color:#5A6474;line-height:1.7}
+  .page-cari .lp-cari-section ul{list-style:none;padding:0;margin:0}
+  .page-cari .lp-cari-section ul li{padding:8px 0 8px 28px;position:relative}
+  .page-cari .lp-cari-section ul li::before{content:"";position:absolute;left:0;top:14px;width:8px;height:8px;background:var(--gold);border-radius:50%}
+  .page-cari .faq-item{border:1px solid #e8ecf0;border-radius:8px;margin-bottom:10px;overflow:hidden}
+  .page-cari .faq-q{padding:14px 16px;font-weight:700;font-size:14px;color:#0F1B2D;cursor:pointer;position:relative;transition:background .2s}
+  .page-cari .faq-q:hover{background:#f8f9fa}
+  .page-cari .faq-q::after{content:"+";position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--gold);transition:transform .3s}
+  .page-cari .faq-item.open .faq-q::after{transform:translateY(-50%) rotate(45deg)}
+  .page-cari .faq-a{padding:0 16px;max-height:0;overflow:hidden;transition:all .3s;font-size:14px;color:#5A6474;line-height:1.6}
+  .page-cari .faq-item.open .faq-a{padding:0 16px 16px;max-height:400px}
+  .page-cari .lp-cari-inquiry{background:linear-gradient(135deg,#0F1B2D,#1a2a44);border-radius:12px;padding:32px;color:#fff;text-align:center}
+  .page-cari .lp-cari-inquiry h2{color:#fff;font-size:20px;margin:0 0 8px}
+  .page-cari .lp-cari-inquiry p{color:#b0c4de;font-size:14px;margin:0 0 20px}
+  .page-cari .form-group{display:flex;gap:10px;max-width:500px;margin:0 auto;flex-wrap:wrap;justify-content:center}
+  .page-cari .form-group input{flex:1;min-width:200px;padding:12px 16px;border:1px solid #334155;border-radius:8px;font-size:14px;font-family:inherit;background:#1e293b;color:#fff;outline:none}
+  .page-cari .form-group input:focus{border-color:var(--gold)}
+  .page-cari .form-group input::placeholder{color:#64748b}
+  .page-cari .btn-wa-sm{display:inline-flex;align-items:center;gap:8px;background:#25D366;color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;border:none;cursor:pointer;font-family:inherit;transition:all .2s}
+  .page-cari .btn-wa-sm:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(37,211,102,.4)}
+  .page-cari .lp-cari-cta{text-align:center;margin-top:32px}
+  .page-cari .lp-cari-cta .btn-wa-hero{font-size:18px;padding:16px 44px}
+  @media(max-width:600px){
+    .page-cari .lp-cari-hero h1{font-size:24px}
+    .page-cari .lp-cari-hero{padding:32px 16px}
+    .page-cari .lp-cari-section{padding:20px 16px}
+    .page-cari .form-group input{min-width:100%}
+  }
+  </style>
+  <div class="lp-cari-wrap">
+    <div class="lp-cari-hero">
+      <h1>Jual ${h}</h1>
+      <p>Butuh ${h} untuk kebutuhan industri atau proyek Anda? ProIndustri menyediakan ${h} berkualitas dengan harga terbaik. Dapatkan penawaran spesial sekarang!</p>
+      <a class="btn-wa-hero" href="${waUrl}" target="_blank" rel="noopener">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        Pesan via WhatsApp
+      </a>
+    </div>
+
+    <div class="lp-cari-trustbar">
+      <span class="trust-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Produk Original</span>
+      <span class="trust-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Garansi Resmi</span>
+      <span class="trust-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg> Kirim Seluruh Indonesia</span>
+      <span class="trust-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Harga Bersaing</span>
+    </div>
+
+    ${galleryHtml}
+
+    <div class="lp-cari-section">
+      <h2>Keunggulan ${hCap}</h2>
+      <p>Kami menyediakan ${h} dengan spesifikasi terbaik untuk memenuhi kebutuhan industri dan proyek Anda. Berikut adalah keunggulan yang bisa Anda dapatkan:</p>
+      <ul>
+        <li>Kualitas terjamin — ${h} yang kami jual telah melalui proses quality control ketat</li>
+        <li>Harga kompetitif — dapatkan harga terbaik untuk ${h} langsung dari distributor</li>
+        <li>Garansi resmi — setiap pembelian ${h} dilengkapi garansi purna jual</li>
+        <li>Pengiriman cepat — ${h} dikirim dari gudang kami dengan proses yang efisien</li>
+        <li>Dukungan teknis — tim kami siap membantu pemilihan ${h} yang tepat untuk kebutuhan Anda</li>
+      </ul>
+    </div>
+
+    <div class="lp-cari-section">
+      <h2>Kenapa Beli ${hCap} di ProIndustri?</h2>
+      <p>ProIndustri adalah mitra terpercaya untuk pengadaan ${h} dan perlengkapan industri. Kami telah melayani berbagai perusahaan dan individu di seluruh Indonesia. Dengan pengalaman bertahun-tahun, kami memahami betul kebutuhan ${h} untuk berbagai sektor industri.</p>
+      <p>Kami menjalin kerja sama langsung dengan supplier dan distributor ${h} terpercaya, sehingga Anda mendapatkan produk original dengan harga yang tidak bisa dikalahkan. Setiap transaksi ${h} di ProIndustri dilengkapi dengan faktur resmi dan garansi.</p>
+    </div>
+
+    <div class="lp-cari-section">
+      <h2>Pertanyaan Umum (FAQ) — ${hCap}</h2>
+      ${faqHtml}
+    </div>
+
+    <div class="lp-cari-inquiry" id="inquiry">
+      <h2>Pesan ${hCap} Sekarang</h2>
+      <p>Isi form di bawah, tim kami akan menghubungi Anda dalam 1x24 jam</p>
+      <div class="form-group">
+        <input type="text" id="inqName" placeholder="Nama Anda" onkeydown="if(event.key==='Enter') goInquiryWA('${esc(slug)}')">
+        <input type="text" id="inqMsg" placeholder="Kebutuhan ${h} Anda (jumlah, spesifikasi)" onkeydown="if(event.key==='Enter') goInquiryWA('${esc(slug)}')">
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn-wa-sm" onclick="goInquiryWA('${esc(slug)}')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+          Hubungi via WhatsApp
+        </button>
+      </div>
+    </div>
+
+    <div class="lp-cari-cta">
+      <p style="font-size:15px;color:#5A6474;margin:0 0 16px">Butuh ${h} segera? Jangan ragu untuk menghubungi kami langsung!</p>
+      <a class="btn-wa-hero" href="${waUrl}" target="_blank" rel="noopener">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        Konsultasi & Pesan Sekarang
+      </a>
+    </div>
+  </div>
+  <script>
+  function goInquiryWA(slug){
+    var name=document.getElementById('inqName')?document.getElementById('inqName').value:'';
+    var msg=document.getElementById('inqMsg')?document.getElementById('inqMsg').value:'';
+    var text='Halo ProIndustri, saya ingin info lebih lanjut tentang *${esc(kw)}*';
+    if(name)text+='%0ANama: '+encodeURIComponent(name);
+    if(msg)text+='%0APesan: '+encodeURIComponent(msg);
+    window.open('${WA_STORE}?text='+text,'_blank');
+  }
+  </script>`;
+
+  return {
+    html: layout({
+      title: `Jual ${h} | ProIndustri`,
+      desc: `Jual ${h} — alat & perlengkapan industri terbaik. Harga bersaing, garansi resmi, tersedia di ProIndustri. Pesan via WhatsApp untuk info lebih lanjut.`,
+      canonical,
+      ogImage: ORIGIN + '/assets/og-image.jpg',
+      jsonLd: [faqLd, breadcrumbLd],
+      body,
+      bodyClass: 'page-cari',
+    })
+  };
 }
 
 // ── Fallback ringan saat DB error (D1 quota habis dll) — tetap layout penuh biar SEO & UX aman ──

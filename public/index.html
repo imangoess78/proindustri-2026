@@ -60,7 +60,7 @@
   "description": "Distributor mesin, tools, & perlengkapan industri impor. Harga grosir, kirim seluruh Indonesia.",
   "potentialAction": {
     "@type": "SearchAction",
-    "target": "https://proindustri.com/?q={search_term_string}",
+    "target": "https://proindustri.com/cari/{search_term_string}",
     "query-input": "required name=search_term_string"
   }
 }
@@ -1104,6 +1104,7 @@ a{text-decoration:none;color:inherit}
 <div class="main">
   <div class="filter-wrap">
     <div class="filter-top">
+      <input class="search-input" type="text" id="searchInput" placeholder="Cari produk... (Enter)" onkeydown="if(event.key==='Enter')renderProducts()" style="flex:1;min-width:180px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px">
       <select class="sort-select" id="sortSelect" onchange="renderProducts()">
         <option value="default">Urutkan: Default</option>
         <option value="price_asc">Harga: Terendah</option>
@@ -2151,7 +2152,20 @@ function renderProducts(){
   if(totalShown>24) shown=shown.slice(0,24);
   if(pc)pc.textContent= totalShown>24 ? '('+24+' dari '+totalShown+' produk)' : '('+totalShown+' produk)';
 
-  if(!shown.length){grid.innerHTML='';if(noRes)noRes.style.display='block';return;}
+  if(!shown.length){
+    grid.innerHTML='';
+    if(noRes){
+      const sq=q.trim();
+      if(sq){
+        const slug=(sq)=>{const s=sq.toLowerCase().replace(/[^a-z0-9\s-]/g,'').trim().replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');return s;};
+        noRes.innerHTML=`<div style="padding:40px 20px;text-align:center"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg><div style="font-size:16px;font-weight:600;color:var(--dark);margin:12px 0 6px">Produk "${esc(sq)}" belum ada di katalog kami</div><div style="font-size:13px;color:var(--muted);margin-bottom:18px">Kami bisa cari & informasikan harga produk ini untuk Anda</div><a class="btn-red" style="display:inline-block;padding:11px 24px;text-decoration:none;font-size:14px" href="/cari/${encodeURIComponent(slug(sq))}">Cari "${esc(sq)}" & Tanya Harga <svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg></a></div>`;
+      }else{
+        noRes.innerHTML='<svg class="ic" aria-hidden="true"><use href="#i-smile"/></svg> Produk tidak ditemukan';
+      }
+      noRes.style.display='block';
+    }
+    return;
+  }
   if(noRes)noRes.style.display='none';
 
   const memberDisc=getMemberDiscount();

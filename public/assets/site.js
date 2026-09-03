@@ -372,8 +372,10 @@
   }
   function goSearch(q) {
     q = (q || '').trim();
-    if (q) location.href = '/shop?q=' + encodeURIComponent(q);
-    else location.href = '/shop';
+    if (!q) { location.href = '/shop'; return; }
+    // Cari → /cari/<slug>: server cek DB, produk ada → redirect shop?q=, tidak ada → LP sales letter + WA
+    const slug = q.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    location.href = slug ? '/cari/' + encodeURIComponent(slug) : '/shop';
   }
 
   // ═══════════════ MEMBER AUTH (shared login/register) ═══════════════

@@ -1633,7 +1633,7 @@ export async function renderSitemap(env) {
 const BING_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
 async function fetchBingImages(kw) {
   try {
-    const cacheKey = 'https://proindustri.com/.bingimg/' + encodeURIComponent(kw);
+    const cacheKey = 'https://proindustri.com/.bingimg/v2/' + encodeURIComponent(kw);
     try {
       const hit = await caches.default.match(cacheKey);
       if (hit) {
@@ -1641,23 +1641,50 @@ async function fetchBingImages(kw) {
         if (Array.isArray(arr) && arr.length) return arr.slice(0, 6);
       }
     } catch (e) { /* cache miss/unavailable → fetch langsung */ }
-    const url = 'https://www.bing.com/images/search?q=' + encodeURIComponent(kw + ' produk') + '&form=HDRSC2&first=1';
+    const url = 'https://www.bing.com/images/search?q=' + encodeURIComponent(kw + ' produk') + '&form=HDRSC2&first=1&setmkt=id-ID&setlang=id';
     const res = await fetch(url, {
       headers: { 'User-Agent': BING_UA, 'Accept-Language': 'id,en;q=0.8' },
       signal: AbortSignal.timeout(6000),
     });
     if (!res.ok) return [];
     const rawHtml = await res.text();
-    const html = rawHtml.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/\u0026/g, '&');
+    console.log('BING dbg: len=', rawHtml.length, 'mRe count=', (rawHtml.match(/m="\{/g) || []).length, 'turl count=', (rawHtml.match(/&quot;turl&quot;/g) || []).length);
+    // Bing membungkus setiap hasil gambar dalam blok m="{...}" dengan &quot; sebagai kutip JSON.
+    // Parse blok: m="{...}" lalu unescape &quot;→" sebelum JSON.parse
+    const tokens = kw.toLowerCase().split(/[^a-z0-9]+/).filter(t => t.length >= 3);
+    const cands = [];
+    const candsUnfiltered = [];
+    let parseOk = 0, filtered = 0;
+    const mRe = /m="(\{[^}]*\})"/g;
+    let mm;
+    while ((mm = mRe.exec(rawHtml)) !== null && candsUnfiltered.length < 30) {
+      let jsonStr;
+      try {
+        jsonStr = mm[1].replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+      } catch (e) { continue; }
+      let d;
+      try { d = JSON.parse(jsonStr); } catch (e) { continue; }
+      let u = d.turl || d.murl || '';
+      const title = String(d.t || '');
+      if (!u) continue;
+      parseOk++;
+      u = u.replace(/&amp;/g, '&').replace(/\\u0026/g, '&');
+      if (!/^https?:\/\//.test(u)) continue;
+      candsUnfiltered.push(u);
+      const titleLow = title.toLowerCase();
+      // filter: minimal 1 token ada di judul gambar
+      if (tokens.length && !tokens.some(t => titleLow.includes(t))) { filtered++; continue; }
+      cands.push(u);
+    }
+    console.log('BING dbg2: parseOk=', parseOk, 'filtered=', filtered, 'cands=', cands.length);
+    // Fallback: jika filter terlalu ketat (keyword spesifik), pakai hasil mentah Bing
+    const pool = (cands.length >= 3 ? cands : candsUnfiltered);
     const imgs = [];
-    const re = /"turl":"(https?:\/\/[^"]+)"/g;
-    let m;
-    while ((m = re.exec(html)) !== null && imgs.length < 6) {
-      let u = m[1].replace(/\\\//g, '/');
-      if (!/^https?:\/\//.test(u) || imgs.includes(u)) continue;
-      // Pakai CDN thumbnail Bing + minta ukuran lebih besar (biar HD di LP)
+    for (const u0 of pool) {
+      let u = u0;
       if (u.includes('mm.bing.net/th?id=')) u += (u.includes('&') ? '&' : '') + 'w=640&h=480&c=7&rs=1';
-      imgs.push(u);
+      if (!imgs.includes(u)) imgs.push(u);
+      if (imgs.length >= 6) break;
     }
     if (imgs.length) {
       console.log('BING imgs found:', imgs.length, imgs[0]);
@@ -1673,7 +1700,6 @@ async function fetchBingImages(kw) {
     return [];
   }
 }
-
 // ── Halaman Cari /cari/<keyword> — LP sales letter untuk keyword yang tidak ada di DB ──
 export async function renderCari(env, rawKeyword) {
   // Keyword dari URL pakai dash → normalisasi ke spasi untuk query DB, slug untuk canonical
@@ -1706,11 +1732,16 @@ export async function renderCari(env, rawKeyword) {
   const h = esc(kw);
   const hCap = esc(kw.charAt(0).toUpperCase() + kw.slice(1));
 
-  // Ambil gambar dari Bing Image search (sesuai keyword) untuk memperkaya LP
-  let imgs = [];
-  try { imgs = await fetchBingImages(kw); } catch (e) { /* gagal -> LP tetap jalan tanpa gambar */ }
-  const galleryHtml = imgs.length
-    ? `<div class="lp-cari-gallery">${imgs.map(u => `<img src="${u}" alt="${h}" loading="lazy" referrerpolicy="no-referrer">`).join('')}</div>`
+  // Produk acak untuk memperkaya LP (bukan galeri Bing — hasil tidak selalu relevan)
+  let prodItems = [];
+  try {
+    const pr = await env.DB.prepare(
+      "SELECT id,slug,name,short_name,category,img,min_price,max_price,variants FROM products WHERE active=1 ORDER BY RANDOM() LIMIT 6"
+    ).all();
+    if (pr.results && pr.results.length) prodItems = pr.results;
+  } catch (e) { /* DB error → LP tetap jalan tanpa card */ }
+  const prodHtml = prodItems.length
+    ? `<div class="lp-cari-section"><h2>Produk Pilihan ${hCap}</h2><p>Produk pilihan dari ProIndustri yang mungkin Anda butuhkan:</p><div class="p-grid">${prodItems.map(homeCard).join('')}</div></div>`
     : '';
 
   // FAQ items
@@ -1759,9 +1790,6 @@ export async function renderCari(env, rawKeyword) {
   .page-cari .lp-cari-trustbar{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:40px}
   .page-cari .trust-mini{display:flex;align-items:center;gap:8px;background:#f0fdf4;color:#16A34A;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600}
   .page-cari .trust-mini svg{width:18px;height:18px}
-  .page-cari .lp-cari-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 auto 36px;max-width:760px}
-  .page-cari .lp-cari-gallery img{width:100%;height:150px;object-fit:cover;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.08);background:#eef1f5;border:1px solid #e8ecf0}
-  @media(max-width:600px){.page-cari .lp-cari-gallery{grid-template-columns:repeat(2,1fr)}.page-cari .lp-cari-gallery img{height:110px}}
   .page-cari .lp-cari-section{background:#fff;border-radius:12px;padding:28px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
   .page-cari .lp-cari-section h2{font-size:20px;font-weight:800;color:#0F1B2D;margin:0 0 16px}
   .page-cari .lp-cari-section p,.page-cari .lp-cari-section li{font-size:14px;color:#5A6474;line-height:1.7}
@@ -1810,7 +1838,7 @@ export async function renderCari(env, rawKeyword) {
       <span class="trust-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg> Harga Bersaing</span>
     </div>
 
-    ${galleryHtml}
+    ${prodHtml}
 
     <div class="lp-cari-section">
       <h2>Keunggulan ${hCap}</h2>
@@ -1878,6 +1906,7 @@ export async function renderCari(env, rawKeyword) {
       jsonLd: [faqLd, breadcrumbLd],
       body,
       bodyClass: 'page-cari',
+      script: WISH_SCRIPT,
     })
   };
 }

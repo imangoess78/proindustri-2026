@@ -42,7 +42,7 @@ function htmlPage(body, status = 200, extra = {}) {
 
 import { PRODUCTS_SEED } from './products_seed.js';
 import { CITIES, RATES, COURIER_NAMES } from './shipping_seed.js';
-import { renderProduct, renderPost, renderArticles, renderShop, renderArchive, renderCategory, renderSitemap, renderFallback, LEGACY_PRODUKT } from './pages.js';
+import { renderProduct, renderPost, renderArticles, renderShop, renderArchive, renderCategory, renderSitemap, renderCari, renderFallback, LEGACY_PRODUKT } from './pages.js';
 
 function slugify(s) {
   return String(s || '').toLowerCase().trim()
@@ -560,6 +560,27 @@ export default {
       if (!page) return new Response('Produk tidak ditemukan', { status: 404, headers: withSec({ 'Content-Type': 'text/plain; charset=utf-8' }) });
       return htmlPage(page.html);
     }
+    // ── /cari/<keyword> — LP sales letter untuk keyword yang tidak ada di DB produk ──
+    if (path.startsWith('/cari/')) {
+      const keyword = decodeURIComponent(path.slice('/cari/'.length));
+      let result = null;
+      try {
+        result = await renderCari(env, keyword);
+      } catch (e) { /* DB error → fallback ke shop */ }
+      if (result && result.redirect) {
+        return new Response(null, {
+          status: 301,
+          headers: withSec({ Location: result.redirect, 'Cache-Control': 'public, max-age=86400' }),
+        });
+      }
+      if (!result || !result.html) {
+        return new Response(null, {
+          status: 301,
+          headers: withSec({ Location: '/shop', 'Cache-Control': 'public, max-age=86400' }),
+        });
+      }
+      return htmlPage(result.html);
+    }
     if (path.startsWith('/kategori/')) {
       const slug = decodeURIComponent(path.slice('/kategori/'.length));
       let page = null;
@@ -691,15 +712,23 @@ export default {
         { loc: '/xnx-xnx-honeywell-detector', prio: '0.7', freq: 'monthly' },
         { loc: '/yokogawa-temperature-transmitter', prio: '0.7', freq: 'monthly' },
       ];
+      try { await ensureProducts(env); } catch (e) { /* seed gagal bukan masalah fatal */ }
+      // Setiap query ditangani sendiri-sendiri: satu error tidak menggugurkan yang lain.
       try {
-        await ensureProducts(env);
-        const prods = await env.DB.prepare("SELECT slug, updated_at FROM products WHERE active=1 AND slug IS NOT NULL AND slug<>''").all();
-        for (const p of prods.results || []) urls.push({ loc: '/produk/' + p.slug, prio: '0.8', freq: 'weekly', lastmod: p.updated_at ? p.updated_at.slice(0, 10) : undefined });
+        const prods = await env.DB.prepare("SELECT id, slug, updated_at FROM products WHERE active=1").all();
+        for (const p of prods.results || []) {
+          const loc = '/produk/' + ((p.slug && p.slug.trim()) || p.id);
+          urls.push({ loc, prio: '0.8', freq: 'weekly', lastmod: p.updated_at ? p.updated_at.slice(0, 10) : undefined });
+        }
+      } catch (e) { /* skip produk */ }
+      try {
         const cats = await env.DB.prepare('SELECT slug FROM categories').all();
         for (const c of cats.results || []) urls.push({ loc: '/kategori/' + c.slug, prio: '0.7', freq: 'weekly' });
+      } catch (e) { /* skip kategori */ }
+      try {
         const arts = await env.DB.prepare("SELECT slug, created_at FROM articles WHERE (status='Published' OR (status='Scheduled' AND created_at <= datetime('now')))").all();
         for (const a of arts.results || []) urls.push({ loc: '/artikel/' + a.slug, prio: '0.7', freq: 'monthly', lastmod: a.created_at ? a.created_at.slice(0, 10) : undefined });
-      } catch (e) { /* sitemap tetap jalan walau DB error */ }
+      } catch (e) { /* skip artikel */ }
       const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(u => `  <url><loc>${ORIGIN}${u.loc}</loc>${u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : ''}<changefreq>${u.freq}</changefreq><priority>${u.prio}</priority></url>`).join('\n')}\n</urlset>`;
       return new Response(xml, { headers: withSec({ 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }) });
     }

@@ -40,6 +40,35 @@ function htmlPage(body, status = 200, extra = {}) {
   });
 }
 
+// ── Edge cache untuk SSR (hemat D1: bot hit kedua dst dilayani dari edge, tidak ke DB) ──
+const SSR_CACHE_TTL = 3600; // 1 jam
+async function serveCached(request, env, ctx, ttl, gen) {
+  if (request.method !== 'GET') return gen();
+  const cache = caches.default;
+  const cacheKey = new Request(request.url, request);
+  try {
+    const hit = await cache.match(cacheKey);
+    if (hit) {
+      const h = new Headers(hit.headers);
+      h.set('X-Cache', 'HIT');
+      return new Response(hit.body, { status: hit.status, headers: h });
+    }
+  } catch (e) {}
+  const resp = await gen();
+  if (resp && resp.status === 200) {
+    try {
+      const h2 = new Headers(resp.headers);
+      if (!h2.has('X-Cache')) h2.set('X-Cache', 'MISS');
+      const toCache = new Response(resp.body, { status: resp.status, headers: h2 });
+      const p = cache.put(cacheKey, toCache.clone());
+      if (ctx && ctx.waitUntil) ctx.waitUntil(p);
+      else await p;
+      return toCache;
+    } catch (e) { return resp; }
+  }
+  return resp;
+}
+
 import { PRODUCTS_SEED } from './products_seed.js';
 import { CITIES, RATES, COURIER_NAMES } from './shipping_seed.js';
 import { renderProduct, renderPost, renderArticles, renderShop, renderArchive, renderCategory, renderSitemap, renderCari, renderFallback, LEGACY_PRODUKT } from './pages.js';
@@ -320,8 +349,11 @@ async function getUserByToken(env, request) {
   return { token, user_id: s.user_id };
 }
 
+let _productsReady = false;
+// Dipanggil sekali per isolate (cold start), bukan tiap request — hemat 5M row reads/hari
 async function ensureProducts(env) {
-  // Migration: tambah kolom slug & ae_url jika belum ada
+  if (_productsReady) return;
+  // Migration: tambah kolom slug & ae_url jika belum ada (sekali saja)
   try {
     const cols = await env.DB.prepare('PRAGMA table_info(products)').all();
     if (!cols.results.some(c => c.name === 'slug')) {
@@ -344,11 +376,15 @@ async function ensureProducts(env) {
         JSON.stringify(p.variants || []), JSON.stringify(p.specs || {})
       ).run();
     }
-  } else {
     await backfillSlugs(env);
-    return;
+  } else {
+    // Hanya backfill jika ada slug kosong / mismatch — cek ringan dulu
+    const empty = await env.DB.prepare("SELECT COUNT(*) as c FROM products WHERE slug IS NULL OR slug=''").first();
+    const needBackfill = (empty?.c || 0) > 0;
+    // Cek mismatch slug SEED vs DB hanya jika ada yang kosong (avoid 22 UPDATE tiap request)
+    if (needBackfill) await backfillSlugs(env);
   }
-  await backfillSlugs(env);
+  _productsReady = true;
 }
 
 async function backfillSlugs(env) {
@@ -371,6 +407,12 @@ async function backfillSlugs(env) {
     }
     await env.DB.prepare('UPDATE products SET slug=? WHERE id=?').bind(cand, r.id).run();
   }
+}
+// Endpoint admin untuk force re-seed/backfill manual (bukan tiap request)
+async function forceBackfillSlugs(env) {
+  _productsReady = false;
+  await backfillSlugs(env);
+  _productsReady = true;
 }
 
 // ── Shipping: seed kota + tarif (seperti RajaOngkir, tanpa API key) ──
@@ -471,7 +513,7 @@ async function isAdmin(request, env) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
 
@@ -495,24 +537,27 @@ export default {
 
     // ── Halaman publik: single product, single post, artikel list, cart, checkout, tentang kami, faq ──
     if (path === '/shop') {
-      try {
-        await ensureProducts(env);
-        const q = url.searchParams.get('q') || '';
-        const page = await renderShop(env, q);
-        return htmlPage(page.html);
-      } catch (e) {
-        // DB error → serve fallback layout penuh (200, bukan 500) biar SEO & UX aman
-        return new Response(renderFallback('Katalog Produk', 'Katalog sedang dimuat ulang, silakan kembali sebentar lagi.', '/shop'), { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
-      }
+      return serveCached(request, env, ctx, SSR_CACHE_TTL, async () => {
+        try {
+          await ensureProducts(env);
+          const q = url.searchParams.get('q') || '';
+          const page = await renderShop(env, q);
+          return htmlPage(page.html);
+        } catch (e) {
+          return new Response(renderFallback('Katalog Produk', 'Katalog sedang dimuat ulang, silakan kembali sebentar lagi.', '/shop'), { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
+        }
+      });
     }
     if (path === '/produk') {
-      try {
-        await ensureProducts(env);
-        const page = await renderArchive(env, parseInt(url.searchParams.get('page') || '1', 10) || 1);
-        return htmlPage(page.html);
-      } catch (e) {
-        return new Response(renderFallback('Semua Produk', 'Katalog sedang dimuat ulang, silakan kembali sebentar lagi.', '/produk'), { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
-      }
+      return serveCached(request, env, ctx, SSR_CACHE_TTL, async () => {
+        try {
+          await ensureProducts(env);
+          const page = await renderArchive(env, parseInt(url.searchParams.get('page') || '1', 10) || 1);
+          return htmlPage(page.html);
+        } catch (e) {
+          return new Response(renderFallback('Semua Produk', 'Katalog sedang dimuat ulang, silakan kembali sebentar lagi.', '/produk'), { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
+        }
+      });
     }
     // ── Redirect URL lama /product/* → /produk/* (dulu pakai prefix "product") ──
     if (path.startsWith('/product/')) {
@@ -524,124 +569,132 @@ export default {
       });
     }
     if (path.startsWith('/produk/')) {
-      const key = decodeURIComponent(path.slice('/produk/'.length));
-      let prod = null;
-      try {
-        await ensureProducts(env);
-        prod = await findProduct(env, key);
-        if (!prod && key.startsWith('jual-')) {
-          prod = await findProduct(env, key.slice(5));
-        }
-      } catch (e) { /* DB error → treat as not found, fallback redirect */ }
-      if (!prod) {
-        // Fallback: slug lama/generik di konten artikel → redirect ke halaman legacy map
-        const legacy = LEGACY_PRODUKT[key] || LEGACY_PRODUKT[key.replace(/^jual-/, '')];
-        if (legacy) {
+      return serveCached(request, env, ctx, SSR_CACHE_TTL, async () => {
+        const key = decodeURIComponent(path.slice('/produk/'.length));
+        let prod = null;
+        try {
+          await ensureProducts(env);
+          prod = await findProduct(env, key);
+          if (!prod && key.startsWith('jual-')) {
+            prod = await findProduct(env, key.slice(5));
+          }
+        } catch (e) { /* DB error → treat as not found, fallback redirect */ }
+        if (!prod) {
+          const legacy = LEGACY_PRODUKT[key] || LEGACY_PRODUKT[key.replace(/^jual-/, '')];
+          if (legacy) {
+            return new Response(null, {
+              status: 301,
+              headers: withSec({ Location: legacy, 'Cache-Control': 'public, max-age=86400' }),
+            });
+          }
           return new Response(null, {
             status: 301,
-            headers: withSec({ Location: legacy, 'Cache-Control': 'public, max-age=86400' }),
+            headers: withSec({ Location: '/shop?q=' + encodeURIComponent(key.replace(/-/g, ' ')), 'Cache-Control': 'public, max-age=86400' }),
           });
         }
-        // Fallback generic: produk tidak ditemukan → redirect ke shop dengan keyword
-        return new Response(null, {
-          status: 301,
-          headers: withSec({ Location: '/shop?q=' + encodeURIComponent(key.replace(/-/g, ' ')), 'Cache-Control': 'public, max-age=86400' }),
-        });
-      }
-      // URL lama pakai id angka -> redirect 301 ke slug baru (SEO friendly)
-      if (key !== prod.slug) {
-        return new Response(null, {
-          status: 301,
-          headers: withSec({ Location: '/produk/' + prod.slug, 'Cache-Control': 'public, max-age=86400' }),
-        });
-      }
-      let page = null;
-      try { page = await renderProduct(env, prod); } catch (e) {}
-      if (!page) return new Response('Produk tidak ditemukan', { status: 404, headers: withSec({ 'Content-Type': 'text/plain; charset=utf-8' }) });
-      return htmlPage(page.html);
+        if (key !== prod.slug) {
+          return new Response(null, {
+            status: 301,
+            headers: withSec({ Location: '/produk/' + prod.slug, 'Cache-Control': 'public, max-age=86400' }),
+          });
+        }
+        let page = null;
+        try { page = await renderProduct(env, prod); } catch (e) {}
+        if (!page) return new Response('Produk tidak ditemukan', { status: 404, headers: withSec({ 'Content-Type': 'text/plain; charset=utf-8' }) });
+        return htmlPage(page.html);
+      });
     }
     // ── /cari/<keyword> — LP sales letter untuk keyword yang tidak ada di DB produk ──
     if (path.startsWith('/cari/')) {
-      const keyword = decodeURIComponent(path.slice('/cari/'.length));
-      let result = null;
-      try {
-        result = await renderCari(env, keyword);
-      } catch (e) { /* DB error → fallback ke shop */ }
-      if (result && result.redirect) {
-        return new Response(null, {
-          status: 301,
-          headers: withSec({ Location: result.redirect, 'Cache-Control': 'public, max-age=86400' }),
-        });
-      }
-      if (!result || !result.html) {
-        return new Response(null, {
-          status: 301,
-          headers: withSec({ Location: '/shop', 'Cache-Control': 'public, max-age=86400' }),
-        });
-      }
-      return htmlPage(result.html);
+      return serveCached(request, env, ctx, SSR_CACHE_TTL, async () => {
+        const keyword = decodeURIComponent(path.slice('/cari/'.length));
+        let result = null;
+        try {
+          result = await renderCari(env, keyword);
+        } catch (e) { /* DB error → fallback ke shop */ }
+        if (result && result.redirect) {
+          return new Response(null, {
+            status: 301,
+            headers: withSec({ Location: result.redirect, 'Cache-Control': 'public, max-age=86400' }),
+          });
+        }
+        if (!result || !result.html) {
+          return new Response(null, {
+            status: 301,
+            headers: withSec({ Location: '/shop', 'Cache-Control': 'public, max-age=86400' }),
+          });
+        }
+        return htmlPage(result.html);
+      });
     }
     if (path.startsWith('/kategori/')) {
-      const slug = decodeURIComponent(path.slice('/kategori/'.length));
-      let page = null;
-      try {
-        await ensureProducts(env);
-        page = await renderCategory(env, slug, parseInt(url.searchParams.get('page') || '1', 10) || 1);
-      } catch (e) { /* DB error → treat as not found, fallback redirect */ }
-      if (!page) {
-        // Fallback: kategori tidak ditemukan → redirect ke shop
-        return new Response(null, {
-          status: 301,
-          headers: withSec({ Location: '/shop', 'Cache-Control': 'public, max-age=86400' }),
-        });
-      }
-      return htmlPage(page.html);
+      return serveCached(request, env, ctx, SSR_CACHE_TTL, async () => {
+        const slug = decodeURIComponent(path.slice('/kategori/'.length));
+        let page = null;
+        try {
+          await ensureProducts(env);
+          page = await renderCategory(env, slug, parseInt(url.searchParams.get('page') || '1', 10) || 1);
+        } catch (e) { /* DB error → treat as not found, fallback redirect */ }
+        if (!page) {
+          return new Response(null, {
+            status: 301,
+            headers: withSec({ Location: '/shop', 'Cache-Control': 'public, max-age=86400' }),
+          });
+        }
+        return htmlPage(page.html);
+      });
     }
     if (path.startsWith('/artikel/')) {
-      const slug = decodeURIComponent(path.slice('/artikel/'.length));
-      let page = null;
-      try { page = await renderPost(env, slug); } catch (e) { /* DB error → treat as not found, fallback redirect */ }
-      if (!page) {
-        // Fallback: artikel tidak ditemukan → redirect ke daftar artikel
-        return new Response(null, {
-          status: 301,
-          headers: withSec({ Location: '/artikel', 'Cache-Control': 'public, max-age=86400' }),
-        });
-      }
-      return htmlPage(page.html);
+      return serveCached(request, env, ctx, SSR_CACHE_TTL, async () => {
+        const slug = decodeURIComponent(path.slice('/artikel/'.length));
+        let page = null;
+        try { page = await renderPost(env, slug); } catch (e) { /* DB error → treat as not found, fallback redirect */ }
+        if (!page) {
+          return new Response(null, {
+            status: 301,
+            headers: withSec({ Location: '/artikel', 'Cache-Control': 'public, max-age=86400' }),
+          });
+        }
+        return htmlPage(page.html);
+      });
     }
     if (path === '/artikel') {
-      try {
-        const page = await renderArticles(env);
-        return htmlPage(page.html);
-      } catch (e) {
-        return new Response(renderFallback('Artikel', 'Artikel sedang dimuat ulang, silakan kembali sebentar lagi.', '/artikel'), { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
-      }
+      return serveCached(request, env, ctx, SSR_CACHE_TTL, async () => {
+        try {
+          const page = await renderArticles(env);
+          return htmlPage(page.html);
+        } catch (e) {
+          return new Response(renderFallback('Artikel', 'Artikel sedang dimuat ulang, silakan kembali sebentar lagi.', '/artikel'), { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
+        }
+      });
     }
 
     // ── Halaman Sitemap (HTML, user-friendly) ──
     if (path === '/sitemap') {
-      try {
-        const page = await renderSitemap(env);
-        return htmlPage(page.html);
-      } catch (e) {
-        return new Response(renderFallback('Sitemap', 'Peta situs sedang dimuat ulang, silakan kembali sebentar lagi.', '/sitemap'), { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
-      }
+      return serveCached(request, env, ctx, SSR_CACHE_TTL, async () => {
+        try {
+          const page = await renderSitemap(env);
+          return htmlPage(page.html);
+        } catch (e) {
+          return new Response(renderFallback('Sitemap', 'Peta situs sedang dimuat ulang, silakan kembali sebentar lagi.', '/sitemap'), { status: 200, headers: withSec({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=60, s-maxage=300' }) });
+        }
+      });
     }
 
     // ── Sitemap XML (dinamis: produk, kategori, artikel) ──
     if (path === '/sitemap.xml') {
-      const ORIGIN = 'https://proindustri.com';
-      const today = new Date().toISOString().slice(0, 10);
-      const urls = [
-        { loc: '/', prio: '1.0', freq: 'daily' },
-        { loc: '/shop', prio: '0.9', freq: 'daily' },
-        { loc: '/produk', prio: '0.8', freq: 'weekly' },
-        { loc: '/artikel', prio: '0.7', freq: 'weekly' },
-        { loc: '/tentang-kami', prio: '0.5', freq: 'monthly' },
-        { loc: '/kontak', prio: '0.5', freq: 'monthly' },
-        { loc: '/faq', prio: '0.5', freq: 'monthly' },
-        { loc: '/sitemap', prio: '0.6', freq: 'monthly' },
+      return serveCached(request, env, ctx, SSR_CACHE_TTL, async () => {
+        const ORIGIN = 'https://proindustri.com';
+        const today = new Date().toISOString().slice(0, 10);
+        const urls = [
+          { loc: '/', prio: '1.0', freq: 'daily' },
+          { loc: '/shop', prio: '0.9', freq: 'daily' },
+          { loc: '/produk', prio: '0.8', freq: 'weekly' },
+          { loc: '/artikel', prio: '0.7', freq: 'weekly' },
+          { loc: '/tentang-kami', prio: '0.5', freq: 'monthly' },
+          { loc: '/kontak', prio: '0.5', freq: 'monthly' },
+          { loc: '/faq', prio: '0.5', freq: 'monthly' },
+          { loc: '/sitemap', prio: '0.6', freq: 'monthly' },
         // ── Landing pages statis (inquiry via WA, 1 keyword = 1 LP) ──
         { loc: '/2-wire-thermocouple', prio: '0.7', freq: 'monthly' },
         { loc: '/3d-laser-measuring-tool', prio: '0.7', freq: 'monthly' },
@@ -732,6 +785,7 @@ export default {
       } catch (e) { /* skip artikel */ }
       const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(u => `  <url><loc>${ORIGIN}${u.loc}</loc>${u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : ''}<changefreq>${u.freq}</changefreq><priority>${u.prio}</priority></url>`).join('\n')}\n</urlset>`;
       return new Response(xml, { headers: withSec({ 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600' }) });
+      });
     }
 
     // ── robots.txt (override asset) ──
